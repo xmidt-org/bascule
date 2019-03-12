@@ -11,6 +11,10 @@ os:
 services:
   - docker
 
+branches:
+  only:
+    - master
+
 matrix:
   allow_failures:
     - go: tip
