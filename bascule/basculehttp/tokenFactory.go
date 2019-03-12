@@ -122,9 +122,5 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *htt
 		return nil, ErrorUnexpectedPrincipal
 	}
 
-	if caps, capOkay := jwsToken.Payload().(jws.Claims).Get("capabilities").([]interface{}); capOkay && len(caps) > 0 {
-		return bascule.NewToken("sat", principal, jwsToken.Payload().(bascule.Attributes)), nil
-	}
-
 	return bascule.NewToken("jwt", principal, jwsToken.Payload().(bascule.Attributes)), nil
 }
