@@ -9,7 +9,7 @@ type JWSParser interface {
 	ParseJWS([]byte) (jws.JWS, error)
 }
 
-type defaultJWSParser int
+type defaultJWSParser struct{}
 
 func (parser defaultJWSParser) ParseJWS(token []byte) (jws.JWS, error) {
 	if jwtToken, err := jws.ParseJWT(token); err == nil {
@@ -21,4 +21,4 @@ func (parser defaultJWSParser) ParseJWS(token []byte) (jws.JWS, error) {
 
 // DefaultJWSParser is the parser implementation that simply delegates to
 // the SermoDigital library's jws.ParseJWT function.
-var DefaultJWSParser JWSParser = defaultJWSParser(0)
+var DefaultJWSParser JWSParser = defaultJWSParser{}

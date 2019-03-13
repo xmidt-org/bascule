@@ -112,15 +112,16 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *htt
 		return nil, err
 	}
 
-	payload, ok := jwsToken.Payload().(bascule.Attributes)
+	claims, ok := jwsToken.Payload().(jws.Claims)
 	if !ok {
 		return nil, ErrorUnexpectedPayload
 	}
+	payload := bascule.Attributes(claims)
 
 	principal, ok := payload[jwtPrincipalKey].(string)
 	if !ok {
 		return nil, ErrorUnexpectedPrincipal
 	}
 
-	return bascule.NewToken("jwt", principal, jwsToken.Payload().(bascule.Attributes)), nil
+	return bascule.NewToken("jwt", principal, payload), nil
 }

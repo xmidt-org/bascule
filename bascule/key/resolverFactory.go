@@ -2,10 +2,9 @@ package key
 
 import (
 	"fmt"
-	"github.com/Comcast/webpa-common/concurrent"
+
 	"github.com/Comcast/webpa-common/resource"
 	"github.com/Comcast/webpa-common/types"
-	"time"
 )
 
 const (
@@ -101,6 +100,6 @@ func (factory *ResolverFactory) NewResolver() (Resolver, error) {
 // NewUpdater uses this factory's configuration to conditionally create a Runnable updater
 // for the given resolver.  This method delegates to the NewUpdater function, and may
 // return a nil Runnable if no updates are necessary.
-func (factory *ResolverFactory) NewUpdater(resolver Resolver) concurrent.Runnable {
-	return NewUpdater(time.Duration(factory.UpdateInterval), resolver)
-}
+// func (factory *ResolverFactory) NewUpdater(resolver Resolver) concurrent.Runnable {
+// 	return NewUpdater(time.Duration(factory.UpdateInterval), resolver)
+// }

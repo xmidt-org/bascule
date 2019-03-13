@@ -4,13 +4,11 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/Comcast/webpa-common/resource"
-	"github.com/Comcast/webpa-common/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"sync"
-	"testing"
-	"time"
 )
 
 func ExampleSingleKeyConfiguration() {
@@ -118,36 +116,36 @@ func TestBadURITemplates(t *testing.T) {
 	}
 }
 
-func TestResolverFactoryNewUpdater(t *testing.T) {
-	assert := assert.New(t)
+// func TestResolverFactoryNewUpdater(t *testing.T) {
+// 	assert := assert.New(t)
 
-	updateKeysCalled := make(chan struct{})
-	runner := func(mock.Arguments) {
-		defer func() {
-			recover() // ignore panics from multiple closes
-		}()
+// 	updateKeysCalled := make(chan struct{})
+// 	runner := func(mock.Arguments) {
+// 		defer func() {
+// 			recover() // ignore panics from multiple closes
+// 		}()
 
-		close(updateKeysCalled)
-	}
+// 		close(updateKeysCalled)
+// 	}
 
-	keyCache := &MockCache{}
-	keyCache.On("UpdateKeys").Return(0, nil).Run(runner)
+// 	keyCache := &MockCache{}
+// 	keyCache.On("UpdateKeys").Return(0, nil).Run(runner)
 
-	resolverFactory := ResolverFactory{
-		UpdateInterval: types.Duration(100 * time.Millisecond),
-	}
+// 	resolverFactory := ResolverFactory{
+// 		UpdateInterval: types.Duration(100 * time.Millisecond),
+// 	}
 
-	if updater := resolverFactory.NewUpdater(keyCache); assert.NotNil(updater) {
-		waitGroup := &sync.WaitGroup{}
-		shutdown := make(chan struct{})
-		updater.Run(waitGroup, shutdown)
+// 	if updater := resolverFactory.NewUpdater(keyCache); assert.NotNil(updater) {
+// 		waitGroup := &sync.WaitGroup{}
+// 		shutdown := make(chan struct{})
+// 		updater.Run(waitGroup, shutdown)
 
-		// we only care that the updater called UpdateKeys() at least once
-		<-updateKeysCalled
-		close(shutdown)
-		waitGroup.Wait()
-	}
-}
+// 		// we only care that the updater called UpdateKeys() at least once
+// 		<-updateKeysCalled
+// 		close(shutdown)
+// 		waitGroup.Wait()
+// 	}
+// }
 
 func TestResolverFactoryDefaultParser(t *testing.T) {
 	assert := assert.New(t)

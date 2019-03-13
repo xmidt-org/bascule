@@ -3,11 +3,11 @@ package key
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"sync"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func makeExpectedPairs(count int) (expectedKeyIDs []string, expectedPairs map[string]Pair) {
@@ -393,61 +393,61 @@ func TestMultiCacheUpdateKeysSequence(t *testing.T) {
 	mock.AssertExpectationsForObjects(t, resolver.Mock, oldPair.Mock, newPair.Mock)
 }
 
-func TestNewUpdaterNoRunnable(t *testing.T) {
-	assert := assert.New(t)
+// func TestNewUpdaterNoRunnable(t *testing.T) {
+// 	assert := assert.New(t)
 
-	keyCache := &MockCache{}
+// 	keyCache := &MockCache{}
 
-	var testData = []struct {
-		updateInterval time.Duration
-		keyCache       Cache
-	}{
-		{
-			updateInterval: -1,
-			keyCache:       keyCache,
-		},
-		{
-			updateInterval: 0,
-			keyCache:       keyCache,
-		},
-		{
-			updateInterval: 1232354,
-			keyCache:       nil,
-		},
-	}
+// 	var testData = []struct {
+// 		updateInterval time.Duration
+// 		keyCache       Cache
+// 	}{
+// 		{
+// 			updateInterval: -1,
+// 			keyCache:       keyCache,
+// 		},
+// 		{
+// 			updateInterval: 0,
+// 			keyCache:       keyCache,
+// 		},
+// 		{
+// 			updateInterval: 1232354,
+// 			keyCache:       nil,
+// 		},
+// 	}
 
-	for _, record := range testData {
-		t.Log(record)
-		updater := NewUpdater(record.updateInterval, record.keyCache)
-		assert.Nil(updater)
-	}
+// 	for _, record := range testData {
+// 		t.Log(record)
+// 		updater := NewUpdater(record.updateInterval, record.keyCache)
+// 		assert.Nil(updater)
+// 	}
 
-	mock.AssertExpectationsForObjects(t, keyCache.Mock)
-}
+// 	mock.AssertExpectationsForObjects(t, keyCache.Mock)
+// }
 
-func TestNewUpdater(t *testing.T) {
-	assert := assert.New(t)
+// func TestNewUpdater(t *testing.T) {
+// 	assert := assert.New(t)
 
-	updateKeysCalled := make(chan struct{})
-	runner := func(mock.Arguments) {
-		defer func() {
-			recover() // ignore panics from multiple closes
-		}()
+// 	updateKeysCalled := make(chan struct{})
+// 	runner := func(mock.Arguments) {
+// 		defer func() {
+// 			recover() // ignore panics from multiple closes
+// 		}()
 
-		close(updateKeysCalled)
-	}
+// 		close(updateKeysCalled)
+// 	}
 
-	keyCache := &MockCache{}
-	keyCache.On("UpdateKeys").Return(0, nil).Run(runner)
+// 	keyCache := &MockCache{}
+// 	keyCache.On("UpdateKeys").Return(0, nil).Run(runner)
 
-	if updater := NewUpdater(100*time.Millisecond, keyCache); assert.NotNil(updater) {
-		waitGroup := &sync.WaitGroup{}
-		shutdown := make(chan struct{})
-		updater.Run(waitGroup, shutdown)
+// 	if updater := NewUpdater(100*time.Millisecond, keyCache); assert.NotNil(updater) {
+// 		waitGroup := &sync.WaitGroup{}
+// 		shutdown := make(chan struct{})
+// 		updater.Run(waitGroup, shutdown)
 
-		// we only care that the updater called UpdateKeys() at least once
-		<-updateKeysCalled
-		close(shutdown)
-		waitGroup.Wait()
-	}
-}
+// 		// we only care that the updater called UpdateKeys() at least once
+// 		<-updateKeysCalled
+// 		close(shutdown)
+// 		waitGroup.Wait()
+// 	}
+// }

@@ -1,7 +1,6 @@
 package key
 
 import (
-	"github.com/Comcast/webpa-common/concurrent"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -186,34 +185,26 @@ func (cache *multiCache) UpdateKeys() (count int, errors []error) {
 // updateInterval is positive, and (2) resolver implements Cache, then this
 // method returns a non-nil function that will spawn a goroutine to update
 // the cache in the background.  Otherwise, this method returns nil.
-func NewUpdater(updateInterval time.Duration, resolver Resolver) (updater concurrent.Runnable) {
+func UpdateAtInterval(updateInterval time.Duration, resolver Resolver, waitgroup *sync.WaitGroup, shutdown <-chan struct{}) {
+	defer waitgroup.Done()
 	if updateInterval < 1 {
 		return
 	}
 
-	if keyCache, ok := resolver.(Cache); ok {
-		updater = concurrent.RunnableFunc(func(waitGroup *sync.WaitGroup, shutdown <-chan struct{}) error {
-			waitGroup.Add(1)
-
-			go func() {
-				defer waitGroup.Done()
-
-				ticker := time.NewTicker(updateInterval)
-				defer ticker.Stop()
-
-				for {
-					select {
-					case <-shutdown:
-						return
-					case <-ticker.C:
-						keyCache.UpdateKeys()
-					}
-				}
-			}()
-
-			return nil
-		})
+	keyCache, ok := resolver.(Cache)
+	if !ok {
+		return
 	}
 
-	return
+	ticker := time.NewTicker(updateInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-shutdown:
+			return
+		case <-ticker.C:
+			go keyCache.UpdateKeys()
+		}
+	}
 }
