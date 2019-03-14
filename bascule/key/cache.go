@@ -1,14 +1,19 @@
 package key
 
 import (
+	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 const (
 	// dummyKeyId is used when no actual keyID is necessary.
 	dummyKeyId = ""
+)
+
+var (
+	ErrOperationTimedOut = errors.New("operation timed out")
 )
 
 // Cache is a Resolver type which provides caching for keys based on keyID.
@@ -32,7 +37,7 @@ type Cache interface {
 	// attempt will be made to update each key present in the cache, regardless
 	// of any update errors for each individual key.  This slice may be nil if no
 	// errors occurred.
-	UpdateKeys() (int, []error)
+	UpdateKeys(ctx context.Context) (int, []error)
 }
 
 // basicCache contains the internal members common to all cache implementations
@@ -81,7 +86,7 @@ func (cache *singleCache) ResolveKey(keyID string) (pair Pair, err error) {
 	return
 }
 
-func (cache *singleCache) UpdateKeys() (count int, errors []error) {
+func (cache *singleCache) UpdateKeys(ctx context.Context) (count int, errors []error) {
 	count = 1
 	cache.update(func() {
 		// this type of cache is specifically for resolvers which don't use the keyID,
@@ -152,13 +157,20 @@ func (cache *multiCache) ResolveKey(keyID string) (pair Pair, err error) {
 	return
 }
 
-func (cache *multiCache) UpdateKeys() (count int, errors []error) {
+func (cache *multiCache) UpdateKeys(ctx context.Context) (count int, errors []error) {
 	if existingPairs, ok := cache.load().(map[string]Pair); ok {
 		count = len(existingPairs)
 		cache.update(func() {
 			newCount := 0
 			newPairs := make(map[string]Pair, len(existingPairs))
 			for keyID, oldPair := range existingPairs {
+				select {
+				case <-ctx.Done():
+					count = 0
+					errors = append(errors, ErrOperationTimedOut)
+					return
+				default:
+				}
 				if newPair, err := cache.delegate.ResolveKey(keyID); err == nil {
 					newCount++
 					newPairs[keyID] = newPair
@@ -178,33 +190,4 @@ func (cache *multiCache) UpdateKeys() (count int, errors []error) {
 	}
 
 	return
-}
-
-// NewUpdater conditionally creates a Runnable which will update the keys in
-// the given resolver on the configured updateInterval.  If both (1) the
-// updateInterval is positive, and (2) resolver implements Cache, then this
-// method returns a non-nil function that will spawn a goroutine to update
-// the cache in the background.  Otherwise, this method returns nil.
-func UpdateAtInterval(updateInterval time.Duration, resolver Resolver, waitgroup *sync.WaitGroup, shutdown <-chan struct{}) {
-	defer waitgroup.Done()
-	if updateInterval < 1 {
-		return
-	}
-
-	keyCache, ok := resolver.(Cache)
-	if !ok {
-		return
-	}
-
-	ticker := time.NewTicker(updateInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-shutdown:
-			return
-		case <-ticker.C:
-			go keyCache.UpdateKeys()
-		}
-	}
 }
