@@ -1,6 +1,7 @@
 package key
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -20,26 +21,32 @@ type Parser interface {
 	// Parse examines data to produce a Pair.  If the returned error is not nil,
 	// the Pair will always be nil.  This method is responsible for dealing with
 	// any required decoding, such as PEM or DER.
-	ParseKey(Purpose, []byte) (Pair, error)
+	ParseKey(context.Context, Purpose, []byte) (Pair, error)
 }
 
 // defaultParser is the internal default Parser implementation
-type defaultParser int
+type defaultParser struct{}
 
 func (p defaultParser) String() string {
 	return "defaultParser"
 }
 
-func (p defaultParser) parseRSAPrivateKey(purpose Purpose, decoded []byte) (Pair, error) {
+func (p defaultParser) parseRSAPrivateKey(ctx context.Context, purpose Purpose, decoded []byte) (Pair, error) {
 	var (
 		parsedKey interface{}
 		err       error
 	)
 
 	if parsedKey, err = x509.ParsePKCS1PrivateKey(decoded); err != nil {
+		if isContextDone(ctx) {
+			return nil, ErrOperationTimedOut
+		}
 		if parsedKey, err = x509.ParsePKCS8PrivateKey(decoded); err != nil {
 			return nil, ErrorUnsupportedPrivateKeyFormat
 		}
+	}
+	if isContextDone(ctx) {
+		return nil, ErrOperationTimedOut
 	}
 
 	privateKey, ok := parsedKey.(*rsa.PrivateKey)
@@ -54,7 +61,7 @@ func (p defaultParser) parseRSAPrivateKey(purpose Purpose, decoded []byte) (Pair
 	}, nil
 }
 
-func (p defaultParser) parseRSAPublicKey(purpose Purpose, decoded []byte) (Pair, error) {
+func (p defaultParser) parseRSAPublicKey(ctx context.Context, purpose Purpose, decoded []byte) (Pair, error) {
 	var (
 		parsedKey interface{}
 		err       error
@@ -62,6 +69,9 @@ func (p defaultParser) parseRSAPublicKey(purpose Purpose, decoded []byte) (Pair,
 
 	if parsedKey, err = x509.ParsePKIXPublicKey(decoded); err != nil {
 		return nil, err
+	}
+	if isContextDone(ctx) {
+		return nil, ErrOperationTimedOut
 	}
 
 	publicKey, ok := parsedKey.(*rsa.PublicKey)
@@ -76,19 +86,22 @@ func (p defaultParser) parseRSAPublicKey(purpose Purpose, decoded []byte) (Pair,
 	}, nil
 }
 
-func (p defaultParser) ParseKey(purpose Purpose, data []byte) (Pair, error) {
+func (p defaultParser) ParseKey(ctx context.Context, purpose Purpose, data []byte) (Pair, error) {
 	block, _ := pem.Decode(data)
 	if block == nil {
 		return nil, ErrorPEMRequired
 	}
+	if isContextDone(ctx) {
+		return nil, ErrOperationTimedOut
+	}
 
 	if purpose.RequiresPrivateKey() {
-		return p.parseRSAPrivateKey(purpose, block.Bytes)
+		return p.parseRSAPrivateKey(ctx, purpose, block.Bytes)
 	} else {
-		return p.parseRSAPublicKey(purpose, block.Bytes)
+		return p.parseRSAPublicKey(ctx, purpose, block.Bytes)
 	}
 }
 
 // DefaultParser is the global, singleton default parser.  All keys submitted to
 // this parser must be PEM-encoded.
-var DefaultParser Parser = defaultParser(0)
+var DefaultParser Parser = defaultParser{}

@@ -68,14 +68,22 @@ type singleCache struct {
 	basicCache
 }
 
-func (cache *singleCache) ResolveKey(keyID string) (pair Pair, err error) {
+func (cache *singleCache) ResolveKey(ctx context.Context, keyID string) (pair Pair, err error) {
 	var ok bool
 	pair, ok = cache.load().(Pair)
 	if !ok {
 		cache.update(func() {
 			pair, ok = cache.load().(Pair)
+			if isContextDone(ctx) {
+				err = ErrOperationTimedOut
+				return
+			}
 			if !ok {
-				pair, err = cache.delegate.ResolveKey(keyID)
+				pair, err = cache.delegate.ResolveKey(ctx, keyID)
+				if isContextDone(ctx) {
+					err = ErrOperationTimedOut
+					return
+				}
 				if err == nil {
 					cache.store(pair)
 				}
@@ -91,7 +99,14 @@ func (cache *singleCache) UpdateKeys(ctx context.Context) (count int, errors []e
 	cache.update(func() {
 		// this type of cache is specifically for resolvers which don't use the keyID,
 		// so just pass an empty string in
-		if pair, err := cache.delegate.ResolveKey(dummyKeyId); err == nil {
+		pair, err := cache.delegate.ResolveKey(ctx, dummyKeyId)
+		if isContextDone(ctx) {
+			count = 0
+			errors = []error{ErrOperationTimedOut}
+			return
+		}
+
+		if err == nil {
 			cache.store(pair)
 		} else {
 			errors = []error{err}
@@ -137,14 +152,24 @@ func (cache *multiCache) copyPairs() map[string]Pair {
 	return newPairs
 }
 
-func (cache *multiCache) ResolveKey(keyID string) (pair Pair, err error) {
+func (cache *multiCache) ResolveKey(ctx context.Context, keyID string) (pair Pair, err error) {
 	var ok bool
 	pair, ok = cache.fetchPair(keyID)
 	if !ok {
 		cache.update(func() {
 			pair, ok = cache.fetchPair(keyID)
+			if isContextDone(ctx) {
+				err = ErrOperationTimedOut
+				return
+			}
+
 			if !ok {
-				pair, err = cache.delegate.ResolveKey(keyID)
+				pair, err = cache.delegate.ResolveKey(ctx, keyID)
+				if isContextDone(ctx) {
+					err = ErrOperationTimedOut
+					return
+				}
+
 				if err == nil {
 					newPairs := cache.copyPairs()
 					newPairs[keyID] = pair
@@ -164,14 +189,20 @@ func (cache *multiCache) UpdateKeys(ctx context.Context) (count int, errors []er
 			newCount := 0
 			newPairs := make(map[string]Pair, len(existingPairs))
 			for keyID, oldPair := range existingPairs {
-				select {
-				case <-ctx.Done():
+				if isContextDone(ctx) {
 					count = 0
 					errors = append(errors, ErrOperationTimedOut)
 					return
-				default:
 				}
-				if newPair, err := cache.delegate.ResolveKey(keyID); err == nil {
+				newPair, err := cache.delegate.ResolveKey(ctx, keyID)
+
+				if isContextDone(ctx) {
+					count = 0
+					errors = append(errors, ErrOperationTimedOut)
+					return
+				}
+
+				if err == nil {
 					newCount++
 					newPairs[keyID] = newPair
 				} else {

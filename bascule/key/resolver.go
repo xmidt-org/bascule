@@ -1,6 +1,7 @@
 package key
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Comcast/webpa-common/resource"
@@ -11,7 +12,7 @@ type Resolver interface {
 	// ResolveKey returns a key Pair associated with the given identifier.  The exact mechanics of resolving
 	// a keyId into a Pair are implementation-specific.  Implementations are free
 	// to ignore the keyId parameter altogether.
-	ResolveKey(keyId string) (Pair, error)
+	ResolveKey(ctx context.Context, keyId string) (Pair, error)
 }
 
 // basicResolver contains common items for all resolvers.
@@ -20,8 +21,8 @@ type basicResolver struct {
 	purpose Purpose
 }
 
-func (b *basicResolver) parseKey(data []byte) (Pair, error) {
-	return b.parser.ParseKey(b.purpose, data)
+func (b *basicResolver) parseKey(ctx context.Context, data []byte) (Pair, error) {
+	return b.parser.ParseKey(ctx, b.purpose, data)
 }
 
 // singleResolver is a Resolver which expects only (1) key for all key ids.
@@ -39,13 +40,16 @@ func (r *singleResolver) String() string {
 	)
 }
 
-func (r *singleResolver) ResolveKey(keyId string) (Pair, error) {
+func (r *singleResolver) ResolveKey(ctx context.Context, keyId string) (Pair, error) {
 	data, err := resource.ReadAll(r.loader)
+	if isContextDone(ctx) {
+		return nil, ErrOperationTimedOut
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	return r.parseKey(data)
+	return r.parseKey(ctx, data)
 }
 
 // multiResolver is a Resolver which uses the key id and will most likely return
@@ -64,20 +68,26 @@ func (r *multiResolver) String() string {
 	)
 }
 
-func (r *multiResolver) ResolveKey(keyId string) (Pair, error) {
+func (r *multiResolver) ResolveKey(ctx context.Context, keyId string) (Pair, error) {
 	values := map[string]interface{}{
 		KeyIdParameterName: keyId,
 	}
 
 	loader, err := r.expander.Expand(values)
+	if isContextDone(ctx) {
+		return nil, ErrOperationTimedOut
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	data, err := resource.ReadAll(loader)
+	if isContextDone(ctx) {
+		return nil, ErrOperationTimedOut
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	return r.parseKey(data)
+	return r.parseKey(ctx, data)
 }

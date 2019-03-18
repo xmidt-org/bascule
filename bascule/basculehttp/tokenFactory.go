@@ -94,7 +94,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *htt
 		keyID = btf.DefaultKeyId
 	}
 
-	pair, err := btf.Resolver.ResolveKey(keyID)
+	pair, err := btf.Resolver.ResolveKey(ctx, keyID)
 	if err != nil {
 		return nil, err
 	}
