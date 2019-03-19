@@ -2,7 +2,6 @@ package key
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"sync/atomic"
 )
@@ -10,10 +9,6 @@ import (
 const (
 	// dummyKeyId is used when no actual keyID is necessary.
 	dummyKeyId = ""
-)
-
-var (
-	ErrOperationTimedOut = errors.New("operation timed out")
 )
 
 // Cache is a Resolver type which provides caching for keys based on keyID.
@@ -74,16 +69,12 @@ func (cache *singleCache) ResolveKey(ctx context.Context, keyID string) (pair Pa
 	if !ok {
 		cache.update(func() {
 			pair, ok = cache.load().(Pair)
-			if isContextDone(ctx) {
-				err = ErrOperationTimedOut
+			if ctx.Err() != nil {
+				err = ctx.Err()
 				return
 			}
 			if !ok {
 				pair, err = cache.delegate.ResolveKey(ctx, keyID)
-				if isContextDone(ctx) {
-					err = ErrOperationTimedOut
-					return
-				}
 				if err == nil {
 					cache.store(pair)
 				}
@@ -100,11 +91,6 @@ func (cache *singleCache) UpdateKeys(ctx context.Context) (count int, errors []e
 		// this type of cache is specifically for resolvers which don't use the keyID,
 		// so just pass an empty string in
 		pair, err := cache.delegate.ResolveKey(ctx, dummyKeyId)
-		if isContextDone(ctx) {
-			count = 0
-			errors = []error{ErrOperationTimedOut}
-			return
-		}
 
 		if err == nil {
 			cache.store(pair)
@@ -158,17 +144,13 @@ func (cache *multiCache) ResolveKey(ctx context.Context, keyID string) (pair Pai
 	if !ok {
 		cache.update(func() {
 			pair, ok = cache.fetchPair(keyID)
-			if isContextDone(ctx) {
-				err = ErrOperationTimedOut
+			if ctx.Err() != nil {
+				err = ctx.Err()
 				return
 			}
 
 			if !ok {
 				pair, err = cache.delegate.ResolveKey(ctx, keyID)
-				if isContextDone(ctx) {
-					err = ErrOperationTimedOut
-					return
-				}
 
 				if err == nil {
 					newPairs := cache.copyPairs()
@@ -189,19 +171,11 @@ func (cache *multiCache) UpdateKeys(ctx context.Context) (count int, errors []er
 			newCount := 0
 			newPairs := make(map[string]Pair, len(existingPairs))
 			for keyID, oldPair := range existingPairs {
-				if isContextDone(ctx) {
-					count = 0
-					errors = append(errors, ErrOperationTimedOut)
+				if ctx.Err() != nil {
+					errors = append(errors, ctx.Err())
 					return
 				}
 				newPair, err := cache.delegate.ResolveKey(ctx, keyID)
-
-				if isContextDone(ctx) {
-					count = 0
-					errors = append(errors, ErrOperationTimedOut)
-					return
-				}
-
 				if err == nil {
 					newCount++
 					newPairs[keyID] = newPair

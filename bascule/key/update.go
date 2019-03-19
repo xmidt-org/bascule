@@ -101,12 +101,3 @@ func WithUpdate(o UpdateOptions) (context.Context, func()) {
 	// just wants a <-chan struct{} the caller can use updateCtx.Done().
 	return updateCtx, cancel
 }
-
-func isContextDone(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
-}

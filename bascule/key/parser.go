@@ -38,15 +38,12 @@ func (p defaultParser) parseRSAPrivateKey(ctx context.Context, purpose Purpose, 
 	)
 
 	if parsedKey, err = x509.ParsePKCS1PrivateKey(decoded); err != nil {
-		if isContextDone(ctx) {
-			return nil, ErrOperationTimedOut
-		}
 		if parsedKey, err = x509.ParsePKCS8PrivateKey(decoded); err != nil {
 			return nil, ErrorUnsupportedPrivateKeyFormat
 		}
 	}
-	if isContextDone(ctx) {
-		return nil, ErrOperationTimedOut
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	privateKey, ok := parsedKey.(*rsa.PrivateKey)
@@ -70,8 +67,8 @@ func (p defaultParser) parseRSAPublicKey(ctx context.Context, purpose Purpose, d
 	if parsedKey, err = x509.ParsePKIXPublicKey(decoded); err != nil {
 		return nil, err
 	}
-	if isContextDone(ctx) {
-		return nil, ErrOperationTimedOut
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	publicKey, ok := parsedKey.(*rsa.PublicKey)
@@ -91,8 +88,8 @@ func (p defaultParser) ParseKey(ctx context.Context, purpose Purpose, data []byt
 	if block == nil {
 		return nil, ErrorPEMRequired
 	}
-	if isContextDone(ctx) {
-		return nil, ErrOperationTimedOut
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	if purpose.RequiresPrivateKey() {

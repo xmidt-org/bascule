@@ -42,8 +42,8 @@ func (r *singleResolver) String() string {
 
 func (r *singleResolver) ResolveKey(ctx context.Context, keyId string) (Pair, error) {
 	data, err := resource.ReadAll(r.loader)
-	if isContextDone(ctx) {
-		return nil, ErrOperationTimedOut
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 	if err != nil {
 		return nil, err
@@ -74,16 +74,13 @@ func (r *multiResolver) ResolveKey(ctx context.Context, keyId string) (Pair, err
 	}
 
 	loader, err := r.expander.Expand(values)
-	if isContextDone(ctx) {
-		return nil, ErrOperationTimedOut
-	}
 	if err != nil {
 		return nil, err
 	}
 
 	data, err := resource.ReadAll(loader)
-	if isContextDone(ctx) {
-		return nil, ErrOperationTimedOut
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 	if err != nil {
 		return nil, err
