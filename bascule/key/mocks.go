@@ -1,16 +1,22 @@
 package key
 
 import (
+	"context"
+
 	"github.com/stretchr/testify/mock"
 )
+
+var _ Resolver = (*MockResolver)(nil)
+var _ Cache = (*MockCache)(nil)
+var _ Parser = (*MockParser)(nil)
 
 // MockResolver is a stretchr mock for Resolver.  It's exposed for other package tests.
 type MockResolver struct {
 	mock.Mock
 }
 
-func (resolver *MockResolver) ResolveKey(keyId string) (Pair, error) {
-	arguments := resolver.Called(keyId)
+func (resolver *MockResolver) ResolveKey(ctx context.Context, keyId string) (Pair, error) {
+	arguments := resolver.Called(ctx, keyId)
 	if pair, ok := arguments.Get(0).(Pair); ok {
 		return pair, arguments.Error(1)
 	} else {
@@ -23,8 +29,8 @@ type MockCache struct {
 	mock.Mock
 }
 
-func (cache *MockCache) ResolveKey(keyId string) (Pair, error) {
-	arguments := cache.Called(keyId)
+func (cache *MockCache) ResolveKey(ctx context.Context, keyId string) (Pair, error) {
+	arguments := cache.Called(ctx, keyId)
 	if pair, ok := arguments.Get(0).(Pair); ok {
 		return pair, arguments.Error(1)
 	} else {
@@ -32,8 +38,8 @@ func (cache *MockCache) ResolveKey(keyId string) (Pair, error) {
 	}
 }
 
-func (cache *MockCache) UpdateKeys() (int, []error) {
-	arguments := cache.Called()
+func (cache *MockCache) UpdateKeys(ctx context.Context) (int, []error) {
+	arguments := cache.Called(ctx)
 	if errors, ok := arguments.Get(1).([]error); ok {
 		return arguments.Int(0), errors
 	} else {
@@ -70,8 +76,8 @@ type MockParser struct {
 	mock.Mock
 }
 
-func (parser *MockParser) ParseKey(purpose Purpose, data []byte) (Pair, error) {
-	arguments := parser.Called(purpose, data)
+func (parser *MockParser) ParseKey(ctx context.Context, purpose Purpose, data []byte) (Pair, error) {
+	arguments := parser.Called(ctx, purpose, data)
 	if pair, ok := arguments.Get(0).(Pair); ok {
 		return pair, arguments.Error(1)
 	}
