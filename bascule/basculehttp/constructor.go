@@ -12,14 +12,14 @@ const (
 	DefaultHeaderName = "Authorization"
 )
 
-type decorator struct {
+type constructor struct {
 	headerName     string
 	authorizations map[bascule.Authorization]TokenFactory
 }
 
-func (d *decorator) decorate(next http.Handler) http.Handler {
+func (c *constructor) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		authorization := request.Header.Get(d.headerName)
+		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
 			response.WriteHeader(http.StatusForbidden)
 			return
@@ -35,7 +35,7 @@ func (d *decorator) decorate(next http.Handler) http.Handler {
 			textproto.CanonicalMIMEHeaderKey(authorization[:i]),
 		)
 
-		tf, supported := d.authorizations[key]
+		tf, supported := c.authorizations[key]
 		if !supported {
 			response.WriteHeader(http.StatusForbidden)
 			return
@@ -60,34 +60,34 @@ func (d *decorator) decorate(next http.Handler) http.Handler {
 	})
 }
 
-type Option func(*decorator)
+type COption func(*constructor)
 
-func WithHeaderName(headerName string) Option {
-	return func(d *decorator) {
+func WithHeaderName(headerName string) COption {
+	return func(c *constructor) {
 		if len(headerName) > 0 {
-			d.headerName = headerName
+			c.headerName = headerName
 		} else {
-			d.headerName = DefaultHeaderName
+			c.headerName = DefaultHeaderName
 		}
 	}
 }
 
-func WithTokenFactory(key bascule.Authorization, tf TokenFactory) Option {
-	return func(d *decorator) {
-		d.authorizations[key] = tf
+func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
+	return func(c *constructor) {
+		c.authorizations[key] = tf
 	}
 }
 
 // New returns an Alice-style constructor which decorates HTTP handlers with security code
-func New(options ...Option) func(http.Handler) http.Handler {
-	d := &decorator{
+func NewConstructor(options ...COption) func(http.Handler) http.Handler {
+	c := &constructor{
 		headerName:     DefaultHeaderName,
 		authorizations: make(map[bascule.Authorization]TokenFactory),
 	}
 
 	for _, o := range options {
-		o(d)
+		o(c)
 	}
 
-	return d.decorate
+	return c.decorate
 }
