@@ -6,10 +6,12 @@ import (
 	"github.com/Comcast/comcast-bascule/bascule"
 )
 
-// some metrics to be added: token type, partner id used, capabilities, source of request (principal?)
+type Monitor interface {
+	Monitor(bascule.Authentication)
+}
 
 type metrics struct {
-	measures bascule.Measures
+	monitor Monitor
 }
 
 func (m *metrics) decorate(next http.Handler) http.Handler {
@@ -20,8 +22,8 @@ func (m *metrics) decorate(next http.Handler) http.Handler {
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
-		if m.measures.TokenCount != nil {
-			m.measures.TokenCount.With(bascule.TokenTypeLabel, auth.Token.Type()).Add(1.0)
+		if m.monitor != nil {
+			m.monitor.Monitor(auth)
 		}
 		next.ServeHTTP(response, request)
 
@@ -30,9 +32,9 @@ func (m *metrics) decorate(next http.Handler) http.Handler {
 
 type MOption func(*metrics)
 
-func WithMeasures(measures bascule.Measures) MOption {
+func WithMeasures(monitor Monitor) MOption {
 	return func(m *metrics) {
-		m.measures = measures
+		m.monitor = monitor
 	}
 }
 
