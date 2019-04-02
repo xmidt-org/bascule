@@ -11,10 +11,10 @@ type Listener interface {
 }
 
 type listenerDecorator struct {
-	listener Listener
+	listeners []Listener
 }
 
-func (m *listenerDecorator) decorate(next http.Handler) http.Handler {
+func (l *listenerDecorator) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		ctx := request.Context()
 		auth, ok := bascule.FromContext(ctx)
@@ -22,27 +22,19 @@ func (m *listenerDecorator) decorate(next http.Handler) http.Handler {
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
-		if m.listener != nil {
-			m.listener.OnAuthenticated(auth)
+		for _, listener := range l.listeners {
+			listener.OnAuthenticated(auth)
 		}
 		next.ServeHTTP(response, request)
 
 	})
 }
 
-type LOption func(*listenerDecorator)
-
-func WithMeasures(listener Listener) LOption {
-	return func(m *listenerDecorator) {
-		m.listener = listener
-	}
-}
-
-func NewListenerDecorator(options ...LOption) func(http.Handler) http.Handler {
+func NewListenerDecorator(listeners ...Listener) func(http.Handler) http.Handler {
 	l := &listenerDecorator{}
 
-	for _, o := range options {
-		o(l)
+	for _, listener := range listeners {
+		l.listeners = append(l.listeners, listener)
 	}
 	return l.decorate
 }
