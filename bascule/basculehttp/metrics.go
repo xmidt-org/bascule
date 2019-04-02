@@ -6,15 +6,15 @@ import (
 	"github.com/Comcast/comcast-bascule/bascule"
 )
 
-type Monitor interface {
-	Monitor(bascule.Authentication)
+type Listener interface {
+	OnAuthenticated(bascule.Authentication)
 }
 
-type metrics struct {
-	monitor Monitor
+type listenerDecorator struct {
+	listener Listener
 }
 
-func (m *metrics) decorate(next http.Handler) http.Handler {
+func (m *listenerDecorator) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		ctx := request.Context()
 		auth, ok := bascule.FromContext(ctx)
@@ -22,27 +22,27 @@ func (m *metrics) decorate(next http.Handler) http.Handler {
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
-		if m.monitor != nil {
-			m.monitor.Monitor(auth)
+		if m.listener != nil {
+			m.listener.OnAuthenticated(auth)
 		}
 		next.ServeHTTP(response, request)
 
 	})
 }
 
-type MOption func(*metrics)
+type LOption func(*listenerDecorator)
 
-func WithMeasures(monitor Monitor) MOption {
-	return func(m *metrics) {
-		m.monitor = monitor
+func WithMeasures(listener Listener) LOption {
+	return func(m *listenerDecorator) {
+		m.listener = listener
 	}
 }
 
-func NewMetrics(options ...MOption) func(http.Handler) http.Handler {
-	m := &metrics{}
+func NewListenerDecorator(options ...LOption) func(http.Handler) http.Handler {
+	l := &listenerDecorator{}
 
 	for _, o := range options {
-		o(m)
+		o(l)
 	}
-	return m.decorate
+	return l.decorate
 }
