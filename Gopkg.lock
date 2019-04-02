@@ -2,10 +2,9 @@
 
 
 [[projects]]
-  digest = "1:81f6ddd8ddf177266084efd103048aaf07a26e6a78c2c5d0f2bcea3ba8dde1e8"
+  digest = "1:aed54ad1e919e3289a1af7112f386d79b3c2a02fc4c0a9fdb0486ada9dbac26f"
   name = "github.com/Comcast/webpa-common"
   packages = [
-    "concurrent",
     "resource",
     "types",
   ]
@@ -73,7 +72,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/Comcast/webpa-common/concurrent",
     "github.com/Comcast/webpa-common/resource",
     "github.com/Comcast/webpa-common/types",
     "github.com/SermoDigital/jose/jws",

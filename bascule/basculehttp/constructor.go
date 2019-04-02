@@ -51,8 +51,8 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		ctx = bascule.WithAuthentication(
 			request.Context(),
 			bascule.Authentication{
-				key,
-				token,
+				Authorization: key,
+				Token:         token,
 			},
 		)
 
