@@ -41,14 +41,26 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 	}
 }
 
-func CreateAttributeCheckByFunc(key string, check AttributeCheckFunc) ValidatorFunc {
+func CreateStringListAttributeCheck(key string, checks ...func(context.Context, []string) error) ValidatorFunc {
 	return func(ctx context.Context, token Token) error {
 		val, ok := token.Attributes()[key]
 		if !ok {
 			return errors.New("no capabilities found")
 		}
-		return check(ctx, val)
+		strVal, ok := val.([]string)
+		if !ok {
+			return errors.New("unexpected attribute value, expected []string")
+		}
+		errs := Errors{}
+		for _, check := range checks {
+			err := check(ctx, strVal)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		if len(errs) == 0 {
+			return nil
+		}
+		return errs
 	}
 }
-
-type AttributeCheckFunc func(context.Context, interface{}) error
