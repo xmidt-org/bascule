@@ -68,10 +68,10 @@ type BearerTokenFactory struct {
 }
 
 func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *http.Request, auth bascule.Authorization, value string) (bascule.Token, error) {
-	decoded, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return nil, err
+	if len(value) == 0 {
+		return nil, errors.New("empty value")
 	}
+	decoded := []byte(value)
 
 	jwsToken, err := btf.Parser.ParseJWS(decoded)
 	if err != nil {

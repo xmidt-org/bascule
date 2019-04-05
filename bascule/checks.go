@@ -5,6 +5,7 @@ package bascule
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 const (
@@ -41,15 +42,15 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 	}
 }
 
-func CreateStringListAttributeCheck(key string, checks ...func(context.Context, []string) error) ValidatorFunc {
+func CreateListAttributeCheck(key string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
 	return func(ctx context.Context, token Token) error {
 		val, ok := token.Attributes()[key]
 		if !ok {
 			return errors.New("no capabilities found")
 		}
-		strVal, ok := val.([]string)
+		strVal, ok := val.([]interface{})
 		if !ok {
-			return errors.New("unexpected attribute value, expected []string")
+			return fmt.Errorf("unexpected attribute value, expected []interface{} but received: %v", val)
 		}
 		errs := Errors{}
 		for _, check := range checks {
