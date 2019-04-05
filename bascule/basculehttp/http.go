@@ -13,6 +13,23 @@ type headerer interface {
 	Headers() http.Header
 }
 
+type ErrorHeaderer struct {
+	err     error
+	headers http.Header
+}
+
+func (e ErrorHeaderer) Error() string {
+	return e.err.Error()
+}
+
+func (e ErrorHeaderer) Headers() http.Header {
+	return e.headers
+}
+
+func NewErrorHeaderer(err error, headers map[string][]string) error {
+	return ErrorHeaderer{err: err, headers: headers}
+}
+
 // WriteResponse performs some basic reflection on v to allow it to modify responses written
 // to an HTTP response.  Useful mainly for errors.
 func WriteResponse(response http.ResponseWriter, defaultStatusCode int, v interface{}) {
