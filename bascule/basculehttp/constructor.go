@@ -44,7 +44,11 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		ctx := request.Context()
 		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+1:])
 		if err != nil {
-			errHeaderer := NewErrorHeaderer(err, map[string][]string{"authError": []string{err.Error()}})
+			errHeaderer := NewErrorHeaderer(err, map[string][]string{
+				"authError": []string{err.Error()},
+				"key":       []string{string(key)},
+				"auth":      []string{authorization[:i], authorization[i+1:]},
+			})
 			WriteResponse(response, http.StatusUnauthorized, errHeaderer)
 			return
 		}
