@@ -5,6 +5,7 @@ package bascule
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 const (
@@ -49,7 +50,7 @@ func CreateStringListAttributeCheck(key string, checks ...func(context.Context, 
 		}
 		strVal, ok := val.([]string)
 		if !ok {
-			return errors.New("unexpected attribute value, expected []string")
+			return fmt.Errorf("unexpected attribute value, expected []string but received: %v", val)
 		}
 		errs := Errors{}
 		for _, check := range checks {
