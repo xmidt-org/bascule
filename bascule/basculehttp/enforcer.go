@@ -25,7 +25,16 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		}
 		err := rules.Check(ctx, auth.Token)
 		if err != nil {
-			WriteResponse(response, http.StatusUnauthorized, err)
+			errStrings := []string{err.Error()}
+			if errs, ok := err.(bascule.MultiError); ok {
+				for _, e := range errs.Errors() {
+					errStrings = append(errStrings, e.Error())
+				}
+			}
+			errHeaderer := NewErrorHeaderer(err, map[string][]string{
+				"authError": errStrings,
+			})
+			WriteResponse(response, http.StatusUnauthorized, errHeaderer)
 			return
 		}
 		next.ServeHTTP(response, request)
