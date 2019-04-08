@@ -12,6 +12,12 @@ const (
 	capabilitiesKey = "capabilities"
 )
 
+func CreateAllowAllCheck() ValidatorFunc {
+	return func(_ context.Context, _ Token) error {
+		return nil
+	}
+}
+
 func CreateValidTypeCheck(validTypes []string) ValidatorFunc {
 	return func(_ context.Context, token Token) error {
 		tt := token.Type()
@@ -64,4 +70,20 @@ func CreateListAttributeCheck(key string, checks ...func(context.Context, []inte
 		}
 		return errs
 	}
+}
+
+func NonEmptyStringListCheck(ctx context.Context, vals []interface{}) error {
+	if len(vals) == 0 {
+		return errors.New("expected at least one value")
+	}
+	for _, val := range vals {
+		str, ok := val.(string)
+		if !ok {
+			return errors.New("expected value to be a string")
+		}
+		if len(str) == 0 {
+			return errors.New("expected string to be nonempty")
+		}
+	}
+	return nil
 }
