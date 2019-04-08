@@ -6,8 +6,15 @@ import (
 	"github.com/Comcast/comcast-bascule/bascule"
 )
 
+// Behavior on not found
+const (
+	Forbid = iota
+	Allow
+)
+
 type enforcer struct {
-	rules map[bascule.Authorization]bascule.Validators
+	notFoundBehavior int
+	rules            map[bascule.Authorization]bascule.Validators
 }
 
 func (e *enforcer) decorate(next http.Handler) http.Handler {
@@ -20,19 +27,34 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		}
 		rules, ok := e.rules[auth.Authorization]
 		if !ok {
-			response.WriteHeader(http.StatusForbidden)
-			return
-		}
-		err := rules.Check(ctx, auth.Token)
-		if err != nil {
-			WriteResponse(response, http.StatusUnauthorized, err)
-			return
+			switch e.notFoundBehavior {
+			case Forbid:
+				response.WriteHeader(http.StatusForbidden)
+				return
+			case Allow:
+				// continue
+			default:
+				response.WriteHeader(http.StatusForbidden)
+				return
+			}
+		} else {
+			err := rules.Check(ctx, auth.Token)
+			if err != nil {
+				WriteResponse(response, http.StatusUnauthorized, err)
+				return
+			}
 		}
 		next.ServeHTTP(response, request)
 	})
 }
 
 type EOption func(*enforcer)
+
+func WithNotFoundBehavior(behavior int) EOption {
+	return func(e *enforcer) {
+		e.notFoundBehavior = behavior
+	}
+}
 
 func WithRules(key bascule.Authorization, v bascule.Validators) EOption {
 	return func(e *enforcer) {
