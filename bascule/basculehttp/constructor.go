@@ -1,6 +1,7 @@
 package basculehttp
 
 import (
+	"context"
 	"net/http"
 	"net/textproto"
 	"strings"
@@ -15,18 +16,22 @@ const (
 type constructor struct {
 	headerName     string
 	authorizations map[bascule.Authorization]TokenFactory
+	getLogger      func(context.Context) Logger
 }
 
 func (c *constructor) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		logger := c.getLogger(request.Context())
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
+			logger.Log(errorKey, "no authorization header", "request", request)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
 
 		i := strings.IndexByte(authorization, ' ')
 		if i < 1 {
+			logger.Log(errorKey, "unexpected authorization header value", "request", request, "auth", authorization)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -37,6 +42,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 
 		tf, supported := c.authorizations[key]
 		if !supported {
+			logger.Log(errorKey, "key not supported", "request", request, "key", key, "auth", authorization[i+1:])
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -44,6 +50,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		ctx := request.Context()
 		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+1:])
 		if err != nil {
+			logger.Log(errorKey, err.Error(), "request", request, "key", key, "auth", authorization[i+1:])
 			WriteResponse(response, http.StatusUnauthorized, err)
 			return
 		}
@@ -78,11 +85,18 @@ func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 	}
 }
 
+func WithCLogger(getLogger func(context.Context) Logger) COption {
+	return func(c *constructor) {
+		c.getLogger = getLogger
+	}
+}
+
 // New returns an Alice-style constructor which decorates HTTP handlers with security code
 func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 	c := &constructor{
 		headerName:     DefaultHeaderName,
 		authorizations: make(map[bascule.Authorization]TokenFactory),
+		getLogger:      getDefaultLoggerFunc,
 	}
 
 	for _, o := range options {

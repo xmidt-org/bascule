@@ -1,6 +1,7 @@
 package basculehttp
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/Comcast/comcast-bascule/bascule"
@@ -19,18 +20,23 @@ const (
 type enforcer struct {
 	notFoundBehavior NotFoundBehavior
 	rules            map[bascule.Authorization]bascule.Validators
+	getLogger        func(context.Context) Logger
 }
 
 func (e *enforcer) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		ctx := request.Context()
+		logger := e.getLogger(ctx)
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
+			logger.Log(errorKey, "no authentication found", "request", request)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
 		rules, ok := e.rules[auth.Authorization]
 		if !ok {
+			logger.Log(errorKey, "no rules found for authorization", "request", request)
+
 			switch e.notFoundBehavior {
 			case Forbid:
 				response.WriteHeader(http.StatusForbidden)
@@ -44,6 +50,13 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		} else {
 			err := rules.Check(ctx, auth.Token)
 			if err != nil {
+				errs := []string{err.Error()}
+				if es, ok := err.(bascule.Errors); ok {
+					for _, e := range es {
+						errs = append(errs, e.Error())
+					}
+				}
+				logger.Log(errorKey, errs, "request", request)
 				WriteResponse(response, http.StatusUnauthorized, err)
 				return
 			}
@@ -66,9 +79,16 @@ func WithRules(key bascule.Authorization, v bascule.Validators) EOption {
 	}
 }
 
+func WithELogger(getLogger func(context.Context) Logger) EOption {
+	return func(e *enforcer) {
+		e.getLogger = getLogger
+	}
+}
+
 func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
 	e := &enforcer{
-		rules: make(map[bascule.Authorization]bascule.Validators),
+		rules:     make(map[bascule.Authorization]bascule.Validators),
+		getLogger: getDefaultLoggerFunc,
 	}
 
 	for _, o := range options {
