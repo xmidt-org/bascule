@@ -29,7 +29,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		logger := e.getLogger(ctx)
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
-			logger.Log(errorKey, "no authentication found", "request", request)
+			logger.Log(bascule.ErrorKey, "no authentication found", "request", request)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -79,7 +79,7 @@ func WithRules(key bascule.Authorization, v bascule.Validators) EOption {
 	}
 }
 
-func WithELogger(getLogger func(context.Context) Logger) EOption {
+func WithELogger(getLogger func(context.Context) bascule.Logger) EOption {
 	return func(e *enforcer) {
 		e.getLogger = getLogger
 	}
@@ -88,7 +88,7 @@ func WithELogger(getLogger func(context.Context) Logger) EOption {
 func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
 	e := &enforcer{
 		rules:     make(map[bascule.Authorization]bascule.Validators),
-		getLogger: getDefaultLoggerFunc,
+		getLogger: bascule.GetDefaultLoggerFunc,
 	}
 
 	for _, o := range options {
