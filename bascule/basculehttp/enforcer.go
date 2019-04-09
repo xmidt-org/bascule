@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Comcast/comcast-bascule/bascule"
+	"github.com/go-kit/kit/log/level"
 )
 
 //go:generate stringer -type=NotFoundBehavior
@@ -29,7 +30,8 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		logger := e.getLogger(ctx)
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
-			logger.Log(bascule.ErrorKey, "no authentication found", "request", request)
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authentication found",
+				"request", request)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -61,6 +63,8 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 				return
 			}
 		}
+		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication accepted by enforcer",
+			"request", request)
 		next.ServeHTTP(response, request)
 	})
 }
