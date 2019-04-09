@@ -6,14 +6,27 @@ import (
 	"github.com/Comcast/comcast-bascule/bascule"
 )
 
+type NotFoundBehavior int
+
 // Behavior on not found
 const (
-	Forbid = iota
+	Forbid NotFoundBehavior = iota
 	Allow
 )
 
+func (n NotFoundBehavior) String() string {
+	switch n {
+	case Forbid:
+		return "Forbid authorization default behavior"
+	case Allow:
+		return "Allow authorization default behavior"
+	default:
+		return "Unknown behavior"
+	}
+}
+
 type enforcer struct {
-	notFoundBehavior int
+	notFoundBehavior NotFoundBehavior
 	rules            map[bascule.Authorization]bascule.Validators
 }
 
@@ -50,7 +63,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 
 type EOption func(*enforcer)
 
-func WithNotFoundBehavior(behavior int) EOption {
+func WithNotFoundBehavior(behavior NotFoundBehavior) EOption {
 	return func(e *enforcer) {
 		e.notFoundBehavior = behavior
 	}
