@@ -46,7 +46,7 @@ func CreateListAttributeCheck(key string, checks ...func(context.Context, []inte
 	return func(ctx context.Context, token Token) error {
 		val, ok := token.Attributes()[key]
 		if !ok {
-			return errors.New("no capabilities found")
+			return fmt.Errorf("couldn't find attribute with key %v", key)
 		}
 		strVal, ok := val.([]interface{})
 		if !ok {
