@@ -6,6 +6,8 @@ import (
 	"github.com/Comcast/comcast-bascule/bascule"
 )
 
+//go:generate stringer -type=NotFoundBehavior
+
 type NotFoundBehavior int
 
 // Behavior on not found
@@ -13,17 +15,6 @@ const (
 	Forbid NotFoundBehavior = iota
 	Allow
 )
-
-func (n NotFoundBehavior) String() string {
-	switch n {
-	case Forbid:
-		return "Forbid authorization default behavior"
-	case Allow:
-		return "Allow authorization default behavior"
-	default:
-		return "Unknown behavior"
-	}
-}
 
 type enforcer struct {
 	notFoundBehavior NotFoundBehavior
