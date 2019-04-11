@@ -2,6 +2,7 @@ package basculehttp
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Comcast/comcast-bascule/bascule"
@@ -30,6 +31,10 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		logger := e.getLogger(ctx)
 		if logger == nil {
 			logger = bascule.GetDefaultLoggerFunc(ctx)
+		}
+		err := logger.Log(level.Key(), level.ErrorValue(), "msg", "testing logger")
+		if err != nil {
+			panic(fmt.Sprintf("panicking from log error: %v", err.Error()))
 		}
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
