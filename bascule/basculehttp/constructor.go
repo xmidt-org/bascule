@@ -23,6 +23,9 @@ type constructor struct {
 func (c *constructor) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		logger := c.getLogger(request.Context())
+		if logger == nil {
+			logger = bascule.GetDefaultLoggerFunc(request.Context())
+		}
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
 			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authorization header", "request", request)

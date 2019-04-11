@@ -21,13 +21,16 @@ const (
 type enforcer struct {
 	notFoundBehavior NotFoundBehavior
 	rules            map[bascule.Authorization]bascule.Validators
-	getLogger        func(context.Context) Logger
+	getLogger        func(context.Context) bascule.Logger
 }
 
 func (e *enforcer) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		ctx := request.Context()
 		logger := e.getLogger(ctx)
+		if logger == nil {
+			logger = bascule.GetDefaultLoggerFunc(ctx)
+		}
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
 			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authentication found",
@@ -37,8 +40,8 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		}
 		rules, ok := e.rules[auth.Authorization]
 		if !ok {
-			logger.Log(errorKey, "no rules found for authorization", "request", request)
-
+			logger.Log(level.Key(), level.ErrorValue(),
+				bascule.ErrorKey, "no rules found for authorization", "request", request)
 			switch e.notFoundBehavior {
 			case Forbid:
 				response.WriteHeader(http.StatusForbidden)
@@ -58,7 +61,8 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 						errs = append(errs, e.Error())
 					}
 				}
-				logger.Log(errorKey, errs, "request", request)
+				logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, errs,
+					"request", request)
 				WriteResponse(response, http.StatusUnauthorized, err)
 				return
 			}
