@@ -28,7 +28,8 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		}
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authorization header", "request", request)
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authorization header",
+				"request header", request.Header, "request URL", request.URL)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -36,7 +37,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		i := strings.IndexByte(authorization, ' ')
 		if i < 1 {
 			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "unexpected authorization header value",
-				"request", request, "auth", authorization)
+				"auth", authorization)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -47,8 +48,8 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 
 		tf, supported := c.authorizations[key]
 		if !supported {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "key not supported", "request", request,
-				"key", key, "auth", authorization[i+1:])
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "key not supported", "key", key,
+				"auth", authorization[i+1:])
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -56,8 +57,8 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		ctx := request.Context()
 		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+1:])
 		if err != nil {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "request", request,
-				"key", key, "auth", authorization[i+1:])
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "key", key,
+				"auth", authorization[i+1:])
 			WriteResponse(response, http.StatusUnauthorized, err)
 			return
 		}
@@ -69,7 +70,8 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 				Token:         token,
 			},
 		)
-		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication added to context", "request", request,
+		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication added to context",
+			"request headers", request.Header, "request URL", request.URL,
 			"token", token, "key", key)
 
 		next.ServeHTTP(response, request.WithContext(ctx))
