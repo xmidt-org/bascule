@@ -28,8 +28,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		}
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authorization header",
-				"request header", request.Header, "request URL", request.URL)
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authorization header")
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -71,7 +70,6 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			},
 		)
 		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication added to context",
-			"request headers", request.Header, "request URL", request.URL,
 			"token", token, "key", key)
 
 		next.ServeHTTP(response, request.WithContext(ctx))

@@ -66,8 +66,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 				return
 			}
 		}
-		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication accepted by enforcer",
-			"request headers", request.Header, "request URL", request.URL)
+		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication accepted by enforcer")
 		next.ServeHTTP(response, request)
 	})
 }
