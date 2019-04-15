@@ -1,5 +1,7 @@
 package bascule
 
+import "fmt"
+
 // Error is an optional interface to be implemented by security related errors
 type Error interface {
 	Cause() error
@@ -13,7 +15,11 @@ type MultiError interface {
 type Errors []error
 
 func (e Errors) Error() string {
-	return "multiple errors"
+	var errors string
+	for _, err := range e {
+		errors = errors + ", " + err.Error()
+	}
+	return fmt.Sprintf("multiple errors: [%v]", errors)
 }
 
 func (e Errors) Errors() []error {
