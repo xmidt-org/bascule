@@ -67,6 +67,10 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			bascule.Authentication{
 				Authorization: key,
 				Token:         token,
+				Request: bascule.Request{
+					URL:    request.URL.EscapedPath(),
+					Method: request.Method,
+				},
 			},
 		)
 		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication added to context",

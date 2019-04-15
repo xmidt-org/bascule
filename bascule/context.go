@@ -1,6 +1,8 @@
 package bascule
 
-import "context"
+import (
+	"context"
+)
 
 // Authorization represents the authorization mechanism performed on the token,
 // e.g. "Basic", "Bearer", etc for HTTP security environments.
@@ -10,6 +12,12 @@ type Authorization string
 type Authentication struct {
 	Authorization Authorization
 	Token         Token
+	Request       Request
+}
+
+type Request struct {
+	URL    string
+	Method string
 }
 
 type authenticationKey struct{}
