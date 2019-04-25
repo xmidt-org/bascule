@@ -40,17 +40,17 @@ func TestBasicTokenFactory(t *testing.T) {
 		{
 			description: "Malformed Value Error",
 			value:       base64.StdEncoding.EncodeToString([]byte("abcdef")),
-			expectedErr: errors.New("TODO:"),
+			expectedErr: ErrorMalformedValue,
 		},
 		{
 			description: "Key Not in Map Error",
 			value:       base64.StdEncoding.EncodeToString([]byte("u:p")),
-			expectedErr: errors.New("TODO:"),
+			expectedErr: ErrorNotInMap,
 		},
 		{
 			description: "Invalid Password Error",
 			value:       base64.StdEncoding.EncodeToString([]byte("user:p")),
-			expectedErr: errors.New("TODO:"),
+			expectedErr: ErrorInvalidPassword,
 		},
 	}
 

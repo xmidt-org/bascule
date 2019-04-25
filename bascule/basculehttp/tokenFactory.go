@@ -18,6 +18,9 @@ const (
 )
 
 var (
+	ErrorMalformedValue      = errors.New("Expected <user>:<password> in decoded value")
+	ErrorNotInMap            = errors.New("Principal not found")
+	ErrorInvalidPassword     = errors.New("Invalid password")
 	ErrorNoProtectedHeader   = errors.New("Missing protected header")
 	ErrorNoSigningMethod     = errors.New("Signing method (alg) is missing or unrecognized")
 	ErrorUnexpectedPayload   = errors.New("Payload isn't a map of strings to interfaces")
@@ -47,17 +50,21 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 	}
 
 	i := bytes.IndexByte(decoded, ':')
-	if i > 0 {
-		principal := string(decoded[:i])
-		if btf[principal] == string(decoded[i+1:]) {
-			// "basic" is a placeholder here ... token types won't always map to the Authorization header.
-			// For example, a JWT should have a type of "jwt" or some such, not "bearer"
-			return bascule.NewToken("basic", principal, bascule.Attributes{}), nil
-		}
+	if i <= 0 {
+		return nil, ErrorMalformedValue
 	}
-
-	// failed authentication
-	return nil, errors.New("TODO: Enrich this error with information")
+	principal := string(decoded[:i])
+	val, ok := btf[principal]
+	if !ok {
+		return nil, ErrorNotInMap
+	}
+	if val != string(decoded[i+1:]) {
+		// failed authentication
+		return nil, ErrorInvalidPassword
+	}
+	// "basic" is a placeholder here ... token types won't always map to the Authorization header.
+	// For example, a JWT should have a type of "jwt" or some such, not "bearer"
+	return bascule.NewToken("basic", principal, bascule.Attributes{}), nil
 }
 
 type BearerTokenFactory struct {
