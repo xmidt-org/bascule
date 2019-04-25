@@ -1,152 +1,154 @@
 package key
 
-// import (
-// 	"errors"
-// 	"fmt"
-// 	"github.com/Comcast/webpa-common/resource"
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/mock"
-// 	"testing"
-// )
+import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
 
-// func TestSingleResolver(t *testing.T) {
-// 	assert := assert.New(t)
+	"github.com/Comcast/webpa-common/resource"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
 
-// 	loader, err := (&resource.Factory{
-// 		URI: publicKeyFilePath,
-// 	}).NewLoader()
+func TestSingleResolver(t *testing.T) {
+	assert := assert.New(t)
 
-// 	if !assert.Nil(err) {
-// 		return
-// 	}
+	loader, err := (&resource.Factory{
+		URI: publicKeyFilePath,
+	}).NewLoader()
 
-// 	expectedData, err := resource.ReadAll(loader)
-// 	assert.NotEmpty(expectedData)
-// 	assert.Nil(err)
+	if !assert.Nil(err) {
+		return
+	}
 
-// 	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt, PurposeSign, PurposeEncrypt} {
-// 		t.Logf("purpose: %s", purpose)
+	expectedData, err := resource.ReadAll(loader)
+	assert.NotEmpty(expectedData)
+	assert.Nil(err)
 
-// 		expectedPair := &MockPair{}
-// 		parser := &MockParser{}
-// 		parser.On("ParseKey", purpose, expectedData).Return(expectedPair, nil).Once()
+	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt, PurposeSign, PurposeEncrypt} {
+		t.Logf("purpose: %s", purpose)
 
-// 		var resolver Resolver = &singleResolver{
-// 			basicResolver: basicResolver{
-// 				parser:  parser,
-// 				purpose: purpose,
-// 			},
+		expectedPair := &MockPair{}
+		parser := &MockParser{}
+		parser.On("ParseKey", mock.Anything, purpose, expectedData).Return(expectedPair, nil).Once()
 
-// 			loader: loader,
-// 		}
+		var resolver Resolver = &singleResolver{
+			basicResolver: basicResolver{
+				parser:  parser,
+				purpose: purpose,
+			},
 
-// 		assert.Contains(fmt.Sprintf("%s", resolver), publicKeyFilePath)
+			loader: loader,
+		}
 
-// 		pair, err := resolver.ResolveKey("does not matter")
-// 		assert.Equal(expectedPair, pair)
-// 		assert.Nil(err)
+		assert.Contains(fmt.Sprintf("%s", resolver), publicKeyFilePath)
 
-// 		mock.AssertExpectationsForObjects(t, expectedPair.Mock, parser.Mock)
-// 	}
-// }
+		pair, err := resolver.ResolveKey(context.Background(), "does not matter")
+		assert.Equal(expectedPair, pair)
+		assert.Nil(err)
 
-// func TestSingleResolverBadResource(t *testing.T) {
-// 	assert := assert.New(t)
+		mock.AssertExpectationsForObjects(t, expectedPair.Mock, parser.Mock)
+	}
+}
 
-// 	var resolver Resolver = &singleResolver{
-// 		basicResolver: basicResolver{
-// 			parser:  DefaultParser,
-// 			purpose: PurposeVerify,
-// 		},
-// 		loader: &resource.File{
-// 			Path: "does not exist",
-// 		},
-// 	}
+func TestSingleResolverBadResource(t *testing.T) {
+	assert := assert.New(t)
 
-// 	key, err := resolver.ResolveKey("does not matter")
-// 	assert.Nil(key)
-// 	assert.NotNil(err)
-// }
+	var resolver Resolver = &singleResolver{
+		basicResolver: basicResolver{
+			parser:  DefaultParser,
+			purpose: PurposeVerify,
+		},
+		loader: &resource.File{
+			Path: "does not exist",
+		},
+	}
 
-// func TestMultiResolver(t *testing.T) {
-// 	assert := assert.New(t)
+	key, err := resolver.ResolveKey(context.Background(), "does not matter")
+	assert.Nil(key)
+	assert.NotNil(err)
+}
 
-// 	expander, err := (&resource.Factory{
-// 		URI: publicKeyFilePathTemplate,
-// 	}).NewExpander()
+func TestMultiResolver(t *testing.T) {
+	assert := assert.New(t)
 
-// 	if !assert.Nil(err) {
-// 		return
-// 	}
+	expander, err := (&resource.Factory{
+		URI: publicKeyFilePathTemplate,
+	}).NewExpander()
 
-// 	loader, err := expander.Expand(
-// 		map[string]interface{}{KeyIdParameterName: keyId},
-// 	)
+	if !assert.Nil(err) {
+		return
+	}
 
-// 	expectedData, err := resource.ReadAll(loader)
-// 	assert.NotEmpty(expectedData)
-// 	assert.Nil(err)
+	loader, err := expander.Expand(
+		map[string]interface{}{KeyIdParameterName: keyId},
+	)
 
-// 	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt, PurposeSign, PurposeEncrypt} {
-// 		t.Logf("purpose: %s", purpose)
+	expectedData, err := resource.ReadAll(loader)
+	assert.NotEmpty(expectedData)
+	assert.Nil(err)
 
-// 		expectedPair := &MockPair{}
-// 		parser := &MockParser{}
-// 		parser.On("ParseKey", purpose, expectedData).Return(expectedPair, nil).Once()
+	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt, PurposeSign, PurposeEncrypt} {
+		t.Logf("purpose: %s", purpose)
 
-// 		var resolver Resolver = &multiResolver{
-// 			basicResolver: basicResolver{
-// 				parser:  parser,
-// 				purpose: purpose,
-// 			},
-// 			expander: expander,
-// 		}
+		expectedPair := &MockPair{}
+		parser := &MockParser{}
+		parser.On("ParseKey", mock.Anything, purpose, expectedData).Return(expectedPair, nil).Once()
 
-// 		assert.Contains(fmt.Sprintf("%s", resolver), publicKeyFilePathTemplate)
+		var resolver Resolver = &multiResolver{
+			basicResolver: basicResolver{
+				parser:  parser,
+				purpose: purpose,
+			},
+			expander: expander,
+		}
 
-// 		pair, err := resolver.ResolveKey(keyId)
-// 		assert.Equal(expectedPair, pair)
-// 		assert.Nil(err)
+		assert.Contains(fmt.Sprintf("%s", resolver), publicKeyFilePathTemplate)
 
-// 		mock.AssertExpectationsForObjects(t, expectedPair.Mock, parser.Mock)
-// 	}
-// }
+		pair, err := resolver.ResolveKey(context.Background(), keyId)
+		assert.Equal(expectedPair, pair)
+		assert.Nil(err)
 
-// func TestMultiResolverBadResource(t *testing.T) {
-// 	assert := assert.New(t)
+		mock.AssertExpectationsForObjects(t, expectedPair.Mock, parser.Mock)
+	}
+}
 
-// 	var resolver Resolver = &multiResolver{
-// 		expander: &resource.Template{
-// 			URITemplate: resource.MustParse("/this/does/not/exist/{key}"),
-// 		},
-// 	}
+func TestMultiResolverBadResource(t *testing.T) {
+	assert := assert.New(t)
 
-// 	key, err := resolver.ResolveKey("this isn't valid")
-// 	assert.Nil(key)
-// 	assert.NotNil(err)
-// }
+	var resolver Resolver = &multiResolver{
+		expander: &resource.Template{
+			URITemplate: resource.MustParse("/this/does/not/exist/{key}"),
+		},
+	}
 
-// type badExpander struct {
-// 	err error
-// }
+	key, err := resolver.ResolveKey(context.Background(), "this isn't valid")
+	assert.Nil(key)
+	assert.NotNil(err)
+}
 
-// func (bad *badExpander) Names() []string {
-// 	return []string{}
-// }
+type badExpander struct {
+	err error
+}
 
-// func (bad *badExpander) Expand(interface{}) (resource.Loader, error) {
-// 	return nil, bad.err
-// }
+func (bad *badExpander) Names() []string {
+	return []string{}
+}
 
-// func TestMultiResolverBadExpander(t *testing.T) {
-// 	assert := assert.New(t)
+func (bad *badExpander) Expand(interface{}) (resource.Loader, error) {
+	return nil, bad.err
+}
 
-// 	expectedError := errors.New("The roof! The roof! The roof is on fire!")
-// 	var resolver Resolver = &multiResolver{
-// 		expander: &badExpander{expectedError},
-// 	}
+func TestMultiResolverBadExpander(t *testing.T) {
+	assert := assert.New(t)
 
-// 	key, err := resolver.ResolveKey("does not matter")
-// 	assert.Nil(key)
-// 	assert.Equal(expectedError, err)
-// }
+	expectedError := errors.New("The roof! The roof! The roof is on fire!")
+	var resolver Resolver = &multiResolver{
+		expander: &badExpander{expectedError},
+	}
+
+	key, err := resolver.ResolveKey(context.Background(), "does not matter")
+	assert.Nil(key)
+	assert.Equal(expectedError, err)
+}

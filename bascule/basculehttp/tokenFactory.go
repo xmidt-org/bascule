@@ -67,7 +67,7 @@ type BearerTokenFactory struct {
 	JWTValidators []*jwt.Validator
 }
 
-func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *http.Request, auth bascule.Authorization, value string) (bascule.Token, error) {
+func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	if len(value) == 0 {
 		return nil, errors.New("empty value")
 	}

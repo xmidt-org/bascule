@@ -1,88 +1,90 @@
 package key
 
-// import (
-// 	"encoding/pem"
-// 	"fmt"
-// 	"github.com/stretchr/testify/assert"
-// 	"io/ioutil"
-// 	"testing"
-// )
+import (
+	"context"
+	"encoding/pem"
+	"fmt"
+	"io/ioutil"
+	"testing"
 
-// func makeNonKeyPEMBlock() []byte {
-// 	block := pem.Block{
-// 		Type:  "NOT A KEY",
-// 		Bytes: []byte{1, 2, 3, 4, 5},
-// 	}
+	"github.com/stretchr/testify/assert"
+)
 
-// 	return pem.EncodeToMemory(&block)
-// }
+func makeNonKeyPEMBlock() []byte {
+	block := pem.Block{
+		Type:  "NOT A KEY",
+		Bytes: []byte{1, 2, 3, 4, 5},
+	}
 
-// func TestDefaultParser(t *testing.T) {
-// 	assert := assert.New(t)
+	return pem.EncodeToMemory(&block)
+}
 
-// 	var testData = []struct {
-// 		keyFilePath   string
-// 		purpose       Purpose
-// 		expectPrivate bool
-// 	}{
-// 		{publicKeyFilePath, PurposeVerify, false},
-// 		{privateKeyFilePath, PurposeEncrypt, true},
-// 		{privateKeyFilePath, PurposeSign, true},
-// 		{publicKeyFilePath, PurposeDecrypt, false},
-// 	}
+func TestDefaultParser(t *testing.T) {
+	assert := assert.New(t)
 
-// 	for _, record := range testData {
-// 		t.Logf("%v", record)
+	var testData = []struct {
+		keyFilePath   string
+		purpose       Purpose
+		expectPrivate bool
+	}{
+		{publicKeyFilePath, PurposeVerify, false},
+		{privateKeyFilePath, PurposeEncrypt, true},
+		{privateKeyFilePath, PurposeSign, true},
+		{publicKeyFilePath, PurposeDecrypt, false},
+	}
 
-// 		data, err := ioutil.ReadFile(record.keyFilePath)
-// 		if !assert.Nil(err) {
-// 			continue
-// 		}
+	for _, record := range testData {
+		t.Logf("%v", record)
 
-// 		pair, err := DefaultParser.ParseKey(record.purpose, data)
-// 		if !assert.Nil(err) && !assert.NotNil(pair) {
-// 			continue
-// 		}
+		data, err := ioutil.ReadFile(record.keyFilePath)
+		if !assert.Nil(err) {
+			continue
+		}
 
-// 		assert.NotNil(pair.Public())
-// 		assert.Equal(record.expectPrivate, pair.HasPrivate())
-// 		assert.Equal(record.expectPrivate, pair.Private() != nil)
-// 		assert.Equal(record.purpose, pair.Purpose())
-// 	}
-// }
+		pair, err := DefaultParser.ParseKey(context.Background(), record.purpose, data)
+		if !assert.Nil(err) && !assert.NotNil(pair) {
+			continue
+		}
 
-// func TestDefaultParserString(t *testing.T) {
-// 	assert := assert.New(t)
-// 	assert.NotEmpty(fmt.Sprintf("%s", DefaultParser))
-// }
+		assert.NotNil(pair.Public())
+		assert.Equal(record.expectPrivate, pair.HasPrivate())
+		assert.Equal(record.expectPrivate, pair.Private() != nil)
+		assert.Equal(record.purpose, pair.Purpose())
+	}
+}
 
-// func TestDefaultParserNoPEM(t *testing.T) {
-// 	assert := assert.New(t)
+func TestDefaultParserString(t *testing.T) {
+	assert := assert.New(t)
+	assert.NotEmpty(fmt.Sprintf("%s", DefaultParser))
+}
 
-// 	notPEM := []byte{9, 9, 9}
-// 	pair, err := DefaultParser.ParseKey(PurposeVerify, notPEM)
-// 	assert.Nil(pair)
-// 	assert.Equal(ErrorPEMRequired, err)
-// }
+func TestDefaultParserNoPEM(t *testing.T) {
+	assert := assert.New(t)
 
-// func TestDefaultParserInvalidPublicKey(t *testing.T) {
-// 	assert := assert.New(t)
+	notPEM := []byte{9, 9, 9}
+	pair, err := DefaultParser.ParseKey(context.Background(), PurposeVerify, notPEM)
+	assert.Nil(pair)
+	assert.Equal(ErrorPEMRequired, err)
+}
 
-// 	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt} {
-// 		t.Logf("%s", purpose)
-// 		pair, err := DefaultParser.ParseKey(purpose, makeNonKeyPEMBlock())
-// 		assert.Nil(pair)
-// 		assert.NotNil(err)
-// 	}
-// }
+func TestDefaultParserInvalidPublicKey(t *testing.T) {
+	assert := assert.New(t)
 
-// func TestDefaultParserInvalidPrivateKey(t *testing.T) {
-// 	assert := assert.New(t)
+	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt} {
+		t.Logf("%s", purpose)
+		pair, err := DefaultParser.ParseKey(context.Background(), purpose, makeNonKeyPEMBlock())
+		assert.Nil(pair)
+		assert.NotNil(err)
+	}
+}
 
-// 	for _, purpose := range []Purpose{PurposeSign, PurposeEncrypt} {
-// 		t.Logf("%s", purpose)
-// 		pair, err := DefaultParser.ParseKey(purpose, makeNonKeyPEMBlock())
-// 		assert.Nil(pair)
-// 		assert.Equal(ErrorUnsupportedPrivateKeyFormat, err)
-// 	}
-// }
+func TestDefaultParserInvalidPrivateKey(t *testing.T) {
+	assert := assert.New(t)
+
+	for _, purpose := range []Purpose{PurposeSign, PurposeEncrypt} {
+		t.Logf("%s", purpose)
+		pair, err := DefaultParser.ParseKey(context.Background(), purpose, makeNonKeyPEMBlock())
+		assert.Nil(pair)
+		assert.Equal(ErrorUnsupportedPrivateKeyFormat, err)
+	}
+}
