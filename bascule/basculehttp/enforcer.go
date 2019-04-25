@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/goph/emperror"
+
 	"github.com/Comcast/comcast-bascule/bascule"
 	"github.com/go-kit/kit/log/level"
 )
@@ -61,7 +63,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 						errs = append(errs, e.Error())
 					}
 				}
-				logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, errs)
+				logger.Log(append(emperror.Context(err), level.Key(), level.ErrorValue(), bascule.ErrorKey, errs)...)
 				WriteResponse(response, http.StatusUnauthorized, err)
 				return
 			}

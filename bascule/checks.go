@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/goph/emperror"
 )
 
 const (
@@ -56,7 +58,7 @@ func CreateListAttributeCheck(key string, checks ...func(context.Context, []inte
 		}
 		strVal, ok := val.([]interface{})
 		if !ok {
-			return fmt.Errorf("unexpected attribute value, expected []interface{} but received: %v", val)
+			return fmt.Errorf("unexpected attribute value, expected []interface{} type but received: %T", val)
 		}
 		errs := Errors{}
 		for _, check := range checks {
@@ -68,7 +70,7 @@ func CreateListAttributeCheck(key string, checks ...func(context.Context, []inte
 		if len(errs) == 0 {
 			return nil
 		}
-		return errs
+		return emperror.Wrap(errs, fmt.Sprintf("attribute checks of key %v failed", key))
 	}
 }
 
