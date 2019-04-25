@@ -58,7 +58,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		if err != nil {
 			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "key", key,
 				"auth", authorization[i+1:])
-			WriteResponse(response, http.StatusUnauthorized, err)
+			WriteResponse(response, http.StatusForbidden, err)
 			return
 		}
 

@@ -65,7 +65,7 @@ func TestConstructor(t *testing.T) {
 			constructor:        c,
 			requestHeaderKey:   testHeader,
 			requestHeaderValue: "Basic AFJDK",
-			expectedStatusCode: http.StatusUnauthorized,
+			expectedStatusCode: http.StatusForbidden,
 		},
 	}
 	for _, tc := range tests {

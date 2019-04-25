@@ -64,7 +64,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 					}
 				}
 				logger.Log(append(emperror.Context(err), level.Key(), level.ErrorValue(), bascule.ErrorKey, errs)...)
-				WriteResponse(response, http.StatusUnauthorized, err)
+				WriteResponse(response, http.StatusForbidden, err)
 				return
 			}
 		}

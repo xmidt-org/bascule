@@ -64,7 +64,7 @@ func TestEnforcer(t *testing.T) {
 				Authorization: "jwt",
 				Token:         bascule.NewToken("", "", bascule.Attributes{}),
 			},
-			expectedStatusCode: http.StatusUnauthorized,
+			expectedStatusCode: http.StatusForbidden,
 		},
 	}
 	for _, tc := range tests {
