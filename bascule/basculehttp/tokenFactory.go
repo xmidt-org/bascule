@@ -11,6 +11,7 @@ import (
 	"github.com/Comcast/comcast-bascule/bascule/key"
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
+	"github.com/goph/emperror"
 )
 
 const (
@@ -18,10 +19,13 @@ const (
 )
 
 var (
-	ErrorNoProtectedHeader   = errors.New("Missing protected header")
-	ErrorNoSigningMethod     = errors.New("Signing method (alg) is missing or unrecognized")
-	ErrorUnexpectedPayload   = errors.New("Payload isn't a map of strings to interfaces")
-	ErrorUnexpectedPrincipal = errors.New("Principal isn't a string")
+	ErrorMalformedValue      = errors.New("expected <user>:<password> in decoded value")
+	ErrorNotInMap            = errors.New("principal not found")
+	ErrorInvalidPassword     = errors.New("invalid password")
+	ErrorNoProtectedHeader   = errors.New("missing protected header")
+	ErrorNoSigningMethod     = errors.New("signing method (alg) is missing or unrecognized")
+	ErrorUnexpectedPayload   = errors.New("payload isn't a map of strings to interfaces")
+	ErrorUnexpectedPrincipal = errors.New("principal isn't a string")
 )
 
 // TokenFactory is a strategy interface responsible for creating and validating a secure token
@@ -43,21 +47,25 @@ type BasicTokenFactory map[string]string
 func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	decoded, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return nil, err
+		return nil, emperror.WrapWith(err, "could not decode string")
 	}
 
 	i := bytes.IndexByte(decoded, ':')
-	if i > 0 {
-		principal := string(decoded[:i])
-		if btf[principal] == string(decoded[i+1:]) {
-			// "basic" is a placeholder here ... token types won't always map to the Authorization header.
-			// For example, a JWT should have a type of "jwt" or some such, not "bearer"
-			return bascule.NewToken("basic", principal, bascule.Attributes{}), nil
-		}
+	if i <= 0 {
+		return nil, ErrorMalformedValue
 	}
-
-	// failed authentication
-	return nil, errors.New("TODO: Enrich this error with information")
+	principal := string(decoded[:i])
+	val, ok := btf[principal]
+	if !ok {
+		return nil, ErrorNotInMap
+	}
+	if val != string(decoded[i+1:]) {
+		// failed authentication
+		return nil, ErrorInvalidPassword
+	}
+	// "basic" is a placeholder here ... token types won't always map to the Authorization header.
+	// For example, a JWT should have a type of "jwt" or some such, not "bearer"
+	return bascule.NewToken("basic", principal, bascule.Attributes{}), nil
 }
 
 type BearerTokenFactory struct {
@@ -67,7 +75,7 @@ type BearerTokenFactory struct {
 	JWTValidators []*jwt.Validator
 }
 
-func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *http.Request, auth bascule.Authorization, value string) (bascule.Token, error) {
+func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	if len(value) == 0 {
 		return nil, errors.New("empty value")
 	}
@@ -75,7 +83,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *htt
 
 	jwsToken, err := btf.Parser.ParseJWS(decoded)
 	if err != nil {
-		return nil, err
+		return nil, emperror.Wrap(err, "failed to parse JWS")
 	}
 
 	protected := jwsToken.Protected()
@@ -96,20 +104,21 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, request *htt
 
 	pair, err := btf.Resolver.ResolveKey(ctx, keyID)
 	if err != nil {
-		return nil, err
+		return nil, emperror.Wrap(err, "failed to resolve key")
 	}
 
 	// validate the signature
 	if len(btf.JWTValidators) > 0 {
 		// all JWS implementations also implement jwt.JWT
 		err = jwsToken.(jwt.JWT).Validate(pair.Public(), signingMethod, btf.JWTValidators...)
+		if err != nil {
+			return nil, emperror.Wrap(err, "failed to validate token")
+		}
 	} else {
 		err = jwsToken.Verify(pair.Public(), signingMethod)
-	}
-
-	if err != nil {
-		// todo: add metrics to log the type of verification error
-		return nil, err
+		if err != nil {
+			return nil, emperror.Wrap(err, "failed to verify token")
+		}
 	}
 
 	claims, ok := jwsToken.Payload().(jws.Claims)
