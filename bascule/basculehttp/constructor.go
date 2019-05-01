@@ -2,6 +2,8 @@ package basculehttp
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/textproto"
 	"strings"
@@ -15,9 +17,10 @@ const (
 )
 
 type constructor struct {
-	headerName     string
-	authorizations map[bascule.Authorization]TokenFactory
-	getLogger      func(context.Context) bascule.Logger
+	headerName      string
+	authorizations  map[bascule.Authorization]TokenFactory
+	getLogger       func(context.Context) bascule.Logger
+	onErrorResponse OnErrorResponse
 }
 
 func (c *constructor) decorate(next http.Handler) http.Handler {
@@ -28,15 +31,19 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		}
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authorization header")
+			err := errors.New("no authorization header")
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error())
+			c.onErrorResponse(MissingHeader, err)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
 
 		i := strings.IndexByte(authorization, ' ')
 		if i < 1 {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "unexpected authorization header value",
+			err := errors.New("unexpected authorization header value")
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(),
 				"auth", authorization)
+			c.onErrorResponse(InvalidHeader, err)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -47,8 +54,10 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 
 		tf, supported := c.authorizations[key]
 		if !supported {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "key not supported", "key", key,
+			err := fmt.Errorf("key not supported: [%v]", key)
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(),
 				"auth", authorization[i+1:])
+			c.onErrorResponse(KeyNotSupported, err)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -58,6 +67,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		if err != nil {
 			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "key", key,
 				"auth", authorization[i+1:])
+			c.onErrorResponse(ParseFailed, err)
 			WriteResponse(response, http.StatusForbidden, err)
 			return
 		}
@@ -104,12 +114,19 @@ func WithCLogger(getLogger func(context.Context) bascule.Logger) COption {
 	}
 }
 
+func WithCErrorResponseFunc(f OnErrorResponse) COption {
+	return func(c *constructor) {
+		c.onErrorResponse = f
+	}
+}
+
 // New returns an Alice-style constructor which decorates HTTP handlers with security code
 func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 	c := &constructor{
-		headerName:     DefaultHeaderName,
-		authorizations: make(map[bascule.Authorization]TokenFactory),
-		getLogger:      bascule.GetDefaultLoggerFunc,
+		headerName:      DefaultHeaderName,
+		authorizations:  make(map[bascule.Authorization]TokenFactory),
+		getLogger:       bascule.GetDefaultLoggerFunc,
+		onErrorResponse: DefaultOnErrorResponse,
 	}
 
 	for _, o := range options {

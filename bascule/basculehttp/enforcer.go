@@ -2,6 +2,7 @@ package basculehttp
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/goph/emperror"
@@ -24,6 +25,7 @@ type enforcer struct {
 	notFoundBehavior NotFoundBehavior
 	rules            map[bascule.Authorization]bascule.Validators
 	getLogger        func(context.Context) bascule.Logger
+	onErrorResponse  OnErrorResponse
 }
 
 func (e *enforcer) decorate(next http.Handler) http.Handler {
@@ -35,35 +37,35 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		}
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, "no authentication found")
+			err := errors.New("no authentication found")
+			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error())
+			e.onErrorResponse(MissingAuthentication, err)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
 		rules, ok := e.rules[auth.Authorization]
 		if !ok {
+			err := errors.New("no rules found for authorization")
 			logger.Log(level.Key(), level.ErrorValue(),
-				bascule.ErrorKey, "no rules found for authorization", "rules", rules,
+				bascule.ErrorKey, err.Error(), "rules", rules,
 				"authorization", auth.Authorization, "behavior", e.notFoundBehavior)
 			switch e.notFoundBehavior {
 			case Forbid:
+				e.onErrorResponse(ChecksNotFound, err)
 				response.WriteHeader(http.StatusForbidden)
 				return
 			case Allow:
 				// continue
 			default:
+				e.onErrorResponse(ChecksNotFound, err)
 				response.WriteHeader(http.StatusForbidden)
 				return
 			}
 		} else {
 			err := rules.Check(ctx, auth.Token)
 			if err != nil {
-				errs := []string{err.Error()}
-				if es, ok := err.(bascule.Errors); ok {
-					for _, e := range es {
-						errs = append(errs, e.Error())
-					}
-				}
-				logger.Log(append(emperror.Context(err), level.Key(), level.ErrorValue(), bascule.ErrorKey, errs)...)
+				logger.Log(append(emperror.Context(err), level.Key(), level.ErrorValue(), bascule.ErrorKey, err)...)
+				e.onErrorResponse(ChecksFailed, err)
 				WriteResponse(response, http.StatusForbidden, err)
 				return
 			}
@@ -93,10 +95,17 @@ func WithELogger(getLogger func(context.Context) bascule.Logger) EOption {
 	}
 }
 
+func WithEErrorResponseFunc(f OnErrorResponse) EOption {
+	return func(e *enforcer) {
+		e.onErrorResponse = f
+	}
+}
+
 func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
 	e := &enforcer{
-		rules:     make(map[bascule.Authorization]bascule.Validators),
-		getLogger: bascule.GetDefaultLoggerFunc,
+		rules:           make(map[bascule.Authorization]bascule.Validators),
+		getLogger:       bascule.GetDefaultLoggerFunc,
+		onErrorResponse: DefaultOnErrorResponse,
 	}
 
 	for _, o := range options {
