@@ -32,8 +32,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
 			err := errors.New("no authorization header")
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error())
-			c.onErrorResponse(MissingHeader, err)
+			c.error(logger, MissingHeader, "", err)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -41,9 +40,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		i := strings.IndexByte(authorization, ' ')
 		if i < 1 {
 			err := errors.New("unexpected authorization header value")
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(),
-				"auth", authorization)
-			c.onErrorResponse(InvalidHeader, err)
+			c.error(logger, InvalidHeader, authorization, err)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -55,9 +52,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		tf, supported := c.authorizations[key]
 		if !supported {
 			err := fmt.Errorf("key not supported: [%v]", key)
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(),
-				"auth", authorization[i+1:])
-			c.onErrorResponse(KeyNotSupported, err)
+			c.error(logger, KeyNotSupported, authorization, err)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -65,9 +60,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		ctx := request.Context()
 		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+1:])
 		if err != nil {
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "key", key,
-				"auth", authorization[i+1:])
-			c.onErrorResponse(ParseFailed, err)
+			c.error(logger, ParseFailed, authorization, err)
 			WriteResponse(response, http.StatusForbidden, err)
 			return
 		}
@@ -88,6 +81,11 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 
 		next.ServeHTTP(response, request.WithContext(ctx))
 	})
+}
+
+func (c *constructor) error(logger bascule.Logger, e ErrorResponseReason, auth string, err error) {
+	logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "auth", auth)
+	c.onErrorResponse(e, err)
 }
 
 type COption func(*constructor)
