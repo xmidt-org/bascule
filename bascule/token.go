@@ -4,6 +4,9 @@ type Attributes map[string]interface{}
 
 // TODO: Add dotted path support and support for common concrete types, e.g. GetString
 func (a Attributes) Get(key string) (interface{}, bool) {
+	if a == nil {
+		return nil, false
+	}
 	v, ok := a[key]
 	return v, ok
 }

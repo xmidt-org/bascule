@@ -31,4 +31,9 @@ func TestGet(t *testing.T) {
 	val, ok = attributes.Get("noval")
 	assert.Empty(val)
 	assert.False(ok)
+
+	emptyAttributes := Attributes(nil)
+	val, ok = emptyAttributes.Get("test")
+	assert.Nil(val)
+	assert.False(ok)
 }

@@ -22,6 +22,7 @@ func TestEnforcer(t *testing.T) {
 		WithELogger(func(_ context.Context) bascule.Logger {
 			return bascule.Logger(log.NewJSONLogger(log.NewSyncWriter(os.Stdout)))
 		}),
+		WithEErrorResponseFunc(DefaultOnErrorResponse),
 	)
 	tests := []struct {
 		description        string

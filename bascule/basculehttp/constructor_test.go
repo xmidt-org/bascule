@@ -20,6 +20,7 @@ func TestConstructor(t *testing.T) {
 		WithCLogger(func(_ context.Context) bascule.Logger {
 			return bascule.Logger(log.NewJSONLogger(log.NewSyncWriter(os.Stdout)))
 		}),
+		WithCErrorResponseFunc(DefaultOnErrorResponse),
 	)
 	c2 := NewConstructor(
 		WithHeaderName(""),
