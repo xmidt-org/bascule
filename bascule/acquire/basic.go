@@ -1,4 +1,4 @@
-package basculeauth
+package acquire
 
 import (
 	"encoding/base64"

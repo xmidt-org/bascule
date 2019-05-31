@@ -1,4 +1,4 @@
-package basculeauth
+package acquire
 
 import (
 	"encoding/json"
@@ -84,11 +84,10 @@ func TestAuthAcquireSuccess(t *testing.T) {
 			}
 
 			// Use Client & URL from our local test server
-			auth := JWTAcquirer{
+			auth := NewJWTAcquirer(JWTAcquirerOptions{
 				AuthURL: url,
 				Timeout: time.Duration(5) * time.Second,
-			}
-			auth.SetDefaults()
+			})
 			token, err := auth.Acquire()
 
 			if tc.expectedErr == nil || err == nil {
@@ -119,12 +118,11 @@ func TestAuthCaching(t *testing.T) {
 	defer server.Close()
 
 	// Use Client & URL from our local test server
-	auth := JWTAcquirer{
+	auth := NewJWTAcquirer(JWTAcquirerOptions{
 		AuthURL: server.URL,
 		Timeout: time.Duration(5) * time.Second,
 		Buffer:  time.Microsecond,
-	}
-	auth.SetDefaults()
+	})
 	token, err := auth.Acquire()
 	assert.Nil(err)
 	tokenA, err := auth.Acquire()

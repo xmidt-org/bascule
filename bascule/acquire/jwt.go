@@ -1,4 +1,4 @@
-package basculeauth
+package acquire
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func DefaultExpirationParser(data []byte) (time.Time, error) {
 	return time.Now().Add(time.Duration(jwt.Expiration) * time.Second), nil
 }
 
-type JWTAcquirer struct {
+type JWTAcquirerOptions struct {
 	AuthURL        string            `json:"authURL"`
 	Timeout        time.Duration     `json:"timeout"`
 	Buffer         time.Duration     `json:"buffer"`
@@ -40,6 +40,10 @@ type JWTAcquirer struct {
 
 	GetToken      ParseToken
 	GetExpiration ParseExpiration
+}
+
+type JWTAcquirer struct {
+	options JWTAcquirerOptions
 
 	cachedAuth string
 	expires    time.Time
@@ -50,26 +54,35 @@ type JWTBasic struct {
 	Token      string  `json:"serviceAccessToken"`
 }
 
-func (acquire *JWTAcquirer) SetDefaults() {
-	acquire.GetToken = DefaultTokenParser
-	acquire.GetExpiration = DefaultExpirationParser
+func NewJWTAcquirer(options JWTAcquirerOptions) JWTAcquirer {
+	if options.GetToken == nil {
+		options.GetToken = DefaultTokenParser
+	}
+	if options.GetExpiration == nil {
+		options.GetExpiration = DefaultExpirationParser
+	}
+
+	return JWTAcquirer{
+		options: options,
+		expires: time.Now(),
+	}
 }
 
 func (acquire *JWTAcquirer) Acquire() (string, error) {
-	if time.Now().Add(acquire.Buffer).Before(acquire.expires) {
+	if time.Now().Add(acquire.options.Buffer).Before(acquire.expires) || acquire.expires == time.Unix(0, 0) {
 		return acquire.cachedAuth, nil
 	}
 
 	jsonStr := []byte(`{}`)
 	httpclient := &http.Client{
-		Timeout: acquire.Timeout,
+		Timeout: acquire.options.Timeout,
 	}
-	req, err := http.NewRequest("GET", acquire.AuthURL, bytes.NewBuffer(jsonStr))
+	req, err := http.NewRequest("GET", acquire.options.AuthURL, bytes.NewBuffer(jsonStr))
 	if err != nil {
 		return "", emperror.Wrap(err, "failed to create new request for JWT")
 	}
 
-	for key, value := range acquire.RequestHeaders {
+	for key, value := range acquire.options.RequestHeaders {
 		req.Header.Set(key, value)
 	}
 
@@ -88,11 +101,11 @@ func (acquire *JWTAcquirer) Acquire() (string, error) {
 		return "", fmt.Errorf("error reading JWT token: [%s]", errRead.Error())
 	}
 
-	auth, err := acquire.GetToken(respBody)
+	auth, err := acquire.options.GetToken(respBody)
 	if err != nil {
 		return "", fmt.Errorf("error parsing JWT token: [%s]", err.Error())
 	}
-	expires, err := acquire.GetExpiration(respBody)
+	expires, err := acquire.options.GetExpiration(respBody)
 	if err != nil {
 		return "", fmt.Errorf("error parsing JWT token: [%s]", err.Error())
 	}

@@ -1,4 +1,4 @@
-package basculeauth
+package acquire
 
 import (
 	"github.com/stretchr/testify/assert"
