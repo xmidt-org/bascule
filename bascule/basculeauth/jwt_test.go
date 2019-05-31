@@ -12,7 +12,7 @@ import (
 )
 
 func TestAuthAcquireSuccess(t *testing.T) {
-	goodAuth := JWTToken{
+	goodAuth := JWTBasic{
 		Token: "test token",
 	}
 	goodToken := "Bearer test token"
@@ -88,6 +88,7 @@ func TestAuthAcquireSuccess(t *testing.T) {
 				AuthURL: url,
 				Timeout: time.Duration(5) * time.Second,
 			}
+			auth.SetDefaults()
 			token, err := auth.Acquire()
 
 			if tc.expectedErr == nil || err == nil {
@@ -105,7 +106,7 @@ func TestAuthCaching(t *testing.T) {
 
 	count := 0
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		auth := JWTToken{
+		auth := JWTBasic{
 			Token:      "gopher+" + string(count),
 			Expiration: 1,
 		}
@@ -123,6 +124,7 @@ func TestAuthCaching(t *testing.T) {
 		Timeout: time.Duration(5) * time.Second,
 		Buffer:  time.Microsecond,
 	}
+	auth.SetDefaults()
 	token, err := auth.Acquire()
 	assert.Nil(err)
 	tokenA, err := auth.Acquire()

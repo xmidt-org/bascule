@@ -10,20 +10,49 @@ import (
 	"time"
 )
 
+type ParseToken func([]byte) (string, error)
+
+func DefaultTokenParser(data []byte) (string, error) {
+	var jwt JWTBasic
+
+	if errUnmarshal := json.Unmarshal(data, &jwt); errUnmarshal != nil {
+		return "", emperror.Wrap(errUnmarshal, "unable to read json")
+	}
+	return jwt.Token, nil
+}
+
+type ParseExpiration func([]byte) (time.Time, error)
+
+func DefaultExpirationParser(data []byte) (time.Time, error) {
+	var jwt JWTBasic
+
+	if errUnmarshal := json.Unmarshal(data, &jwt); errUnmarshal != nil {
+		return time.Time{}, emperror.Wrap(errUnmarshal, "unable to read json")
+	}
+	return time.Now().Add(time.Duration(jwt.Expiration) * time.Second), nil
+}
+
 type JWTAcquirer struct {
-	Client  string        `json:"client"`
-	Secret  string        `json:"secret"`
-	AuthURL string        `json:"authURL"`
-	Timeout time.Duration `json:"timeout"`
-	Buffer  time.Duration `json:"buffer"`
+	AuthURL        string            `json:"authURL"`
+	Timeout        time.Duration     `json:"timeout"`
+	Buffer         time.Duration     `json:"buffer"`
+	RequestHeaders map[string]string `json:"requestHeaders"`
+
+	GetToken      ParseToken
+	GetExpiration ParseExpiration
 
 	cachedAuth string
 	expires    time.Time
 }
 
-type JWTToken struct {
+type JWTBasic struct {
 	Expiration float64 `json:"expires_in"`
 	Token      string  `json:"serviceAccessToken"`
+}
+
+func (acquire *JWTAcquirer) SetDefaults() {
+	acquire.GetToken = DefaultTokenParser
+	acquire.GetExpiration = DefaultExpirationParser
 }
 
 func (acquire *JWTAcquirer) Acquire() (string, error) {
@@ -39,12 +68,13 @@ func (acquire *JWTAcquirer) Acquire() (string, error) {
 	if err != nil {
 		return "", emperror.Wrap(err, "failed to create new request for JWT")
 	}
-	req.Header.Set("X-Client-Id", acquire.Client)
-	req.Header.Set("X-Client-Secret", acquire.Secret)
+
+	for key, value := range acquire.RequestHeaders {
+		req.Header.Set(key, value)
+	}
 
 	resp, errHTTP := httpclient.Do(req)
 	if errHTTP != nil {
-
 		return "", fmt.Errorf("error acquiring JWT token: [%s]", errHTTP.Error())
 	}
 	defer resp.Body.Close()
@@ -55,16 +85,19 @@ func (acquire *JWTAcquirer) Acquire() (string, error) {
 
 	respBody, errRead := ioutil.ReadAll(resp.Body)
 	if errRead != nil {
-
 		return "", fmt.Errorf("error reading JWT token: [%s]", errRead.Error())
 	}
 
-	var jwt JWTToken
-
-	if errUnmarshal := json.Unmarshal(respBody, &jwt); errUnmarshal != nil {
-		return "", emperror.Wrap(errUnmarshal, "unable to read json in JWT response")
+	auth, err := acquire.GetToken(respBody)
+	if err != nil {
+		return "", fmt.Errorf("error parsing JWT token: [%s]", err.Error())
 	}
-	acquire.cachedAuth = fmt.Sprintf("Bearer %s", jwt.Token)
-	acquire.expires = time.Now().Add(time.Duration(jwt.Expiration) * time.Second)
+	expires, err := acquire.GetExpiration(respBody)
+	if err != nil {
+		return "", fmt.Errorf("error parsing JWT token: [%s]", err.Error())
+	}
+
+	acquire.cachedAuth = fmt.Sprintf("Bearer %s", auth)
+	acquire.expires = expires
 	return acquire.cachedAuth, nil
 }
