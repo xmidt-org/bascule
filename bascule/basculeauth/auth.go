@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-type AuthHeaderAcquirer interface {
+type Acquirer interface {
 	Acquire() (string, error)
 }
 
@@ -16,7 +16,7 @@ func (d *DefaultAcquirer) Acquire() (string, error) {
 	return "", nil
 }
 
-func AddAuth(r *http.Request, acquirer AuthHeaderAcquirer) error {
+func AddAuth(r *http.Request, acquirer Acquirer) error {
 	if r == nil {
 		return errors.New("can't add authorization to nil request")
 	}
