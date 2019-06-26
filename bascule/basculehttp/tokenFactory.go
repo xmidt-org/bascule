@@ -9,8 +9,7 @@ import (
 
 	"github.com/Comcast/comcast-bascule/bascule"
 	"github.com/Comcast/comcast-bascule/bascule/key"
-	"github.com/SermoDigital/jose/jws"
-	"github.com/SermoDigital/jose/jwt"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/goph/emperror"
 )
 
@@ -26,6 +25,8 @@ var (
 	ErrorNoSigningMethod     = errors.New("signing method (alg) is missing or unrecognized")
 	ErrorUnexpectedPayload   = errors.New("payload isn't a map of strings to interfaces")
 	ErrorUnexpectedPrincipal = errors.New("principal isn't a string")
+	ErrorInvalidToken        = errors.New("token isn't valid")
+	ErrorUnexpectedClaims    = errors.New("claims wasn't MapClaims as expected")
 )
 
 // TokenFactory is a strategy interface responsible for creating and validating a secure token
@@ -69,63 +70,48 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 }
 
 type BearerTokenFactory struct {
-	DefaultKeyId  string
-	Resolver      key.Resolver
-	Parser        bascule.JWSParser
-	JWTValidators []*jwt.Validator
+	DefaultKeyId string
+	Resolver     key.Resolver
+	Parser       bascule.JWTParser
+	Leeway       bascule.Leeway
 }
 
 func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	if len(value) == 0 {
 		return nil, errors.New("empty value")
 	}
-	decoded := []byte(value)
 
-	jwsToken, err := btf.Parser.ParseJWS(decoded)
+	keyfunc := func(token *jwt.Token) (interface{}, error) {
+		keyID, ok := token.Header["kid"].(string)
+		if !ok {
+			keyID = btf.DefaultKeyId
+		}
+
+		pair, err := btf.Resolver.ResolveKey(ctx, keyID)
+		if err != nil {
+			return nil, emperror.Wrap(err, "failed to resolve key")
+		}
+		return pair.Public(), nil
+	}
+
+	leewayclaims := bascule.ClaimsWithLeeway{
+		Leeway: btf.Leeway,
+	}
+
+	jwsToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to parse JWS")
 	}
-
-	protected := jwsToken.Protected()
-	if len(protected) == 0 {
-		return nil, ErrorNoProtectedHeader
+	if !jwsToken.Valid {
+		return nil, ErrorInvalidToken
 	}
 
-	alg, _ := protected.Get("alg").(string)
-	signingMethod := jws.GetSigningMethod(alg)
-	if signingMethod == nil {
-		return nil, ErrorNoSigningMethod
-	}
-
-	keyID, _ := protected.Get("kid").(string)
-	if len(keyID) == 0 {
-		keyID = btf.DefaultKeyId
-	}
-
-	pair, err := btf.Resolver.ResolveKey(ctx, keyID)
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to resolve key")
-	}
-
-	// validate the signature
-	if len(btf.JWTValidators) > 0 {
-		// all JWS implementations also implement jwt.JWT
-		err = jwsToken.(jwt.JWT).Validate(pair.Public(), signingMethod, btf.JWTValidators...)
-		if err != nil {
-			return nil, emperror.Wrap(err, "failed to validate token")
-		}
-	} else {
-		err = jwsToken.Verify(pair.Public(), signingMethod)
-		if err != nil {
-			return nil, emperror.Wrap(err, "failed to verify token")
-		}
-	}
-
-	claims, ok := jwsToken.Payload().(jws.Claims)
+	claims, ok := jwsToken.Claims.(*jwt.MapClaims)
 	if !ok {
-		return nil, ErrorUnexpectedPayload
+		return nil, emperror.Wrap(ErrorUnexpectedClaims, "failed to parse JWS")
 	}
-	payload := bascule.Attributes(claims)
+
+	payload := bascule.Attributes(*claims)
 
 	principal, ok := payload[jwtPrincipalKey].(string)
 	if !ok {
