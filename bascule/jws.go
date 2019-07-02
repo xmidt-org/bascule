@@ -1,24 +1,63 @@
 package bascule
 
 import (
-	"github.com/SermoDigital/jose/jws"
+	"errors"
+
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
-// JWSParser parses raw Tokens into JWS objects
-type JWSParser interface {
-	ParseJWS([]byte) (jws.JWS, error)
+// JWTParser parses raw Tokens into JWT objects
+type JWTParser interface {
+	ParseJWT(string, jwt.Claims, jwt.Keyfunc) (*jwt.Token, error)
 }
 
-type defaultJWSParser struct{}
+type defaultJWTParser struct{}
 
-func (parser defaultJWSParser) ParseJWS(token []byte) (jws.JWS, error) {
-	if jwtToken, err := jws.ParseJWT(token); err == nil {
-		return jwtToken.(jws.JWS), nil
+func (parser defaultJWTParser) ParseJWT(token string, claims jwt.Claims, parseFunc jwt.Keyfunc) (*jwt.Token, error) {
+	if jwtToken, err := jwt.ParseWithClaims(token, claims, parseFunc); err == nil {
+		return jwtToken, nil
 	} else {
 		return nil, err
 	}
 }
 
-// DefaultJWSParser is the parser implementation that simply delegates to
-// the SermoDigital library's jws.ParseJWT function.
-var DefaultJWSParser JWSParser = defaultJWSParser{}
+// DefaultJWTParser is the parser implementation that simply delegates to
+// the jwt-go library's jws.ParseJWT function.
+var DefaultJWTParser JWTParser = defaultJWTParser{}
+
+type ClaimsWithLeeway struct {
+	*jwt.MapClaims
+	Leeway Leeway
+}
+
+type Leeway struct {
+	EXP int64 `json:"expLeeway"`
+	NBF int64 `json:"nbfLeeway"`
+	IAT int64 `json:"iatLeeway"`
+}
+
+func (c *ClaimsWithLeeway) Valid() error {
+	vErr := new(jwt.ValidationError)
+	now := jwt.TimeFunc().Unix()
+
+	if c.VerifyExpiresAt(now+c.Leeway.EXP, false) == false {
+		vErr.Inner = errors.New("Token is expired")
+		vErr.Errors |= jwt.ValidationErrorExpired
+	}
+
+	if c.VerifyIssuedAt(now-c.Leeway.IAT, false) == false {
+		vErr.Inner = errors.New("Token used before issued")
+		vErr.Errors |= jwt.ValidationErrorIssuedAt
+	}
+
+	if c.VerifyNotBefore(now-c.Leeway.NBF, false) == false {
+		vErr.Inner = errors.New("Token is not valid yet")
+		vErr.Errors |= jwt.ValidationErrorNotValidYet
+	}
+
+	if vErr.Errors == 0 {
+		return nil
+	}
+
+	return vErr
+}
