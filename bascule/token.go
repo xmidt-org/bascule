@@ -1,3 +1,6 @@
+// package bascule provides a token interface and basic implementation, which
+// can be validated and added and taken from a context.  Some basic checks
+// which can be used to validate are also provided.
 package bascule
 
 type Attributes map[string]interface{}

@@ -9,6 +9,8 @@ var (
 	errMissingCredentials = errors.New("no credentials found")
 )
 
+// BasicAcquirer saves a basic auth upon creation and returns it whenever
+// Acquire is called.
 type BasicAcquirer struct {
 	encodedCredentials string
 }
