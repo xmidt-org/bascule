@@ -67,5 +67,4 @@ func main() {
 	authFuncs := authChain(logger)
 	router.Handle("/test", authFuncs.ThenFunc(simpleResponse))
 	http.ListenAndServe(":6000", router)
-	os.Exit(0)
 }
