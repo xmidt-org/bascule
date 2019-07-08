@@ -2,6 +2,8 @@
 
 The package for auth related middleware, implemented as [alice-style http decorators](https://github.com/justinas/alice).
 
+[![GoDoc](https://godoc.org/github.com/Comcast/comcast-bascule/bascule/basculehttp?status.svg)](https://godoc.org/github.com/Comcast/comcast-bascule/bascule/basculehttp)
+
 ## Summary
 
 This package makes it easy to validate the Authorization of an incoming http 

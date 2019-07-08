@@ -9,6 +9,7 @@ The library for authorization: both acquiring and validating.
 [![Go Report Card](https://goreportcard.com/badge/github.com/Comcast/comcast-bascule)](https://goreportcard.com/report/github.com/Comcast/comcast-bascule)
 [![Apache V2 License](http://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/Comcast/comcast-bascule/blob/master/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/Comcast/comcast-bascule.svg)](CHANGELOG.md)
+[![GoDoc](https://godoc.org/github.com/Comcast/comcast-bascule/bascule?status.svg)](https://godoc.org/github.com/Comcast/comcast-bascule/bascule)
 
 ## Summary
 
@@ -27,7 +28,7 @@ expires.
 ## Validating Authorization
 
 Validation of Tokens happens once an authorization value has been parsed into 
-something that implements the Token interface. TODO: Add link to interface in GoDoc.  
+something that implements the [Token interface](https://godoc.org/github.com/Comcast/comcast-bascule/bascule#Token).  
 The `basculehttp` subpackage provides http decorators/middleware that will parse an http 
 request into a Token and validate it with configurable rules.
 
