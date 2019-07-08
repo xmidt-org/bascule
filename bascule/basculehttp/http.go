@@ -1,3 +1,7 @@
+// parckage basculehttp contains some basic http middleware (in the form of
+// Alice-style decorators) that can be used to extract and parse a Token from
+// an http header, validate the Token, and  allow for the consumer to add
+// additional logs or metrics upon an error or a valid Token.
 package basculehttp
 
 import "net/http"
@@ -8,11 +12,14 @@ type statusCoder interface {
 	StatusCode() int
 }
 
-// headerer allows errors and other types to supply headers, mainly for writing HTTP responses.
+// headerer allows errors and other types to supply headers, mainly for writing
+// HTTP responses.
 type headerer interface {
 	Headers() http.Header
 }
 
+// ErrorHeaderer implements headerer, allowing an error to supply http headers
+// in an error response.
 type ErrorHeaderer struct {
 	err     error
 	headers http.Header

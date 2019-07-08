@@ -24,8 +24,6 @@ an http request.  The JWT acquirer gets a JWT from a configurable endpoint,
 caches it, and will get a new JWT at a configurable time before the current JWT 
 expires.
 
-TODO: Add a static Bearer token, similar to the Basic one.
-
 ## Validating Authorization
 
 Validation of Tokens happens once an authorization value has been parsed into 

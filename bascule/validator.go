@@ -14,14 +14,19 @@ type Validator interface {
 	Check(context.Context, Token) error
 }
 
+// ValidatorFunc is the Check function that a Validator has.
 type ValidatorFunc func(context.Context, Token) error
 
+// Check runs the validatorFunc, making a ValidatorFunc also a Validator.
 func (vf ValidatorFunc) Check(ctx context.Context, t Token) error {
 	return vf(ctx, t)
 }
 
+// Validators are a list of objects that implement the Validator interface.
 type Validators []Validator
 
+// Check runs through the list of validator Checks and adds any errors returned
+// to the list of errors, which is an Errors type.
 func (v Validators) Check(ctx context.Context, t Token) error {
 	// we want *all* rules to run, so we get a complete picture of the failure
 	var all Errors

@@ -30,12 +30,16 @@ type ClaimsWithLeeway struct {
 	Leeway Leeway
 }
 
+// Leeway is the amount of buffer to include with the time, to allow for clock
+// skew.
 type Leeway struct {
 	EXP int64 `json:"expLeeway"`
 	NBF int64 `json:"nbfLeeway"`
 	IAT int64 `json:"iatLeeway"`
 }
 
+// Valid implements the jwt.Claims interface, ensuring that the token claism
+// are valid.  This implementation checks the time based claims: exp, iat, nbf.
 func (c *ClaimsWithLeeway) Valid() error {
 	vErr := new(jwt.ValidationError)
 	now := jwt.TimeFunc().Unix()

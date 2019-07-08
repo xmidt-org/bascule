@@ -14,12 +14,15 @@ const (
 	capabilitiesKey = "capabilities"
 )
 
+// CreateAllowAllCheck returns a Validator that never returns an error.
 func CreateAllowAllCheck() ValidatorFunc {
 	return func(_ context.Context, _ Token) error {
 		return nil
 	}
 }
 
+// CreateValidTypeCheck returns a Validator that checks that the token's type
+// is one of the given valid types.
 func CreateValidTypeCheck(validTypes []string) ValidatorFunc {
 	return func(_ context.Context, token Token) error {
 		tt := token.Type()
@@ -32,6 +35,8 @@ func CreateValidTypeCheck(validTypes []string) ValidatorFunc {
 	}
 }
 
+// CreateNonEmptyTypeCheck returns a Validator that checks that the token's
+// type isn't an empty string.
 func CreateNonEmptyTypeCheck() ValidatorFunc {
 	return func(_ context.Context, token Token) error {
 		if token.Type() == "" {
@@ -41,6 +46,8 @@ func CreateNonEmptyTypeCheck() ValidatorFunc {
 	}
 }
 
+// CreateNonEmptyPrincipalCheck returns a Validator that checks that the
+// token's Principal isn't an empty string.
 func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 	return func(_ context.Context, token Token) error {
 		if token.Principal() == "" {
@@ -50,6 +57,9 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 	}
 }
 
+// CreateListAttributeCheck returns a Validator that runs checks against the
+// content found in the key given.  It runs every check and returns all errors
+// it finds.
 func CreateListAttributeCheck(key string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
 	return func(ctx context.Context, token Token) error {
 		val, ok := token.Attributes()[key]
@@ -74,7 +84,9 @@ func CreateListAttributeCheck(key string, checks ...func(context.Context, []inte
 	}
 }
 
-func NonEmptyStringListCheck(ctx context.Context, vals []interface{}) error {
+// NonEmptyStringListCheck checks that the list of values given are a list of
+// one or more nonempty strings.
+func NonEmptyStringListCheck(_ context.Context, vals []interface{}) error {
 	if len(vals) == 0 {
 		return errors.New("expected at least one value")
 	}

@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	// DefaultHeaderName is the http header to get the authorization
+	// information from.
 	DefaultHeaderName = "Authorization"
 )
 
@@ -88,8 +90,12 @@ func (c *constructor) error(logger bascule.Logger, e ErrorResponseReason, auth s
 	c.onErrorResponse(e, err)
 }
 
+// COption is any function that modifies the constructor - used to configure
+// the constructor.
 type COption func(*constructor)
 
+// WithHeaderName sets the headername and verifies it's valid.  The headername
+// is the name of the header to get the authorization information from.
 func WithHeaderName(headerName string) COption {
 	return func(c *constructor) {
 		if len(headerName) > 0 {
@@ -100,25 +106,31 @@ func WithHeaderName(headerName string) COption {
 	}
 }
 
+// WithTokenFactory sets the TokenFactory for the constructor to use.
 func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 	return func(c *constructor) {
 		c.authorizations[key] = tf
 	}
 }
 
+// WithCLogger sets the function to use to get the logger from the context.
+// If no logger is set, nothing is logged.
 func WithCLogger(getLogger func(context.Context) bascule.Logger) COption {
 	return func(c *constructor) {
 		c.getLogger = getLogger
 	}
 }
 
+// WithCErrorResponseFunc sets the function that is called when an error occurs.
 func WithCErrorResponseFunc(f OnErrorResponse) COption {
 	return func(c *constructor) {
 		c.onErrorResponse = f
 	}
 }
 
-// New returns an Alice-style constructor which decorates HTTP handlers with security code
+// NewConstructor creates an Alice-style decorator function that acts as
+// middleware: parsing the http request to get a Token, which is added to the
+// context.
 func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 	c := &constructor{
 		headerName:      DefaultHeaderName,

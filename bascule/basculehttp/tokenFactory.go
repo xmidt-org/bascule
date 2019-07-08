@@ -29,22 +29,27 @@ var (
 	ErrorUnexpectedClaims    = errors.New("claims wasn't MapClaims as expected")
 )
 
-// TokenFactory is a strategy interface responsible for creating and validating a secure token
+// TokenFactory is a strategy interface responsible for creating and validating
+// a secure Token.
 type TokenFactory interface {
 	ParseAndValidate(context.Context, *http.Request, bascule.Authorization, string) (bascule.Token, error)
 }
 
+// TokenFactoryFunc makes it so any function that has the same signature as
+// TokenFactory's ParseAndValidate function implements TokenFactory.
 type TokenFactoryFunc func(context.Context, *http.Request, bascule.Authorization, string) (bascule.Token, error)
 
 func (tff TokenFactoryFunc) ParseAndValidate(ctx context.Context, r *http.Request, a bascule.Authorization, v string) (bascule.Token, error) {
 	return tff(ctx, r, a, v)
 }
 
-// An example TokenFactory that this package should supply in some form.
-// This type allows client code to simply use an in-memory map of users and passwords
-// to authenticate against.  Other implementations might look things up in a database, etc.
+// BasicTokenFactory parses a basic auth and verifies it is in a map of valid
+// basic auths.
 type BasicTokenFactory map[string]string
 
+// ParseAndValidate expects the given value to be a base64 encoded string with
+// the username followed by a colon and then the password.  The function checks
+// that the username password pair is in the map and returns a Token if it is.
 func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	decoded, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
@@ -64,11 +69,12 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 		// failed authentication
 		return nil, ErrorInvalidPassword
 	}
-	// "basic" is a placeholder here ... token types won't always map to the Authorization header.
-	// For example, a JWT should have a type of "jwt" or some such, not "bearer"
+	// "basic" is a placeholder here ... token types won't always map to the
+	// Authorization header.  For example, a JWT should have a type of "jwt" or some such, not "bearer"
 	return bascule.NewToken("basic", principal, bascule.Attributes{}), nil
 }
 
+// BearerTokenFactory parses and does basic validation for a JWT token.
 type BearerTokenFactory struct {
 	DefaultKeyId string
 	Resolver     key.Resolver
@@ -76,6 +82,10 @@ type BearerTokenFactory struct {
 	Leeway       bascule.Leeway
 }
 
+// ParseAndValidate expects the given value to be a JWT with a kid header.  The
+// kid should be resolvable by the Resolver and the JWT should be Parseable and
+// pass any basic validation checks done by the Parser.  If everything goes
+// well, a Token of type "jwt" is returned.
 func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	if len(value) == 0 {
 		return nil, errors.New("empty value")

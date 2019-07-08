@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/goph/emperror"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/goph/emperror"
 )
+
+// TODO: add a different basic JWT Acquirer that simply stores the JWT and
+// rename this stuff.
 
 type ParseToken func([]byte) (string, error)
 
