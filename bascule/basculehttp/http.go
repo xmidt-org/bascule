@@ -1,4 +1,4 @@
-// parckage basculehttp contains some basic http middleware (in the form of
+// package basculehttp contains some basic http middleware (in the form of
 // Alice-style decorators) that can be used to extract and parse a Token from
 // an http header, validate the Token, and  allow for the consumer to add
 // additional logs or metrics upon an error or a valid Token.
