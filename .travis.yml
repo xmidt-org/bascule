@@ -2,10 +2,7 @@ language: go
 
 go:
   - 1.12.x
-
-os:
-  - linux
-  - osx
+  - tip
 
 services:
   - docker
@@ -25,15 +22,8 @@ install:
 script:
   - if [ -n "$(gofmt -s -l . | grep -v "vendor")" ]; then diff -u <(echo -n) <(gofmt -d $(gofmt -s -l . | grep -v "vendor")); fi
   - go test -v -race $(go list ./... | grep -v "/vendor/")
+
+after_success:
   - go get github.com/haya14busa/goverage
   - goverage -coverprofile=coverage.txt ./...
-  - bash <(curl -s https://codecov.io/bash) -t c5bd3dd8-e037-45d6-a426-968b3462a930
-
-jobs:
-  include:
-    - stage: integration
-      name: "Integration Tests"
-      script:
-        - git clone https://github.com/xmidt-org/bascule.git
-        - cd bascule
-        # build bascule
+  - bash <(curl -s https://codecov.io/bash)
