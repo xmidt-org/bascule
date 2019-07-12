@@ -7,8 +7,8 @@ import (
 
 	"github.com/goph/emperror"
 
-	"github.com/Comcast/comcast-bascule/bascule"
 	"github.com/go-kit/kit/log/level"
+	"github.com/xmidt-org/bascule"
 )
 
 //go:generate stringer -type=NotFoundBehavior

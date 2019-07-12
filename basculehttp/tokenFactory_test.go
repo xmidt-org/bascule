@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Comcast/comcast-bascule/bascule"
 	"github.com/stretchr/testify/assert"
+	"github.com/xmidt-org/bascule"
 )
 
 func TestBasicTokenFactory(t *testing.T) {

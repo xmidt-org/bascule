@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Comcast/comcast-bascule/bascule/acquire"
+	"github.com/xmidt-org/bascule/acquire"
 )
 
 func main() {

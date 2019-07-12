@@ -1,12 +1,12 @@
 package basculehttp
 
 import (
-	"github.com/Comcast/comcast-bascule/bascule"
 	"github.com/SermoDigital/jose"
 	"github.com/SermoDigital/jose/crypto"
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
 	"github.com/stretchr/testify/mock"
+	"github.com/xmidt-org/bascule"
 )
 
 type mockJWSParser struct {

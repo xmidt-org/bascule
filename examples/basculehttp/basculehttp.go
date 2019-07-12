@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Comcast/comcast-bascule/bascule"
-	"github.com/Comcast/comcast-bascule/bascule/basculehttp"
-	"github.com/Comcast/webpa-common/logging"
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/bascule/basculehttp"
+	"github.com/xmidt-org/webpa-common/logging"
 )
 
 func SetLogger(logger log.Logger) func(delegate http.Handler) http.Handler {

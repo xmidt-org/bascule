@@ -7,10 +7,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/Comcast/comcast-bascule/bascule"
-	"github.com/Comcast/comcast-bascule/bascule/key"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/goph/emperror"
+	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/bascule/key"
 )
 
 const (
