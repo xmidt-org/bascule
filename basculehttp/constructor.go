@@ -8,8 +8,8 @@ import (
 	"net/textproto"
 	"strings"
 
-	"github.com/Comcast/comcast-bascule/bascule"
 	"github.com/go-kit/kit/log/level"
+	"github.com/xmidt-org/bascule"
 )
 
 const (

@@ -34,6 +34,6 @@ jobs:
     - stage: integration
       name: "Integration Tests"
       script:
-        - git clone https://github.com/Comcast/comcast-bascule.git
-        - cd comcast-bascule
-        # build comcast-bascule
+        - git clone https://github.com/xmidt-org/bascule.git
+        - cd bascule
+        # build bascule

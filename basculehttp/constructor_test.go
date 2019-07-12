@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Comcast/comcast-bascule/bascule"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/xmidt-org/bascule"
 )
 
 func TestConstructor(t *testing.T) {
