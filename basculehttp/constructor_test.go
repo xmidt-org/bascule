@@ -14,8 +14,10 @@ import (
 
 func TestConstructor(t *testing.T) {
 	testHeader := "test header"
+	testDelimiter := "="
 	c := NewConstructor(
 		WithHeaderName(testHeader),
+		WithHeaderDelimiter(testDelimiter),
 		WithTokenFactory("Basic", BasicTokenFactory{"codex": "codex"}),
 		WithCLogger(func(_ context.Context) bascule.Logger {
 			return bascule.Logger(log.NewJSONLogger(log.NewSyncWriter(os.Stdout)))
@@ -24,6 +26,7 @@ func TestConstructor(t *testing.T) {
 	)
 	c2 := NewConstructor(
 		WithHeaderName(""),
+		WithHeaderDelimiter(""),
 		WithCLogger(func(_ context.Context) bascule.Logger { return nil }),
 	)
 	tests := []struct {
@@ -37,7 +40,7 @@ func TestConstructor(t *testing.T) {
 			description:        "Success",
 			constructor:        c,
 			requestHeaderKey:   testHeader,
-			requestHeaderValue: "Basic Y29kZXg6Y29kZXg=",
+			requestHeaderValue: "Basic=Y29kZXg6Y29kZXg=",
 			expectedStatusCode: http.StatusOK,
 		},
 		{
@@ -65,7 +68,7 @@ func TestConstructor(t *testing.T) {
 			description:        "Parse and Validate Error",
 			constructor:        c,
 			requestHeaderKey:   testHeader,
-			requestHeaderValue: "Basic AFJDK",
+			requestHeaderValue: "Basic=AFJDK",
 			expectedStatusCode: http.StatusForbidden,
 		},
 	}

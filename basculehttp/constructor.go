@@ -16,10 +16,15 @@ const (
 	// DefaultHeaderName is the http header to get the authorization
 	// information from.
 	DefaultHeaderName = "Authorization"
+
+	// DefaultHeaderDelimiter is the character between the authorization and
+	// its key.
+	DefaultHeaderDelimiter = " "
 )
 
 type constructor struct {
 	headerName      string
+	headerDelimiter string
 	authorizations  map[bascule.Authorization]TokenFactory
 	getLogger       func(context.Context) bascule.Logger
 	onErrorResponse OnErrorResponse
@@ -39,7 +44,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			return
 		}
 
-		i := strings.IndexByte(authorization, ' ')
+		i := strings.Index(authorization, c.headerDelimiter)
 		if i < 1 {
 			err := errors.New("unexpected authorization header value")
 			c.error(logger, InvalidHeader, authorization, err)
@@ -60,7 +65,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		}
 
 		ctx := request.Context()
-		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+1:])
+		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
 		if err != nil {
 			c.error(logger, ParseFailed, authorization, err)
 			WriteResponse(response, http.StatusForbidden, err)
@@ -100,8 +105,14 @@ func WithHeaderName(headerName string) COption {
 	return func(c *constructor) {
 		if len(headerName) > 0 {
 			c.headerName = headerName
-		} else {
-			c.headerName = DefaultHeaderName
+		}
+	}
+}
+
+func WithHeaderDelimiter(delimiter string) COption {
+	return func(c *constructor) {
+		if len(delimiter) > 0 {
+			c.headerDelimiter = delimiter
 		}
 	}
 }
@@ -134,6 +145,7 @@ func WithCErrorResponseFunc(f OnErrorResponse) COption {
 func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 	c := &constructor{
 		headerName:      DefaultHeaderName,
+		headerDelimiter: DefaultHeaderDelimiter,
 		authorizations:  make(map[bascule.Authorization]TokenFactory),
 		getLogger:       bascule.GetDefaultLoggerFunc,
 		onErrorResponse: DefaultOnErrorResponse,
