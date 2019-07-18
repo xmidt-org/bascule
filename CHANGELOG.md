@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.3.1]
+- Fix travis yaml
+- Added delimiter option for constructor
+
 ## [v0.3.0]
 - Added Auth for outgoing requests
 - Added jwt Validator
@@ -47,7 +51,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.3.1...HEAD
+[v0.3.1]: https://github.com/xmidt-org/bascule/compare/0.3.0...v0.3.1
 [v0.3.0]: https://github.com/xmidt-org/bascule/compare/0.2.5...v0.3.0
 [v0.2.5]: https://github.com/xmidt-org/bascule/compare/0.2.4...v0.2.5
 [v0.2.4]: https://github.com/xmidt-org/bascule/compare/0.2.3...v0.2.4
