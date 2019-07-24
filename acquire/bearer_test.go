@@ -12,7 +12,7 @@ import (
 )
 
 func TestAuthAcquireSuccess(t *testing.T) {
-	goodAuth := JWTBasic{
+	goodAuth := SimpleBearer{
 		Token: "test token",
 	}
 	goodToken := "Bearer test token"
@@ -84,7 +84,7 @@ func TestAuthAcquireSuccess(t *testing.T) {
 			}
 
 			// Use Client & URL from our local test server
-			auth := NewJWTAcquirer(JWTAcquirerOptions{
+			auth := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
 				AuthURL: url,
 				Timeout: time.Duration(5) * time.Second,
 			})
@@ -105,7 +105,7 @@ func TestAuthCaching(t *testing.T) {
 
 	count := 0
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		auth := JWTBasic{
+		auth := SimpleBearer{
 			Token:      "gopher+" + string(count),
 			Expiration: 1,
 		}
@@ -118,7 +118,7 @@ func TestAuthCaching(t *testing.T) {
 	defer server.Close()
 
 	// Use Client & URL from our local test server
-	auth := NewJWTAcquirer(JWTAcquirerOptions{
+	auth := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
 		AuthURL: server.URL,
 		Timeout: time.Duration(5) * time.Second,
 		Buffer:  time.Microsecond,

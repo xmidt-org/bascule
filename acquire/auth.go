@@ -36,3 +36,12 @@ func AddAuth(r *http.Request, acquirer Acquirer) error {
 	}
 	return nil
 }
+
+//TODO: create a const value acquirer?
+type fixedValueAcquirer struct {
+	Auth string
+}
+
+func (f *fixedValueAcquirer) Acquire() (string, error) {
+	return f.Auth, nil
+}
