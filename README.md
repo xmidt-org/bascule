@@ -2,7 +2,7 @@
 
 The library for authorization: both acquiring and validating.
 
-[![Build Status](https://travis-ci.org/xmidt-org/bascule.svg?branch=master)](https://travis-ci.org/xmidt-org/bascule)
+[![Build Status](https://travis-ci.com/xmidt-org/bascule.svg?branch=master)](https://travis-ci.com/xmidt-org/bascule)
 [![codecov.io](http://codecov.io/github/xmidt-org/bascule/coverage.svg?branch=master)](http://codecov.io/github/xmidt-org/bascule?branch=master)
 [![Code Climate](https://codeclimate.com/github/xmidt-org/bascule/badges/gpa.svg)](https://codeclimate.com/github/xmidt-org/bascule)
 [![Issue Count](https://codeclimate.com/github/xmidt-org/bascule/badges/issue_count.svg)](https://codeclimate.com/github/xmidt-org/bascule)
