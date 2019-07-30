@@ -64,7 +64,9 @@ type SimpleBearer struct {
 //NewFixedBearerTokenAcquirer returns an acquirer which returns an authorization
 //string value of the form 'Bearer [input-token]'
 func NewFixedBearerTokenAcquirer(token string) Acquirer {
-	return &fixedValueAcquirer{Auth: "Bearer " + token}
+	return &fixedValueAcquirer{
+		AuthValue: token,
+		AuthType:  "Bearer"}
 }
 
 //NewRemoteBearerTokenAcquirer returns an acquirer which fetches tokens from a configurable URL location
@@ -107,7 +109,7 @@ func (acquire *remoteBearerTokenAcquirer) Acquire() (string, error) {
 
 	resp, errHTTP := httpclient.Do(req)
 	if errHTTP != nil {
-		return "", fmt.Errorf("error acquiring Bearer token: [%s]", errHTTP.Error())
+		return "", fmt.Errorf("error acquiring bearer token: [%s]", errHTTP.Error())
 	}
 	defer resp.Body.Close()
 

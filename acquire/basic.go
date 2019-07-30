@@ -2,19 +2,18 @@ package acquire
 
 import (
 	"encoding/base64"
-	"errors"
 )
 
-var (
-	errMissingCredentials = errors.New("no credentials found")
-)
-
+//NewBasicAuthAcquirer provides an Acquirer compatible with encoded basic auth credentials
 func NewBasicAuthAcquirer(credentials string) Acquirer {
 	return &fixedValueAcquirer{
-		Auth: "Basic " + credentials}
+		AuthValue: credentials,
+		AuthType:  "Basic"}
 }
 
+//NewBasicAuthAcquirerPlainText provides an Acquirer compatible with plain text basic auth credentials
 func NewBasicAuthAcquirerPlainText(username, password string) Acquirer {
 	return &fixedValueAcquirer{
-		Auth: "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))}
+		AuthValue: base64.StdEncoding.EncodeToString([]byte(username + ":" + password)),
+		AuthType:  "Basic"}
 }

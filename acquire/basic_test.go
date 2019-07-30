@@ -6,32 +6,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBasicAcquirerSuccess(t *testing.T) {
+func TestBasicAuthAcquirerSuccess(t *testing.T) {
 	assert := assert.New(t)
-	credentials := "test credentials"
-	expctedCredentials := "Basic test credentials"
-	acquirer := NewBasicAuthAcquirer(credentials)
-	returnedCredentials, err := acquirer.Acquire()
+	acquirer := NewBasicAuthAcquirer("test credentials")
+
+	actual, err := acquirer.Acquire()
+
 	assert.Nil(err)
-	assert.Equal(expctedCredentials, returnedCredentials)
+	assert.Equal("Basic test credentials", actual)
 }
 
-func TestBasicAcquirer(t *testing.T) {
+func TestBasicAuthAcquirersEquality(t *testing.T) {
 	assert := assert.New(t)
-	credentials := "Z29waGVyOmhlbGxv"
-	plainAcquirer := NewBasicAuthAcquirerPlainText("gopher", "hello")
-	acquirer := NewBasicAuthAcquirer(credentials)
-	returnedCredentials, err := acquirer.Acquire()
+
+	plainTextAcquirer := NewBasicAuthAcquirerPlainText("gopher", "hello")
+	acquirer := NewBasicAuthAcquirer("Z29waGVyOmhlbGxv")
+
+	acquirerAuthorization, err := acquirer.Acquire()
 	assert.Nil(err)
-	returnedCredentialsPlain, err := plainAcquirer.Acquire()
-	assert.Equal(returnedCredentialsPlain, returnedCredentials)
+
+	plainTextAcquirerAuthorization, err := plainTextAcquirer.Acquire()
+	assert.Nil(err)
+
+	assert.Equal(acquirerAuthorization, plainTextAcquirerAuthorization)
 }
 
-func TestBasicAcquirerFailure(t *testing.T) {
+func TestBasicAuthAcquirerFailure(t *testing.T) {
 	assert := assert.New(t)
-	credentials := ""
-	acquirer := NewBasicAuthAcquirer(credentials)
-	returnedCredentials, err := acquirer.Acquire()
-	assert.Equal(errMissingCredentials, err)
-	assert.Equal(credentials, returnedCredentials)
+	acquirer := NewBasicAuthAcquirer("")
+
+	authorization, err := acquirer.Acquire()
+
+	assert.Equal(ErrMissingAuthValue, err)
+	assert.Empty(authorization)
 }

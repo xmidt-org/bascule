@@ -36,14 +36,14 @@ func TestAuthAcquireSuccess(t *testing.T) {
 			authToken:     goodAuth,
 			expectedToken: "",
 			authURL:       "/\b",
-			expectedErr:   errors.New("failed to create new request for JWT"),
+			expectedErr:   errors.New("failed to create new request for Bearer"),
 		},
 		{
 			description:   "HTTP Do Error",
 			authToken:     goodAuth,
 			expectedToken: "",
 			authURL:       "/",
-			expectedErr:   errors.New("error acquiring JWT token"),
+			expectedErr:   errors.New("error acquiring bearer token"),
 		},
 		{
 			description:        "HTTP Unauthorized Error",
@@ -56,7 +56,7 @@ func TestAuthAcquireSuccess(t *testing.T) {
 			description:   "Unmarshal Error",
 			authToken:     []byte("{token:5555}"),
 			expectedToken: "",
-			expectedErr:   errors.New("unable to read json"),
+			expectedErr:   errors.New("unable to parse bearer token"),
 		},
 	}
 
@@ -86,7 +86,7 @@ func TestAuthAcquireSuccess(t *testing.T) {
 			// Use Client & URL from our local test server
 			auth := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
 				AuthURL: url,
-				Timeout: time.Duration(5) * time.Second,
+				Timeout: 5 * time.Second,
 			})
 			token, err := auth.Acquire()
 
