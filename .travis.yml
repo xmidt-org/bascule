@@ -21,7 +21,7 @@ install:
 
 script:
   - if [ -n "$(gofmt -s -l . | grep -v "vendor")" ]; then diff -u <(echo -n) <(gofmt -d $(gofmt -s -l . | grep -v "vendor")); fi
-  - go test -v -race $(go list ./... | grep -v "/vendor/")
+  - GO111MODULE=on go test -v -race -coverprofile=coverage.txt ./...
 
 after_success:
   - go get github.com/haya14busa/goverage
