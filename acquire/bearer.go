@@ -34,7 +34,7 @@ func DefaultExpirationParser(data []byte) (time.Time, error) {
 	if errUnmarshal := json.Unmarshal(data, &bearer); errUnmarshal != nil {
 		return time.Time{}, emperror.Wrap(errUnmarshal, "unable to parse bearer token expiration")
 	}
-	return time.Now().Add(time.Duration(bearer.Expiration) * time.Second), nil
+	return time.Now().Add(time.Duration(bearer.ExpiresInSeconds) * time.Second), nil
 }
 
 //RemoteBearerTokenAcquirerOptions provides configuration for the RemoteBearerTokenAcquirer
@@ -49,29 +49,21 @@ type RemoteBearerTokenAcquirerOptions struct {
 }
 
 type remoteBearerTokenAcquirer struct {
-	options RemoteBearerTokenAcquirerOptions
-
+	options    RemoteBearerTokenAcquirerOptions
 	cachedAuth string
 	expires    time.Time
+	httpClient *http.Client
 }
 
-//SimpleBearer defines the field name mappings used by the default Token and Expiration parsers
+//SimpleBearer defines the field name mappings used by the default bearer token and expiration parsers
 type SimpleBearer struct {
-	Expiration float64 `json:"expires_in"`
-	Token      string  `json:"serviceAccessToken"`
-}
-
-//NewFixedBearerTokenAcquirer returns an acquirer which returns an authorization
-//string value of the form 'Bearer [input-token]'
-func NewFixedBearerTokenAcquirer(token string) Acquirer {
-	return &fixedValueAcquirer{
-		AuthValue: token,
-		AuthType:  "Bearer"}
+	ExpiresInSeconds float64 `json:"expires_in"`
+	Token            string  `json:"serviceAccessToken"`
 }
 
 //NewRemoteBearerTokenAcquirer returns an acquirer which fetches tokens from a configurable URL location
 //The acquirer caches tokens and only re-fetches them from such URL once they have expired
-func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) Acquirer {
+func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (Acquirer, error) {
 	if options.GetToken == nil {
 		options.GetToken = DefaultTokenParser
 	}
@@ -85,12 +77,13 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) Acqu
 	return &remoteBearerTokenAcquirer{
 		options: options,
 		expires: time.Now(),
-	}
+		httpClient: &http.Client{
+			Timeout: options.Timeout,
+		}}, nil
 }
 
 func (acquire *remoteBearerTokenAcquirer) Acquire() (string, error) {
-	//TODO: Are we treating time.Unix(0, 0) as the "never expired" case here?
-	if time.Now().Add(acquire.options.Buffer).Before(acquire.expires) || acquire.expires == time.Unix(0, 0) {
+	if time.Now().Add(acquire.options.Buffer).Before(acquire.expires) {
 		return acquire.cachedAuth, nil
 	}
 
@@ -103,11 +96,7 @@ func (acquire *remoteBearerTokenAcquirer) Acquire() (string, error) {
 		req.Header.Set(key, value)
 	}
 
-	httpclient := &http.Client{
-		Timeout: acquire.options.Timeout,
-	}
-
-	resp, errHTTP := httpclient.Do(req)
+	resp, errHTTP := acquire.httpClient.Do(req)
 	if errHTTP != nil {
 		return "", fmt.Errorf("error acquiring bearer token: [%s]", errHTTP.Error())
 	}

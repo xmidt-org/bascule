@@ -3,6 +3,7 @@ package acquire
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,11 +12,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAuthAcquireSuccess(t *testing.T) {
+func TestRemoteBearerTokenAcquirer(t *testing.T) {
 	goodAuth := SimpleBearer{
-		Token: "test token",
+		Token: "test-token",
 	}
-	goodToken := "Bearer test token"
+	goodToken := "Bearer test-token"
 
 	tests := []struct {
 		description        string
@@ -66,6 +67,11 @@ func TestAuthAcquireSuccess(t *testing.T) {
 
 			// Start a local HTTP server
 			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+				// Test optional headers
+				assert.Equal("v0", req.Header.Get("k0"))
+				assert.Equal("v1", req.Header.Get("k1"))
+
 				// Send response to be tested
 				if tc.returnUnauthorized {
 					rw.WriteHeader(http.StatusUnauthorized)
@@ -84,10 +90,14 @@ func TestAuthAcquireSuccess(t *testing.T) {
 			}
 
 			// Use Client & URL from our local test server
-			auth := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
-				AuthURL: url,
-				Timeout: 5 * time.Second,
+			auth, errConstructor := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
+				AuthURL:        url,
+				Timeout:        5 * time.Second,
+				RequestHeaders: map[string]string{"k0": "v0", "k1": "v1"},
 			})
+
+			assert.Nil(errConstructor)
+
 			token, err := auth.Acquire()
 
 			if tc.expectedErr == nil || err == nil {
@@ -100,14 +110,14 @@ func TestAuthAcquireSuccess(t *testing.T) {
 	}
 }
 
-func TestAuthCaching(t *testing.T) {
+func TestRemoteBearerTokenAcquirerCaching(t *testing.T) {
 	assert := assert.New(t)
 
 	count := 0
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		auth := SimpleBearer{
-			Token:      "gopher+" + string(count),
-			Expiration: 1,
+			Token:            fmt.Sprintf("gopher%v", count),
+			ExpiresInSeconds: 3600, //1 hour
 		}
 		count++
 
@@ -118,18 +128,17 @@ func TestAuthCaching(t *testing.T) {
 	defer server.Close()
 
 	// Use Client & URL from our local test server
-	auth := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
+	auth, errConstructor := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
 		AuthURL: server.URL,
 		Timeout: time.Duration(5) * time.Second,
 		Buffer:  time.Microsecond,
 	})
+	assert.Nil(errConstructor)
 	token, err := auth.Acquire()
 	assert.Nil(err)
-	tokenA, err := auth.Acquire()
+
+	cachedToken, err := auth.Acquire()
 	assert.Nil(err)
-	assert.Equal(token, tokenA)
-	time.Sleep(time.Second)
-	tokenA, err = auth.Acquire()
-	assert.Nil(err)
-	assert.NotEqual(token, tokenA)
+	assert.Equal(token, cachedToken)
+	assert.Equal(1, count)
 }

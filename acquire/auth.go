@@ -2,16 +2,16 @@
 package acquire
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/goph/emperror"
 	"github.com/pkg/errors"
 )
 
-//ErrMissingAuthValue is returned by an Acquirer when it lacks an auth value
-//but it's expected to have one
-var ErrMissingAuthValue = errors.New("No authorization value was defined")
+//ErrEmptyCredentials is returned whenever an Acquirer is attempted to
+//be built with empty credentials
+//Use DefaultAcquirer for such no-op use case
+var ErrEmptyCredentials = errors.New("Empty credentials are not valid")
 
 // Acquirer gets an Authorization value that can be added to an http request.
 // The format of the string returned should be the key, a space, and then the
@@ -52,14 +52,20 @@ func AddAuth(r *http.Request, acquirer Acquirer) error {
 }
 
 type fixedValueAcquirer struct {
-	AuthType  string
 	AuthValue string
 }
 
 func (f *fixedValueAcquirer) Acquire() (string, error) {
-	if f.AuthValue == "" {
-		return "", ErrMissingAuthValue
-	}
+	return f.AuthValue, nil
+}
 
-	return fmt.Sprintf("%s %s", f.AuthType, f.AuthValue), nil
+//NewFixedAuthAcquirer returns an acquirer with a fixed authentication
+//value. 'authValue' should be the full authorization value of the form '[type] [token]'
+//(i.e. Bearer xyz)
+func NewFixedAuthAcquirer(authValue string) (Acquirer, error) {
+	if authValue != "" {
+		return &fixedValueAcquirer{
+			AuthValue: authValue}, nil
+	}
+	return nil, ErrEmptyCredentials
 }
