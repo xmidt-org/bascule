@@ -142,3 +142,56 @@ func TestRemoteBearerTokenAcquirerCaching(t *testing.T) {
 	assert.Equal(token, cachedToken)
 	assert.Equal(1, count)
 }
+
+func TestRemoteBearerTokenAcquirerNeverExpiringToken(t *testing.T) {
+	assert := assert.New(t)
+	count := 0
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		bearerAuthValue := customBearer{
+			Token:                "neverExpiring",
+			ExpiresOnUnixSeconds: 0,
+		}
+
+		count++
+
+		marshaledAuth, err := json.Marshal(&bearerAuthValue)
+		assert.Nil(err)
+		rw.Write(marshaledAuth)
+	}))
+	defer server.Close()
+
+	acquirer, errConstructor := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
+		AuthURL: server.URL,
+		Timeout: time.Duration(5) * time.Second,
+		Buffer:  time.Microsecond,
+
+		GetExpiration: func(data []byte) (time.Time, error) {
+			auth := &customBearer{}
+			json.Unmarshal(data, &auth)
+
+			return time.Unix(auth.ExpiresOnUnixSeconds, 0), nil
+		},
+
+		GetToken: func(data []byte) (string, error) {
+			auth := &customBearer{}
+			json.Unmarshal(data, &auth)
+
+			return auth.Token, nil
+		},
+	})
+
+	assert.Nil(errConstructor)
+	authValue, err := acquirer.Acquire()
+	assert.Nil(err)
+	assert.Equal("Bearer neverExpiring", authValue)
+
+	cachedAuthValue, err := acquirer.Acquire()
+	assert.Nil(err)
+	assert.Equal(authValue, cachedAuthValue)
+	assert.Equal(1, count)
+}
+
+type customBearer struct {
+	Token                string `json:"token"`
+	ExpiresOnUnixSeconds int64  `json:"expires_on"`
+}

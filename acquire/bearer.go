@@ -49,10 +49,11 @@ type RemoteBearerTokenAcquirerOptions struct {
 }
 
 type remoteBearerTokenAcquirer struct {
-	options    RemoteBearerTokenAcquirerOptions
-	cachedAuth string
-	expires    time.Time
-	httpClient *http.Client
+	options                RemoteBearerTokenAcquirerOptions
+	cachedAuth             string
+	expires                time.Time
+	httpClient             *http.Client
+	neverExpiringTokenTime time.Time
 }
 
 //SimpleBearer defines the field name mappings used by the default bearer token and expiration parsers
@@ -79,11 +80,13 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (Acq
 		expires: time.Now(),
 		httpClient: &http.Client{
 			Timeout: options.Timeout,
-		}}, nil
+		},
+		neverExpiringTokenTime: time.Unix(0, 0),
+	}, nil
 }
 
 func (acquire *remoteBearerTokenAcquirer) Acquire() (string, error) {
-	if time.Now().Add(acquire.options.Buffer).Before(acquire.expires) {
+	if time.Now().Add(acquire.options.Buffer).Before(acquire.expires) || acquire.expires == acquire.neverExpiringTokenTime {
 		return acquire.cachedAuth, nil
 	}
 
