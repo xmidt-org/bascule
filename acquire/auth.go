@@ -51,21 +51,20 @@ func AddAuth(r *http.Request, acquirer Acquirer) error {
 	return nil
 }
 
-type fixedValueAcquirer struct {
-	AuthValue string
+//FixedValueAcquirer implements Acquirer with a constant authorization value
+type FixedValueAcquirer struct {
+	authValue string
 }
 
-func (f *fixedValueAcquirer) Acquire() (string, error) {
-	return f.AuthValue, nil
+func (f *FixedValueAcquirer) Acquire() (string, error) {
+	return f.authValue, nil
 }
 
-//NewFixedAuthAcquirer returns an acquirer with a fixed authentication
-//value. 'authValue' should be the full authorization value of the form '[type] [token]'
-//(i.e. Bearer xyz)
-func NewFixedAuthAcquirer(authValue string) (Acquirer, error) {
+// NewFixedAuthAcquirer returns a FixedValueAcquirer with the given authValue
+func NewFixedAuthAcquirer(authValue string) (*FixedValueAcquirer, error) {
 	if authValue != "" {
-		return &fixedValueAcquirer{
-			AuthValue: authValue}, nil
+		return &FixedValueAcquirer{
+			authValue: authValue}, nil
 	}
 	return nil, ErrEmptyCredentials
 }

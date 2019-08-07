@@ -48,7 +48,8 @@ type RemoteBearerTokenAcquirerOptions struct {
 	GetExpiration ParseExpiration
 }
 
-type remoteBearerTokenAcquirer struct {
+//RemoteBearerTokenAcquirer implements Acquirer and fetches the tokens from a remote location with caching strategy
+type RemoteBearerTokenAcquirer struct {
 	options                RemoteBearerTokenAcquirerOptions
 	authValue              string
 	authValueExpiration    time.Time
@@ -62,10 +63,8 @@ type SimpleBearer struct {
 	Token            string  `json:"serviceAccessToken"`
 }
 
-//NewRemoteBearerTokenAcquirer returns an acquirerr which fetches tokens from a configurable URL location
-//The acquirerr caches tokens and only re-fetches them from such URL once they have expired
-//Note: If you'd like for a token to never expire, set is expiration to time.Unix(0,0)
-func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (Acquirer, error) {
+// NewRemoteBearerTokenAcquirer returns a RemoteBearerTokenAcquirer configured with the given options
+func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (*RemoteBearerTokenAcquirer, error) {
 	if options.GetToken == nil {
 		options.GetToken = DefaultTokenParser
 	}
@@ -74,9 +73,9 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (Acq
 		options.GetExpiration = DefaultExpirationParser
 	}
 
-	//TODO: we should inject defaults values for the other options as well
+	//TODO: we should inject timeout and buffer defaults values as well
 
-	return &remoteBearerTokenAcquirer{
+	return &RemoteBearerTokenAcquirer{
 		options:             options,
 		authValueExpiration: time.Now(),
 		httpClient: &http.Client{
@@ -86,9 +85,8 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (Acq
 	}, nil
 }
 
-func (acquirer *remoteBearerTokenAcquirer) Acquire() (string, error) {
-	unexpiredAuthValue := time.Now().Add(acquirer.options.Buffer).Before(acquirer.authValueExpiration)
-	if unexpiredAuthValue || acquirer.authValueExpiration == acquirer.nonExpiringSpecialCase {
+func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
+	if time.Now().Add(acquirer.options.Buffer).Before(acquirer.authValueExpiration) {
 		return acquirer.authValue, nil
 	}
 

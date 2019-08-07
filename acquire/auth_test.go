@@ -10,31 +10,50 @@ import (
 )
 
 func TestAddAuth(t *testing.T) {
+	fixedAcquirer, _ := NewFixedAuthAcquirer("Basic abc==")
+	tests := []struct {
+		name        string
+		request     *http.Request
+		acquirer    Acquirer
+		shouldError bool
+		authValue   string
+	}{
+		{
+			name:        "RequestIsNil",
+			acquirer:    &DefaultAcquirer{},
+			shouldError: true,
+		},
+		{
+			name:        "AcquirerIsNil",
+			request:     httptest.NewRequest(http.MethodGet, "/", nil),
+			shouldError: true,
+		},
+		{
+			name:        "AcquirerFails",
+			acquirer:    &failingAcquirer{},
+			shouldError: true,
+		},
+		{
+			name:        "HappyPath",
+			request:     httptest.NewRequest(http.MethodGet, "/", nil),
+			acquirer:    fixedAcquirer,
+			shouldError: false,
+			authValue:   "Basic abc==",
+		},
+	}
 
-	t.Run("RequestIsNil", func(t *testing.T) {
-		assert := assert.New(t)
-		assert.NotNil(AddAuth(nil, &DefaultAcquirer{}))
-	})
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
 
-	t.Run("AcquirerIsNil", func(t *testing.T) {
-		assert := assert.New(t)
-		assert.NotNil(AddAuth(httptest.NewRequest(http.MethodGet, "/", nil), nil))
-	})
-
-	t.Run("AcquirerFails", func(t *testing.T) {
-		assert := assert.New(t)
-		assert.NotNil(AddAuth(httptest.NewRequest(http.MethodGet, "/", nil), &failingAcquirer{}))
-	})
-
-	t.Run("HappyPath", func(t *testing.T) {
-		assert := assert.New(t)
-		acquirer, err := NewFixedAuthAcquirer("Basic abc==")
-		assert.Nil(err)
-
-		r := httptest.NewRequest(http.MethodGet, "/", nil)
-		assert.Nil(AddAuth(r, acquirer))
-		assert.Equal("Basic abc==", r.Header.Get("Authorization"))
-	})
+			if test.shouldError {
+				assert.NotNil(AddAuth(test.request, test.acquirer))
+			} else {
+				assert.Nil(AddAuth(test.request, test.acquirer))
+				assert.Equal(test.authValue, test.request.Header.Get("Authorization"))
+			}
+		})
+	}
 }
 
 func TestFixedAuthAcquirer(t *testing.T) {
