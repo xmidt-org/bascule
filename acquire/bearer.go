@@ -50,10 +50,10 @@ type RemoteBearerTokenAcquirerOptions struct {
 
 type remoteBearerTokenAcquirer struct {
 	options                RemoteBearerTokenAcquirerOptions
-	cachedAuth             string
-	expires                time.Time
+	authValue              string
+	authValueExpiration    time.Time
 	httpClient             *http.Client
-	neverExpiringTokenTime time.Time
+	nonExpiringSpecialCase time.Time
 }
 
 //SimpleBearer defines the field name mappings used by the default bearer token and expiration parsers
@@ -62,8 +62,9 @@ type SimpleBearer struct {
 	Token            string  `json:"serviceAccessToken"`
 }
 
-//NewRemoteBearerTokenAcquirer returns an acquirer which fetches tokens from a configurable URL location
-//The acquirer caches tokens and only re-fetches them from such URL once they have expired
+//NewRemoteBearerTokenAcquirer returns an acquirerr which fetches tokens from a configurable URL location
+//The acquirerr caches tokens and only re-fetches them from such URL once they have expired
+//Note: If you'd like for a token to never expire, set is expiration to time.Unix(0,0)
 func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (Acquirer, error) {
 	if options.GetToken == nil {
 		options.GetToken = DefaultTokenParser
@@ -76,30 +77,31 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (Acq
 	//TODO: we should inject defaults values for the other options as well
 
 	return &remoteBearerTokenAcquirer{
-		options: options,
-		expires: time.Now(),
+		options:             options,
+		authValueExpiration: time.Now(),
 		httpClient: &http.Client{
 			Timeout: options.Timeout,
 		},
-		neverExpiringTokenTime: time.Unix(0, 0),
+		nonExpiringSpecialCase: time.Unix(0, 0),
 	}, nil
 }
 
-func (acquire *remoteBearerTokenAcquirer) Acquire() (string, error) {
-	if time.Now().Add(acquire.options.Buffer).Before(acquire.expires) || acquire.expires == acquire.neverExpiringTokenTime {
-		return acquire.cachedAuth, nil
+func (acquirer *remoteBearerTokenAcquirer) Acquire() (string, error) {
+	unexpiredAuthValue := time.Now().Add(acquirer.options.Buffer).Before(acquirer.authValueExpiration)
+	if unexpiredAuthValue || acquirer.authValueExpiration == acquirer.nonExpiringSpecialCase {
+		return acquirer.authValue, nil
 	}
 
-	req, err := http.NewRequest("GET", acquire.options.AuthURL, bytes.NewBufferString("{}"))
+	req, err := http.NewRequest("GET", acquirer.options.AuthURL, bytes.NewBufferString("{}"))
 	if err != nil {
 		return "", emperror.Wrap(err, "failed to create new request for Bearer")
 	}
 
-	for key, value := range acquire.options.RequestHeaders {
+	for key, value := range acquirer.options.RequestHeaders {
 		req.Header.Set(key, value)
 	}
 
-	resp, errHTTP := acquire.httpClient.Do(req)
+	resp, errHTTP := acquirer.httpClient.Do(req)
 	if errHTTP != nil {
 		return "", fmt.Errorf("error acquiring bearer token: [%s]", errHTTP.Error())
 	}
@@ -114,15 +116,15 @@ func (acquire *remoteBearerTokenAcquirer) Acquire() (string, error) {
 		return "", fmt.Errorf("error reading Bearer token: [%s]", errRead.Error())
 	}
 
-	token, err := acquire.options.GetToken(respBody)
+	token, err := acquirer.options.GetToken(respBody)
 	if err != nil {
 		return "", fmt.Errorf("error parsing Bearer token: [%s]", err.Error())
 	}
-	expires, err := acquire.options.GetExpiration(respBody)
+	expiration, err := acquirer.options.GetExpiration(respBody)
 	if err != nil {
 		return "", fmt.Errorf("error parsing Bearer token: [%s]", err.Error())
 	}
 
-	acquire.cachedAuth, acquire.expires = "Bearer "+token, expires
-	return acquire.cachedAuth, nil
+	acquirer.authValue, acquirer.authValueExpiration = "Bearer "+token, expiration
+	return acquirer.authValue, nil
 }
