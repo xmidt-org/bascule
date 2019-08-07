@@ -33,18 +33,18 @@ func TestRemoteBearerTokenAcquirer(t *testing.T) {
 			expectedErr:   nil,
 		},
 		{
-			description:   "HTTP Make Request Error",
-			authToken:     goodAuth,
-			expectedToken: "",
-			authURL:       "/\b",
-			expectedErr:   errors.New("failed to create new request for Bearer"),
-		},
-		{
 			description:   "HTTP Do Error",
 			authToken:     goodAuth,
 			expectedToken: "",
 			authURL:       "/",
-			expectedErr:   errors.New("error acquiring bearer token"),
+			expectedErr:   errors.New("error making request to '/' to acquire bearer"),
+		},
+		{
+			description:   "HTTP Make Request Error",
+			authToken:     goodAuth,
+			expectedToken: "",
+			authURL:       "/\b",
+			expectedErr:   errors.New("failed to create new request"),
 		},
 		{
 			description:        "HTTP Unauthorized Error",

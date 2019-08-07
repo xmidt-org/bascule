@@ -1,7 +1,6 @@
 package acquire
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -90,7 +89,7 @@ func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 		return acquirer.authValue, nil
 	}
 
-	req, err := http.NewRequest("GET", acquirer.options.AuthURL, bytes.NewBufferString("{}"))
+	req, err := http.NewRequest("GET", acquirer.options.AuthURL, nil)
 	if err != nil {
 		return "", emperror.Wrap(err, "failed to create new request for Bearer")
 	}
@@ -101,7 +100,7 @@ func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 
 	resp, errHTTP := acquirer.httpClient.Do(req)
 	if errHTTP != nil {
-		return "", fmt.Errorf("error acquiring bearer token: [%s]", errHTTP.Error())
+		return "", emperror.Wrapf(errHTTP, "error making request to '%v' to acquire bearer token", acquirer.options.AuthURL)
 	}
 	defer resp.Body.Close()
 
@@ -111,16 +110,16 @@ func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 
 	respBody, errRead := ioutil.ReadAll(resp.Body)
 	if errRead != nil {
-		return "", fmt.Errorf("error reading Bearer token: [%s]", errRead.Error())
+		return "", emperror.Wrap(errRead, "error reading HTTP response body")
 	}
 
 	token, err := acquirer.options.GetToken(respBody)
 	if err != nil {
-		return "", fmt.Errorf("error parsing Bearer token: [%s]", err.Error())
+		return "", emperror.Wrap(err, "error parsing bearer token from http response body")
 	}
 	expiration, err := acquirer.options.GetExpiration(respBody)
 	if err != nil {
-		return "", fmt.Errorf("error parsing Bearer token: [%s]", err.Error())
+		return "", emperror.Wrap(err, "error parsing bearer token expiration from http response body")
 	}
 
 	acquirer.authValue, acquirer.authValueExpiration = "Bearer "+token, expiration
