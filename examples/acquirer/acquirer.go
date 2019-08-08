@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,7 +13,12 @@ import (
 
 func main() {
 	// set up acquirer and add the auth to the request
-	acquirer := acquire.NewBasicAcquirerPlainText("testuser", "testpass")
+	acquirer, err := acquire.NewFixedAuthAcquirer("Basic " + base64.StdEncoding.EncodeToString([]byte("testuser:testpass")))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create basic auth plain text acquirer: %v\n", err.Error())
+		os.Exit(1)
+	}
+
 	request, err := http.NewRequest(http.MethodGet, "http://localhost:6000/test", nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create request: %v\n", err.Error())
