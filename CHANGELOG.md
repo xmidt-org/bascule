@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.4.0]
+- Refactored acquirer code to be more flexible/extendable
+- Gave examples their own go.mod files so the library doesn't have unnecessary dependencies.
+
 ## [v0.3.1]
 - Fix travis yaml
 - Added delimiter option for constructor
@@ -51,7 +55,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.4.0...HEAD
+[v0.4.0]: https://github.com/xmidt-org/bascule/compare/0.3.1...v0.4.0
 [v0.3.1]: https://github.com/xmidt-org/bascule/compare/0.3.0...v0.3.1
 [v0.3.0]: https://github.com/xmidt-org/bascule/compare/0.2.5...v0.3.0
 [v0.2.5]: https://github.com/xmidt-org/bascule/compare/0.2.4...v0.2.5
