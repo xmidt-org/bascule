@@ -1,4 +1,4 @@
-module github.com/Comcast/comcast-bascule
+module github.com/xmidt-org/bascule
 
 go 1.12
 

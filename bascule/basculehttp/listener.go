@@ -3,7 +3,7 @@ package basculehttp
 import (
 	"net/http"
 
-	"github.com/Comcast/comcast-bascule/bascule"
+	"github.com/xmidt-org/bascule/bascule"
 )
 
 type Listener interface {

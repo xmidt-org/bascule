@@ -7,7 +7,7 @@ import (
 
 	"github.com/goph/emperror"
 
-	"github.com/Comcast/comcast-bascule/bascule"
+	"github.com/xmidt-org/bascule/bascule"
 	"github.com/go-kit/kit/log/level"
 )
 
