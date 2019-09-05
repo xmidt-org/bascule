@@ -105,7 +105,8 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	}
 
 	leewayclaims := bascule.ClaimsWithLeeway{
-		Leeway: btf.Leeway,
+		MapClaims: make(jwt.MapClaims),
+		Leeway:    btf.Leeway,
 	}
 
 	jwsToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
