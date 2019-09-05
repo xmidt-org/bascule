@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Comcast/comcast-bascule/bascule"
+	"github.com/xmidt-org/bascule/bascule"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
 )

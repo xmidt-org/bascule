@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Comcast/comcast-bascule/bascule"
-	"github.com/Comcast/comcast-bascule/bascule/key"
+	"github.com/xmidt-org/bascule/bascule"
+	"github.com/xmidt-org/bascule/bascule/key"
 	"github.com/SermoDigital/jose"
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
