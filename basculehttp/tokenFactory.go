@@ -117,12 +117,16 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 		return nil, ErrorInvalidToken
 	}
 
-	claims, ok := jwsToken.Claims.(*jwt.MapClaims)
+	claims, ok := jwsToken.Claims.(*bascule.ClaimsWithLeeway)
 	if !ok {
 		return nil, emperror.Wrap(ErrorUnexpectedClaims, "failed to parse JWS")
 	}
 
-	payload := bascule.Attributes(*claims)
+	claimsMap, err := claims.GetMap()
+	if err != nil {
+		return nil, emperror.WrapWith(err, "failed to get map of claims", "claims struct", claims)
+	}
+	payload := bascule.Attributes(claimsMap)
 
 	principal, ok := payload[jwtPrincipalKey].(string)
 	if !ok {
