@@ -27,7 +27,7 @@ func (parser defaultJWTParser) ParseJWT(token string, claims jwt.Claims, parseFu
 var DefaultJWTParser JWTParser = defaultJWTParser{}
 
 type ClaimsWithLeeway struct {
-	jwt.MapClaims
+	jwt.StandardClaims
 	Leeway Leeway
 }
 

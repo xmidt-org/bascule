@@ -26,7 +26,7 @@ var (
 	ErrorUnexpectedPayload   = errors.New("payload isn't a map of strings to interfaces")
 	ErrorUnexpectedPrincipal = errors.New("principal isn't a string")
 	ErrorInvalidToken        = errors.New("token isn't valid")
-	ErrorUnexpectedClaims    = errors.New("claims wasn't MapClaims as expected")
+	ErrorUnexpectedClaims    = errors.New("claims wasn't ClaimsWithLeeway as expected")
 )
 
 // TokenFactory is a strategy interface responsible for creating and validating
@@ -105,8 +105,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	}
 
 	leewayclaims := bascule.ClaimsWithLeeway{
-		MapClaims: make(jwt.MapClaims),
-		Leeway:    btf.Leeway,
+		Leeway: btf.Leeway,
 	}
 
 	jwsToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
