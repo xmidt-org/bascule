@@ -8,7 +8,9 @@ import (
 	"net/textproto"
 	"strings"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/goph/emperror"
 	"github.com/xmidt-org/bascule"
 )
 
@@ -67,7 +69,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		ctx := request.Context()
 		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
 		if err != nil {
-			c.error(logger, ParseFailed, authorization, err)
+			c.error(logger, ParseFailed, authorization, emperror.Wrap(err, "failed to parse and validate token"))
 			WriteResponse(response, http.StatusForbidden, err)
 			return
 		}
@@ -91,7 +93,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 }
 
 func (c *constructor) error(logger bascule.Logger, e ErrorResponseReason, auth string, err error) {
-	logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "auth", auth)
+	log.With(logger, emperror.Context(err)...).Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "auth", auth)
 	c.onErrorResponse(e, err)
 }
 
