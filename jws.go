@@ -1,6 +1,7 @@
 package bascule
 
 import (
+	"encoding/json"
 	"errors"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -64,6 +65,11 @@ func (c *ClaimsWithLeeway) Valid() error {
 	}
 
 	return vErr
+}
+
+func (c *ClaimsWithLeeway) UnmarshalJSON(data []byte) error {
+	c.MapClaims = make(jwt.MapClaims) // just to be sure it's clean before each unmarshal
+	return json.Unmarshal(data, &c.MapClaims)
 }
 
 // GetMap returns a map of string to interfaces of the values in the ClaimsWithLeeway
