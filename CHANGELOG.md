@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.5.0]
+- Fixed panic in jws parser
+- Fixed ClaimsWithLeeway to be unmarshaled into correctly
+- Updated basculehttp logs to provide more information
+
 ## [v0.4.0]
 - Refactored acquirer code to be more flexible/extendable
 - Gave examples their own go.mod files so the library doesn't have unnecessary dependencies.
@@ -55,7 +60,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.5.0...HEAD
+[v0.5.0]: https://github.com/xmidt-org/bascule/compare/0.4.0...v0.5.0
 [v0.4.0]: https://github.com/xmidt-org/bascule/compare/0.3.1...v0.4.0
 [v0.3.1]: https://github.com/xmidt-org/bascule/compare/0.3.0...v0.3.1
 [v0.3.0]: https://github.com/xmidt-org/bascule/compare/0.2.5...v0.3.0
