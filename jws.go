@@ -74,16 +74,5 @@ func (c *ClaimsWithLeeway) UnmarshalJSON(data []byte) error {
 
 // GetMap returns a map of string to interfaces of the values in the ClaimsWithLeeway
 func (c *ClaimsWithLeeway) GetMap() (map[string]interface{}, error) {
-	// for StandardClaims, which don't work with the []string aud values that we use
-	// var finalMap map[string]interface{}
-	// inrec, err := json.Marshal(c)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = json.Unmarshal(inrec, &finalMap)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// return finalMap, nil
 	return c.MapClaims, nil
 }

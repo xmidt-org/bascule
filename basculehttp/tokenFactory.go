@@ -130,7 +130,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 
 	principal, ok := payload[jwtPrincipalKey].(string)
 	if !ok {
-		return nil, emperror.WrapWith(ErrorUnexpectedPrincipal, "failed to get and convert principal", "principal", payload[jwtPrincipalKey], "claims map", claimsMap, "payload", payload)
+		return nil, emperror.WrapWith(ErrorUnexpectedPrincipal, "failed to get and convert principal", "principal", payload[jwtPrincipalKey], "payload", payload)
 	}
 
 	return bascule.NewToken("jwt", principal, payload), nil
