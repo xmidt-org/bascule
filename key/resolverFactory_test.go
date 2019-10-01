@@ -117,37 +117,6 @@ func TestBadURITemplates(t *testing.T) {
 	}
 }
 
-// func TestResolverFactoryNewUpdater(t *testing.T) {
-// 	assert := assert.New(t)
-
-// 	updateKeysCalled := make(chan struct{})
-// 	runner := func(mock.Arguments) {
-// 		defer func() {
-// 			recover() // ignore panics from multiple closes
-// 		}()
-
-// 		close(updateKeysCalled)
-// 	}
-
-// 	keyCache := &MockCache{}
-// 	keyCache.On("UpdateKeys").Return(0, nil).Run(runner)
-
-// 	resolverFactory := ResolverFactory{
-// 		UpdateInterval: types.Duration(100 * time.Millisecond),
-// 	}
-
-// 	if updater := resolverFactory.NewUpdater(keyCache); assert.NotNil(updater) {
-// 		waitGroup := &sync.WaitGroup{}
-// 		shutdown := make(chan struct{})
-// 		updater.Run(waitGroup, shutdown)
-
-// 		// we only care that the updater called UpdateKeys() at least once
-// 		<-updateKeysCalled
-// 		close(shutdown)
-// 		waitGroup.Wait()
-// 	}
-// }
-
 func TestResolverFactoryDefaultParser(t *testing.T) {
 	assert := assert.New(t)
 
