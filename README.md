@@ -18,6 +18,19 @@ way to acquire Authorization header values.  Tokens can be parsed and validated
 from http requests. Bascule provides a generic framework that can be configured, 
 but currently can support basic and jwt authorization.
 
+## Table of Contents
+
+- [Code of Conduct](#code-of-conduct)
+- [Acquiring Authorization](#acquiring-authorization)
+- [Validating Authorization](#validating-authorization)
+- [Install](#install)
+- [Contributing](#contributing)
+
+## Code of Conduct
+
+This project and everyone participating in it are governed by the [XMiDT Code Of Conduct](https://xmidt.io/code_of_conduct/). 
+By participating, you agree to this Code.
+
 ## Acquiring Authorization
 
 The `acquire` subpackage handles getting the value for an Authorization header of
