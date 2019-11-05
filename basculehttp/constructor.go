@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strings"
 
 	"github.com/go-kit/kit/log"
@@ -24,11 +25,25 @@ const (
 	DefaultHeaderDelimiter = " "
 )
 
+func DefaultGetURLFunc(u *url.URL) (string, error) {
+	return u.EscapedPath(), nil
+}
+
+func CreateRemovePrefixURLFunc(prefix string) func(*url.URL) (string, error) {
+	return func(u *url.URL) (string, error) {
+		if !strings.HasPrefix(u.EscapedPath(), prefix) {
+			return "", errors.New("unexpected URL, did not start with expected prefix")
+		}
+		return u.EscapedPath()[len(prefix)+1:], nil
+	}
+}
+
 type constructor struct {
 	headerName      string
 	headerDelimiter string
 	authorizations  map[bascule.Authorization]TokenFactory
 	getLogger       func(context.Context) bascule.Logger
+	getURL          func(*url.URL) (string, error)
 	onErrorResponse OnErrorResponse
 }
 
@@ -74,13 +89,20 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			return
 		}
 
+		u, err := c.getURL(request.URL)
+		if err != nil {
+			c.error(logger, GetURLFailed, authorization, emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
+			WriteResponse(response, http.StatusForbidden, err)
+			return
+		}
+
 		ctx = bascule.WithAuthentication(
 			request.Context(),
 			bascule.Authentication{
 				Authorization: key,
 				Token:         token,
 				Request: bascule.Request{
-					URL:    request.URL.EscapedPath(),
+					URL:    u,
 					Method: request.Method,
 				},
 			},
@@ -134,6 +156,14 @@ func WithCLogger(getLogger func(context.Context) bascule.Logger) COption {
 	}
 }
 
+func WithGetURLFunc(getURL func(*url.URL) (string, error)) COption {
+	return func(c *constructor) {
+		if getURL != nil {
+			c.getURL = getURL
+		}
+	}
+}
+
 // WithCErrorResponseFunc sets the function that is called when an error occurs.
 func WithCErrorResponseFunc(f OnErrorResponse) COption {
 	return func(c *constructor) {
@@ -150,6 +180,7 @@ func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 		headerDelimiter: DefaultHeaderDelimiter,
 		authorizations:  make(map[bascule.Authorization]TokenFactory),
 		getLogger:       bascule.GetDefaultLoggerFunc,
+		getURL:          DefaultGetURLFunc,
 		onErrorResponse: DefaultOnErrorResponse,
 	}
 
