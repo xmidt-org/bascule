@@ -4,6 +4,14 @@ package basculehttp
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Forbid-0]
+	_ = x[Allow-1]
+}
+
 const _NotFoundBehavior_name = "ForbidAllow"
 
 var _NotFoundBehavior_index = [...]uint8{0, 6, 11}
