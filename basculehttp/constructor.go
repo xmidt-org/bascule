@@ -34,7 +34,7 @@ func CreateRemovePrefixURLFunc(prefix string) func(*url.URL) (string, error) {
 		if !strings.HasPrefix(u.EscapedPath(), prefix) {
 			return "", errors.New("unexpected URL, did not start with expected prefix")
 		}
-		return u.EscapedPath()[len(prefix)+1:], nil
+		return u.EscapedPath()[len(prefix):], nil
 	}
 }
 
@@ -53,6 +53,14 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		if logger == nil {
 			logger = bascule.GetDefaultLoggerFunc(request.Context())
 		}
+
+		u, err := c.getURL(request.URL)
+		if err != nil {
+			c.error(logger, GetURLFailed, "", emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
+			WriteResponse(response, http.StatusForbidden, err)
+			return
+		}
+
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
 			err := errors.New("no authorization header")
@@ -85,13 +93,6 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
 		if err != nil {
 			c.error(logger, ParseFailed, authorization, emperror.Wrap(err, "failed to parse and validate token"))
-			WriteResponse(response, http.StatusForbidden, err)
-			return
-		}
-
-		u, err := c.getURL(request.URL)
-		if err != nil {
-			c.error(logger, GetURLFailed, authorization, emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
 			WriteResponse(response, http.StatusForbidden, err)
 			return
 		}
