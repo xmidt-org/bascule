@@ -64,16 +64,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Basic code and structure established
 
 [Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.6.0...HEAD
-[v0.6.0]: https://github.com/xmidt-org/bascule/compare/0.5.0...v0.6.0
-[v0.5.0]: https://github.com/xmidt-org/bascule/compare/0.4.0...v0.5.0
-[v0.4.0]: https://github.com/xmidt-org/bascule/compare/0.3.1...v0.4.0
-[v0.3.1]: https://github.com/xmidt-org/bascule/compare/0.3.0...v0.3.1
-[v0.3.0]: https://github.com/xmidt-org/bascule/compare/0.2.5...v0.3.0
-[v0.2.5]: https://github.com/xmidt-org/bascule/compare/0.2.4...v0.2.5
-[v0.2.4]: https://github.com/xmidt-org/bascule/compare/0.2.3...v0.2.4
-[v0.2.3]: https://github.com/xmidt-org/bascule/compare/0.2.2...v0.2.3
-[v0.2.2]: https://github.com/xmidt-org/bascule/compare/0.2.1...v0.2.2
-[v0.2.1]: https://github.com/xmidt-org/bascule/compare/0.2.0...v0.2.1
-[v0.2.0]: https://github.com/xmidt-org/bascule/compare/0.1.1...v0.2.0
-[v0.1.1]: https://github.com/xmidt-org/bascule/compare/0.1.0...v0.1.1
-[v0.1.0]: https://github.com/xmidt-org/bascule/compare/0.0.0...v0.1.0
+[v0.6.0]: https://github.com/xmidt-org/bascule/compare/v0.5.0...v0.6.0
+[v0.5.0]: https://github.com/xmidt-org/bascule/compare/v0.4.0...v0.5.0
+[v0.4.0]: https://github.com/xmidt-org/bascule/compare/v0.3.1...v0.4.0
+[v0.3.1]: https://github.com/xmidt-org/bascule/compare/v0.3.0...v0.3.1
+[v0.3.0]: https://github.com/xmidt-org/bascule/compare/v0.2.5...v0.3.0
+[v0.2.5]: https://github.com/xmidt-org/bascule/compare/v0.2.4...v0.2.5
+[v0.2.4]: https://github.com/xmidt-org/bascule/compare/v0.2.3...v0.2.4
+[v0.2.3]: https://github.com/xmidt-org/bascule/compare/v0.2.2...v0.2.3
+[v0.2.2]: https://github.com/xmidt-org/bascule/compare/v0.2.1...v0.2.2
+[v0.2.1]: https://github.com/xmidt-org/bascule/compare/v0.2.0...v0.2.1
+[v0.2.0]: https://github.com/xmidt-org/bascule/compare/v0.1.1...v0.2.0
+[v0.1.1]: https://github.com/xmidt-org/bascule/compare/v0.1.0...v0.1.1
+[v0.1.0]: https://github.com/xmidt-org/bascule/compare/v0.0.0...v0.1.0
