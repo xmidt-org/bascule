@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,11 +30,14 @@ func TestListenerDecorator(t *testing.T) {
 	handler.ServeHTTP(writer, req)
 	assert.Equal(http.StatusForbidden, writer.Code)
 
+	u, err := url.ParseRequestURI("/")
+	assert.Nil(err)
+
 	ctx := bascule.WithAuthentication(context.Background(), bascule.Authentication{
 		Authorization: "jwt",
 		Token:         bascule.NewToken("", "", bascule.Attributes{}),
 		Request: bascule.Request{
-			URL:    "/",
+			URL:    u,
 			Method: "get",
 		},
 	})

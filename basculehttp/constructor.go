@@ -25,16 +25,24 @@ const (
 	DefaultHeaderDelimiter = " "
 )
 
-func DefaultGetURLFunc(u *url.URL) (string, error) {
-	return u.EscapedPath(), nil
+// ParseURL is a function that modifies the url given then returns it.
+type ParseURL func(*url.URL) (*url.URL, error)
+
+// DefaultParseURLFunc does nothing.  It returns the same url it received.
+func DefaultParseURLFunc(u *url.URL) (*url.URL, error) {
+	return u, nil
 }
 
-func CreateRemovePrefixURLFunc(prefix string) func(*url.URL) (string, error) {
-	return func(u *url.URL) (string, error) {
-		if !strings.HasPrefix(u.EscapedPath(), prefix) {
-			return "", errors.New("unexpected URL, did not start with expected prefix")
+// CreateRemovePrefixURLFunc parses the URL by removing the prefix specified.
+func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
+	return func(u *url.URL) (*url.URL, error) {
+		escapedPath := u.EscapedPath()
+		if !strings.HasPrefix(escapedPath, prefix) {
+			return nil, errors.New("unexpected URL, did not start with expected prefix")
 		}
-		return u.EscapedPath()[len(prefix):], nil
+		u.Path = escapedPath[len(prefix):]
+		u.RawPath = escapedPath[len(prefix):]
+		return next(u)
 	}
 }
 
@@ -43,7 +51,7 @@ type constructor struct {
 	headerDelimiter string
 	authorizations  map[bascule.Authorization]TokenFactory
 	getLogger       func(context.Context) bascule.Logger
-	getURL          func(*url.URL) (string, error)
+	parseURL        ParseURL
 	onErrorResponse OnErrorResponse
 }
 
@@ -54,7 +62,9 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			logger = bascule.GetDefaultLoggerFunc(request.Context())
 		}
 
-		u, err := c.getURL(request.URL)
+		// copy the URL before modifying it
+		urlVal := *request.URL
+		u, err := c.parseURL(&urlVal)
 		if err != nil {
 			c.error(logger, GetURLFailed, "", emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
 			WriteResponse(response, http.StatusForbidden, err)
@@ -134,6 +144,7 @@ func WithHeaderName(headerName string) COption {
 	}
 }
 
+// WithHeaderDelimiter sets the value expected between the authorization key and token.
 func WithHeaderDelimiter(delimiter string) COption {
 	return func(c *constructor) {
 		if len(delimiter) > 0 {
@@ -157,10 +168,12 @@ func WithCLogger(getLogger func(context.Context) bascule.Logger) COption {
 	}
 }
 
-func WithGetURLFunc(getURL func(*url.URL) (string, error)) COption {
+// WithParseURLFunc sets the function to use to make any changes to the URL
+// before it is added to the context.
+func WithParseURLFunc(parseURL ParseURL) COption {
 	return func(c *constructor) {
-		if getURL != nil {
-			c.getURL = getURL
+		if parseURL != nil {
+			c.parseURL = parseURL
 		}
 	}
 }
@@ -181,7 +194,7 @@ func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 		headerDelimiter: DefaultHeaderDelimiter,
 		authorizations:  make(map[bascule.Authorization]TokenFactory),
 		getLogger:       bascule.GetDefaultLoggerFunc,
-		getURL:          DefaultGetURLFunc,
+		parseURL:        DefaultParseURLFunc,
 		onErrorResponse: DefaultOnErrorResponse,
 	}
 

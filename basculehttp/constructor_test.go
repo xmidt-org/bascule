@@ -23,7 +23,7 @@ func TestConstructor(t *testing.T) {
 		WithCLogger(func(_ context.Context) bascule.Logger {
 			return bascule.Logger(log.NewJSONLogger(log.NewSyncWriter(os.Stdout)))
 		}),
-		WithGetURLFunc(CreateRemovePrefixURLFunc("/test")),
+		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
 	)
 	c2 := NewConstructor(

@@ -2,6 +2,7 @@ package bascule
 
 import (
 	"context"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,8 @@ import (
 
 func TestContext(t *testing.T) {
 	assert := assert.New(t)
+	u, err := url.ParseRequestURI("/a/b/c")
+	assert.Nil(err)
 	expectedAuth := Authentication{
 		Authorization: "authorization string",
 		Token: simpleToken{
@@ -17,7 +20,7 @@ func TestContext(t *testing.T) {
 			attributes: map[string]interface{}{"testkey": "testval", "attr": 5},
 		},
 		Request: Request{
-			URL:    "/a/b/c",
+			URL:    u,
 			Method: "GET",
 		},
 	}
