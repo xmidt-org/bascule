@@ -15,6 +15,7 @@ import (
 func TestConstructor(t *testing.T) {
 	testHeader := "test header"
 	testDelimiter := "="
+
 	c := NewConstructor(
 		WithHeaderName(testHeader),
 		WithHeaderDelimiter(testDelimiter),
@@ -22,6 +23,7 @@ func TestConstructor(t *testing.T) {
 		WithCLogger(func(_ context.Context) bascule.Logger {
 			return bascule.Logger(log.NewJSONLogger(log.NewSyncWriter(os.Stdout)))
 		}),
+		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
 	)
 	c2 := NewConstructor(
@@ -35,6 +37,7 @@ func TestConstructor(t *testing.T) {
 		requestHeaderKey   string
 		requestHeaderValue string
 		expectedStatusCode int
+		endpoint           string
 	}{
 		{
 			description:        "Success",
@@ -42,6 +45,13 @@ func TestConstructor(t *testing.T) {
 			requestHeaderKey:   testHeader,
 			requestHeaderValue: "Basic=Y29kZXg6Y29kZXg=",
 			expectedStatusCode: http.StatusOK,
+			endpoint:           "/test",
+		},
+		{
+			description:        "URL Parsing Error",
+			constructor:        c,
+			endpoint:           "/blah",
+			expectedStatusCode: http.StatusForbidden,
 		},
 		{
 			description:        "No Authorization Header Error",
@@ -49,6 +59,7 @@ func TestConstructor(t *testing.T) {
 			requestHeaderKey:   DefaultHeaderName,
 			requestHeaderValue: "",
 			expectedStatusCode: http.StatusForbidden,
+			endpoint:           "/",
 		},
 		{
 			description:        "No Space in Auth Header Error",
@@ -56,6 +67,7 @@ func TestConstructor(t *testing.T) {
 			requestHeaderKey:   testHeader,
 			requestHeaderValue: "abcd",
 			expectedStatusCode: http.StatusBadRequest,
+			endpoint:           "/test",
 		},
 		{
 			description:        "Key Not Supported Error",
@@ -63,6 +75,7 @@ func TestConstructor(t *testing.T) {
 			requestHeaderKey:   DefaultHeaderName,
 			requestHeaderValue: "abcd ",
 			expectedStatusCode: http.StatusForbidden,
+			endpoint:           "/test",
 		},
 		{
 			description:        "Parse and Validate Error",
@@ -70,6 +83,7 @@ func TestConstructor(t *testing.T) {
 			requestHeaderKey:   testHeader,
 			requestHeaderValue: "Basic=AFJDK",
 			expectedStatusCode: http.StatusForbidden,
+			endpoint:           "/test",
 		},
 	}
 	for _, tc := range tests {
@@ -78,7 +92,7 @@ func TestConstructor(t *testing.T) {
 			handler := tc.constructor(next)
 
 			writer := httptest.NewRecorder()
-			req := httptest.NewRequest("get", "/", nil)
+			req := httptest.NewRequest("get", tc.endpoint, nil)
 			req.Header.Add(tc.requestHeaderKey, tc.requestHeaderValue)
 			handler.ServeHTTP(writer, req)
 			assert.Equal(tc.expectedStatusCode, writer.Code)

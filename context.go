@@ -2,6 +2,7 @@ package bascule
 
 import (
 	"context"
+	"net/url"
 )
 
 // Authorization represents the authorization mechanism performed on the token,
@@ -18,7 +19,7 @@ type Authentication struct {
 // Request holds request information that may be useful for validating the
 // token.
 type Request struct {
-	URL    string
+	URL    *url.URL
 	Method string
 }
 

@@ -11,6 +11,7 @@ const (
 	InvalidHeader
 	KeyNotSupported
 	ParseFailed
+	GetURLFailed
 	MissingAuthentication
 	ChecksNotFound
 	ChecksFailed

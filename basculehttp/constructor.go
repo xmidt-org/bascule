@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strings"
 
 	"github.com/go-kit/kit/log"
@@ -24,11 +25,33 @@ const (
 	DefaultHeaderDelimiter = " "
 )
 
+// ParseURL is a function that modifies the url given then returns it.
+type ParseURL func(*url.URL) (*url.URL, error)
+
+// DefaultParseURLFunc does nothing.  It returns the same url it received.
+func DefaultParseURLFunc(u *url.URL) (*url.URL, error) {
+	return u, nil
+}
+
+// CreateRemovePrefixURLFunc parses the URL by removing the prefix specified.
+func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
+	return func(u *url.URL) (*url.URL, error) {
+		escapedPath := u.EscapedPath()
+		if !strings.HasPrefix(escapedPath, prefix) {
+			return nil, errors.New("unexpected URL, did not start with expected prefix")
+		}
+		u.Path = escapedPath[len(prefix):]
+		u.RawPath = escapedPath[len(prefix):]
+		return next(u)
+	}
+}
+
 type constructor struct {
 	headerName      string
 	headerDelimiter string
 	authorizations  map[bascule.Authorization]TokenFactory
 	getLogger       func(context.Context) bascule.Logger
+	parseURL        ParseURL
 	onErrorResponse OnErrorResponse
 }
 
@@ -38,6 +61,16 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		if logger == nil {
 			logger = bascule.GetDefaultLoggerFunc(request.Context())
 		}
+
+		// copy the URL before modifying it
+		urlVal := *request.URL
+		u, err := c.parseURL(&urlVal)
+		if err != nil {
+			c.error(logger, GetURLFailed, "", emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
+			WriteResponse(response, http.StatusForbidden, err)
+			return
+		}
+
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
 			err := errors.New("no authorization header")
@@ -80,7 +113,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 				Authorization: key,
 				Token:         token,
 				Request: bascule.Request{
-					URL:    request.URL.EscapedPath(),
+					URL:    u,
 					Method: request.Method,
 				},
 			},
@@ -111,6 +144,7 @@ func WithHeaderName(headerName string) COption {
 	}
 }
 
+// WithHeaderDelimiter sets the value expected between the authorization key and token.
 func WithHeaderDelimiter(delimiter string) COption {
 	return func(c *constructor) {
 		if len(delimiter) > 0 {
@@ -134,6 +168,16 @@ func WithCLogger(getLogger func(context.Context) bascule.Logger) COption {
 	}
 }
 
+// WithParseURLFunc sets the function to use to make any changes to the URL
+// before it is added to the context.
+func WithParseURLFunc(parseURL ParseURL) COption {
+	return func(c *constructor) {
+		if parseURL != nil {
+			c.parseURL = parseURL
+		}
+	}
+}
+
 // WithCErrorResponseFunc sets the function that is called when an error occurs.
 func WithCErrorResponseFunc(f OnErrorResponse) COption {
 	return func(c *constructor) {
@@ -150,6 +194,7 @@ func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 		headerDelimiter: DefaultHeaderDelimiter,
 		authorizations:  make(map[bascule.Authorization]TokenFactory),
 		getLogger:       bascule.GetDefaultLoggerFunc,
+		parseURL:        DefaultParseURLFunc,
 		onErrorResponse: DefaultOnErrorResponse,
 	}
 
