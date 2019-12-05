@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.7.0]
+- Modified URL in context to be a *url.URL [#47](https://github.com/xmidt-org/bascule/pull/47)
+- Added a ParseURL function into the basculehttp constructor [#47](https://github.com/xmidt-org/bascule/pull/47)
+- Added automated release using travis [#49](https://github.com/xmidt-org/bascule/pull/49)
+
 ## [v0.6.0] 
 - Prune use of unnecessary custom time.Duration
 
@@ -63,7 +68,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.7.0...HEAD
+[v0.7.0]: https://github.com/xmidt-org/bascule/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://github.com/xmidt-org/bascule/compare/v0.5.0...v0.6.0
 [v0.5.0]: https://github.com/xmidt-org/bascule/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/xmidt-org/bascule/compare/v0.3.1...v0.4.0
