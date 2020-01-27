@@ -3,15 +3,189 @@
 // which can be used to validate are also provided.
 package bascule
 
-type Attributes map[string]interface{}
+import (
+	"time"
 
-// TODO: Add dotted path support and support for common concrete types, e.g. GetString
-func (a Attributes) Get(key string) (interface{}, bool) {
-	if a == nil {
+	"github.com/spf13/cast"
+	"github.com/spf13/viper"
+)
+
+//Attributes is the interface that wraps methods which dictate how to interact
+//with a token's attributes
+//Getter functions return a boolean as second element which indicates that a
+//value of the requested type exists at the given key path
+type Attributes interface {
+	Get(key string) (interface{}, bool)
+	GetBool(key string) (bool, bool)
+	GetDuration(key string) (time.Duration, bool)
+	GetFloat64(key string) (float64, bool)
+	GetInt64(key string) (int64, bool)
+	GetIntSlice(key string) ([]int, bool)
+	GetString(key string) (string, bool)
+	GetStringMap(key string) (map[string]interface{}, bool)
+	GetStringSlice(key string) ([]string, bool)
+	GetTime(key string) (time.Time, bool)
+	IsSet(key string) bool
+	FullView() map[string]interface{}
+}
+
+var nilTime = time.Time{}
+
+type AttributesOptions struct {
+	//KeyDelimiter configures the separator for building key paths
+	//for the Attributes getter functions. Defaults to '.'
+	KeyDelimiter string
+
+	//AttributesMap is used as the initial attributes datasource
+	AttributesMap map[string]interface{}
+}
+
+type attributes struct {
+	v *viper.Viper
+}
+
+func (a *attributes) Get(key string) (interface{}, bool) {
+	if !a.v.IsSet(key) {
 		return nil, false
 	}
-	v, ok := a[key]
-	return v, ok
+
+	return a.v.Get(key), true
+}
+
+func (a *attributes) GetBool(key string) (bool, bool) {
+	if !a.v.IsSet(key) {
+		return false, false
+	}
+	v, err := cast.ToBoolE(a.v.Get(key))
+	if err != nil {
+		return false, false
+	}
+	return v, true
+}
+
+func (a *attributes) GetDuration(key string) (time.Duration, bool) {
+	if !a.v.IsSet(key) {
+		return 0, false
+	}
+	v, err := cast.ToDurationE(a.v.Get(key))
+	if err != nil {
+		return 0, false
+	}
+
+	return v, true
+}
+func (a *attributes) GetFloat64(key string) (float64, bool) {
+	if !a.v.IsSet(key) {
+		return 0, false
+	}
+	v, err := cast.ToFloat64E(a.v.Get(key))
+	if err != nil {
+		return 0, false
+	}
+
+	return v, true
+}
+
+func (a *attributes) GetInt64(key string) (int64, bool) {
+	if !a.v.IsSet(key) {
+		return 0, false
+	}
+	v, err := cast.ToInt64E(a.v.Get(key))
+	if err != nil {
+		return 0, false
+	}
+	return v, true
+}
+
+func (a *attributes) GetIntSlice(key string) ([]int, bool) {
+	if !a.v.IsSet(key) {
+		return nil, false
+	}
+	v, err := cast.ToIntSliceE(a.v.Get(key))
+	if err != nil {
+		return nil, false
+	}
+	return v, true
+
+}
+func (a *attributes) GetString(key string) (string, bool) {
+	if !a.v.IsSet(key) {
+		return "", false
+	}
+	v, err := cast.ToStringE(a.v.Get(key))
+	if err != nil {
+		return "", false
+	}
+	return v, true
+}
+func (a *attributes) GetStringMap(key string) (map[string]interface{}, bool) {
+	if !a.v.IsSet(key) {
+		return nil, false
+	}
+	v, err := cast.ToStringMapE(a.v.Get(key))
+	if err != nil {
+		return nil, false
+	}
+	return v, true
+
+}
+func (a *attributes) GetStringSlice(key string) ([]string, bool) {
+	if !a.v.IsSet(key) {
+		return nil, false
+	}
+	v, err := cast.ToStringSliceE(a.v.Get(key))
+	if err != nil {
+		return nil, false
+	}
+	return v, true
+}
+
+func (a *attributes) GetTime(key string) (time.Time, bool) {
+	if !a.v.IsSet(key) {
+		return nilTime, false
+	}
+	v, err := cast.ToTimeE(a.v.Get(key))
+	if err != nil {
+		return nilTime, false
+	}
+	return v, true
+}
+
+func (a *attributes) IsSet(key string) bool {
+	return a.v.IsSet(key)
+}
+
+func (a *attributes) FullView() map[string]interface{} {
+	return a.v.AllSettings()
+}
+
+func NewAttributes() Attributes {
+	return NewAttributesWithOptions(AttributesOptions{})
+}
+
+func NewAttributesFromMap(m map[string]interface{}) Attributes {
+	return NewAttributesWithOptions(AttributesOptions{
+		AttributesMap: m,
+	})
+}
+
+func NewAttributesWithOptions(o AttributesOptions) Attributes {
+	var (
+		options []viper.Option
+		v       *viper.Viper
+	)
+
+	if o.KeyDelimiter != "" {
+		options = append(options, viper.KeyDelimiter(o.KeyDelimiter))
+	}
+
+	v = viper.NewWithOptions(options...)
+
+	if o.AttributesMap != nil {
+		v.MergeConfigMap(o.AttributesMap)
+	}
+
+	return &attributes{v: v}
 }
 
 // Token is the behavior supplied by all secure tokens

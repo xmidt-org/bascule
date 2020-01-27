@@ -36,7 +36,7 @@ func TestEnforcer(t *testing.T) {
 			enforcer:    e2,
 			auth: bascule.Authentication{
 				Authorization: "jwt",
-				Token:         bascule.NewToken("test", "", bascule.Attributes{}),
+				Token:         bascule.NewToken("test", "", bascule.NewAttributes()),
 			},
 			expectedStatusCode: http.StatusOK,
 		},
@@ -63,7 +63,7 @@ func TestEnforcer(t *testing.T) {
 			enforcer:    e2,
 			auth: bascule.Authentication{
 				Authorization: "jwt",
-				Token:         bascule.NewToken("", "", bascule.Attributes{}),
+				Token:         bascule.NewToken("", "", bascule.NewAttributes()),
 			},
 			expectedStatusCode: http.StatusForbidden,
 		},

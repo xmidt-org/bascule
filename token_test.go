@@ -6,9 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	attrs = map[string]interface{}{"testkey": "testval", "attr": 5}
-)
+var attrs = NewAttributesFromMap(map[string]interface{}{"testkey": "testval", "attr": 5})
 
 func TestToken(t *testing.T) {
 	assert := assert.New(t)
@@ -17,7 +15,7 @@ func TestToken(t *testing.T) {
 	token := NewToken(tokenType, principal, attrs)
 	assert.Equal(tokenType, token.Type())
 	assert.Equal(principal, token.Principal())
-	assert.Equal(Attributes(attrs), token.Attributes())
+	assert.Equal(attrs, token.Attributes())
 }
 
 func TestGet(t *testing.T) {
@@ -32,7 +30,7 @@ func TestGet(t *testing.T) {
 	assert.Empty(val)
 	assert.False(ok)
 
-	emptyAttributes := Attributes(nil)
+	emptyAttributes := NewAttributes()
 	val, ok = emptyAttributes.Get("test")
 	assert.Nil(val)
 	assert.False(ok)

@@ -18,15 +18,15 @@ const (
 )
 
 var (
-	ErrorMalformedValue      = errors.New("expected <user>:<password> in decoded value")
-	ErrorNotInMap            = errors.New("principal not found")
-	ErrorInvalidPassword     = errors.New("invalid password")
-	ErrorNoProtectedHeader   = errors.New("missing protected header")
-	ErrorNoSigningMethod     = errors.New("signing method (alg) is missing or unrecognized")
-	ErrorUnexpectedPayload   = errors.New("payload isn't a map of strings to interfaces")
-	ErrorUnexpectedPrincipal = errors.New("principal isn't a string")
-	ErrorInvalidToken        = errors.New("token isn't valid")
-	ErrorUnexpectedClaims    = errors.New("claims wasn't MapClaims as expected")
+	ErrorMalformedValue    = errors.New("expected <user>:<password> in decoded value")
+	ErrorPrincipalNotFound = errors.New("principal not found")
+	ErrorInvalidPassword   = errors.New("invalid password")
+	ErrorNoProtectedHeader = errors.New("missing protected header")
+	ErrorNoSigningMethod   = errors.New("signing method (alg) is missing or unrecognized")
+	ErrorUnexpectedPayload = errors.New("payload isn't a map of strings to interfaces")
+	ErrorInvalidPrincipal  = errors.New("principal must be a non-empty string")
+	ErrorInvalidToken      = errors.New("token isn't valid")
+	ErrorUnexpectedClaims  = errors.New("claims wasn't MapClaims as expected")
 )
 
 // TokenFactory is a strategy interface responsible for creating and validating
@@ -63,7 +63,7 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 	principal := string(decoded[:i])
 	val, ok := btf[principal]
 	if !ok {
-		return nil, ErrorNotInMap
+		return nil, ErrorPrincipalNotFound
 	}
 	if val != string(decoded[i+1:]) {
 		// failed authentication
@@ -71,7 +71,7 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 	}
 	// "basic" is a placeholder here ... token types won't always map to the
 	// Authorization header.  For example, a JWT should have a type of "jwt" or some such, not "bearer"
-	return bascule.NewToken("basic", principal, bascule.Attributes{}), nil
+	return bascule.NewToken("basic", principal, bascule.NewAttributes()), nil
 }
 
 // BearerTokenFactory parses and does basic validation for a JWT token.
@@ -118,6 +118,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	}
 
 	claims, ok := jwsToken.Claims.(*bascule.ClaimsWithLeeway)
+
 	if !ok {
 		return nil, emperror.Wrap(ErrorUnexpectedClaims, "failed to parse JWS")
 	}
@@ -126,12 +127,14 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	if err != nil {
 		return nil, emperror.WrapWith(err, "failed to get map of claims", "claims struct", claims)
 	}
-	payload := bascule.Attributes(claimsMap)
 
-	principal, ok := payload[jwtPrincipalKey].(string)
+	jwtClaims := bascule.NewAttributesFromMap(claimsMap)
+
+	principal, ok := jwtClaims.GetString(jwtPrincipalKey)
+
 	if !ok {
-		return nil, emperror.WrapWith(ErrorUnexpectedPrincipal, "failed to get and convert principal", "principal", payload[jwtPrincipalKey], "payload", payload)
+		return nil, emperror.WrapWith(ErrorInvalidPrincipal, "principal value of proper type not found", "principal", principal, "jwtClaims", claimsMap)
 	}
 
-	return bascule.NewToken("jwt", principal, payload), nil
+	return bascule.NewToken("jwt", principal, jwtClaims), nil
 }
