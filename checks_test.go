@@ -43,17 +43,27 @@ func TestCreateNonEmptyPrincipalCheck(t *testing.T) {
 
 func TestCreateListAttributeCheck(t *testing.T) {
 	assert := assert.New(t)
-	f := CreateListAttributeCheck("testkey", NonEmptyStringListCheck)
-	err := f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": []interface{}{"a", "b", "c"}})))
+	f := CreateListAttributeCheck("testkey.subkey", NonEmptyStringListCheck)
+
+	err := f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{
+		"testkey": map[string]interface{}{"subkey": []interface{}{"a", "b", "c"}}})))
 	assert.Nil(err)
+
 	err = f(context.Background(), NewToken("", "", NewAttributes()))
 	assert.NotNil(err)
+
 	err = f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": ""})))
 	assert.NotNil(err)
-	err = f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": []interface{}{}})))
+
+	err = f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": map[string]interface{}{
+		"subkey": []interface{}{}}})))
 	assert.NotNil(err)
-	err = f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": []interface{}{5, 7, 6}})))
+
+	err = f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": map[string]interface{}{
+		"subkey": []interface{}{5, 7, 6}}})))
 	assert.NotNil(err)
-	err = f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": []interface{}{""}})))
+
+	err = f(context.Background(), NewToken("", "", NewAttributesFromMap(map[string]interface{}{"testkey": map[string]interface{}{
+		"subkey": []interface{}{""}}})))
 	assert.NotNil(err)
 }
