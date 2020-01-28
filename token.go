@@ -11,9 +11,9 @@ import (
 )
 
 //Attributes is the interface that wraps methods which dictate how to interact
-//with a token's attributes
-//Getter functions return a boolean as second element which indicates that a
-//value of the requested type exists at the given key path
+//with a token's attributes. Getter functions return a boolean as second element
+//which indicates that a value of the requested type exists at the given key path.
+//Key path separators are configurable through AttributeOptions
 type Attributes interface {
 	Get(key string) (interface{}, bool)
 	GetBool(key string) (bool, bool)
@@ -31,6 +31,7 @@ type Attributes interface {
 
 var nilTime = time.Time{}
 
+//AttributesOptions allows customizing Attributes initialization
 type AttributesOptions struct {
 	//KeyDelimiter configures the separator for building key paths
 	//for the Attributes getter functions. Defaults to '.'
@@ -42,6 +43,11 @@ type AttributesOptions struct {
 
 type attributes struct {
 	v *viper.Viper
+
+	//Note: having m is superfluous given v. However, it's a caching
+	//optimization for FullView() since v.AllSettings() is a relatively
+	//expensive operation
+	m map[string]interface{}
 }
 
 func (a *attributes) Get(key string) (interface{}, bool) {
@@ -156,19 +162,24 @@ func (a *attributes) IsSet(key string) bool {
 }
 
 func (a *attributes) FullView() map[string]interface{} {
-	return a.v.AllSettings()
+	return a.m
 }
 
+//NewAttributes builds an empty Attributes instance.
 func NewAttributes() Attributes {
 	return NewAttributesWithOptions(AttributesOptions{})
 }
 
+//NewAttributesFromMap builds an Attributes instance with
+//the given map as datasource. Default AttributeOptions are used.
 func NewAttributesFromMap(m map[string]interface{}) Attributes {
 	return NewAttributesWithOptions(AttributesOptions{
 		AttributesMap: m,
 	})
 }
 
+//NewAttributesWithOptions builds an Attributes instance from the given
+//options. Zero value options are ok.
 func NewAttributesWithOptions(o AttributesOptions) Attributes {
 	var (
 		options []viper.Option
@@ -181,11 +192,12 @@ func NewAttributesWithOptions(o AttributesOptions) Attributes {
 
 	v = viper.NewWithOptions(options...)
 
-	if o.AttributesMap != nil {
-		v.MergeConfigMap(o.AttributesMap)
-	}
+	v.MergeConfigMap(o.AttributesMap)
 
-	return &attributes{v: v}
+	return &attributes{
+		v: v,
+		m: o.AttributesMap,
+	}
 }
 
 // Token is the behavior supplied by all secure tokens
