@@ -62,7 +62,7 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 // it finds.
 func CreateListAttributeCheck(key string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
 	return func(ctx context.Context, token Token) error {
-		val, ok := token.Attributes()[key]
+		val, ok := token.Attributes().Get(key)
 		if !ok {
 			return fmt.Errorf("couldn't find attribute with key %v", key)
 		}

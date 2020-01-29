@@ -25,7 +25,7 @@ func TestBasicTokenFactory(t *testing.T) {
 		{
 			description:   "Sucess",
 			value:         base64.StdEncoding.EncodeToString([]byte("user:pass")),
-			expectedToken: bascule.NewToken("basic", "user", bascule.Attributes{}),
+			expectedToken: bascule.NewToken("basic", "user", bascule.NewAttributes()),
 		},
 		{
 			description: "Can't Decode Error",
@@ -40,7 +40,7 @@ func TestBasicTokenFactory(t *testing.T) {
 		{
 			description: "Key Not in Map Error",
 			value:       base64.StdEncoding.EncodeToString([]byte("u:p")),
-			expectedErr: ErrorNotInMap,
+			expectedErr: ErrorPrincipalNotFound,
 		},
 		{
 			description: "Invalid Password Error",
