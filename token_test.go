@@ -119,8 +119,8 @@ func TestTypedGetters(t *testing.T) {
 		topKeyMap = make(map[string]interface{})
 
 		m = map[string]interface{}{
-			"nonOfTheAboveType": struct{}{},
-			topKey:              topKeyMap,
+			badTypeKey: struct{}{},
+			topKey:     topKeyMap,
 		}
 	)
 
