@@ -10,13 +10,13 @@ import (
 	"github.com/goph/emperror"
 )
 
-//TokenParser defines the function signature of a bearer token extractor from a payload
+//TokenParser defines the function signature of a bearer token extractor from a payload.
 type TokenParser func([]byte) (string, error)
 
-//ParseExpiration defines the function signature of a bearer token expiration date extractor
+//ParseExpiration defines the function signature of a bearer token expiration date extractor.
 type ParseExpiration func([]byte) (time.Time, error)
 
-//DefaultTokenParser extracts a bearer token as defined by a SimpleBearer in a payload
+//DefaultTokenParser extracts a bearer token as defined by a SimpleBearer in a payload.
 func DefaultTokenParser(data []byte) (string, error) {
 	var bearer SimpleBearer
 
@@ -26,7 +26,7 @@ func DefaultTokenParser(data []byte) (string, error) {
 	return bearer.Token, nil
 }
 
-//DefaultExpirationParser extracts a bearer token expiration date as defined by a SimpleBearer in a payload
+//DefaultExpirationParser extracts a bearer token expiration date as defined by a SimpleBearer in a payload.
 func DefaultExpirationParser(data []byte) (time.Time, error) {
 	var bearer SimpleBearer
 
@@ -36,7 +36,7 @@ func DefaultExpirationParser(data []byte) (time.Time, error) {
 	return time.Now().Add(time.Duration(bearer.ExpiresInSeconds) * time.Second), nil
 }
 
-//RemoteBearerTokenAcquirerOptions provides configuration for the RemoteBearerTokenAcquirer
+//RemoteBearerTokenAcquirerOptions provides configuration for the RemoteBearerTokenAcquirer.
 type RemoteBearerTokenAcquirerOptions struct {
 	AuthURL        string            `json:"authURL"`
 	Timeout        time.Duration     `json:"timeout"`
@@ -47,7 +47,7 @@ type RemoteBearerTokenAcquirerOptions struct {
 	GetExpiration ParseExpiration
 }
 
-//RemoteBearerTokenAcquirer implements Acquirer and fetches the tokens from a remote location with caching strategy
+//RemoteBearerTokenAcquirer implements Acquirer and fetches the tokens from a remote location with caching strategy.
 type RemoteBearerTokenAcquirer struct {
 	options                RemoteBearerTokenAcquirerOptions
 	authValue              string
@@ -56,13 +56,13 @@ type RemoteBearerTokenAcquirer struct {
 	nonExpiringSpecialCase time.Time
 }
 
-//SimpleBearer defines the field name mappings used by the default bearer token and expiration parsers
+//SimpleBearer defines the field name mappings used by the default bearer token and expiration parsers.
 type SimpleBearer struct {
 	ExpiresInSeconds float64 `json:"expires_in"`
 	Token            string  `json:"serviceAccessToken"`
 }
 
-// NewRemoteBearerTokenAcquirer returns a RemoteBearerTokenAcquirer configured with the given options
+// NewRemoteBearerTokenAcquirer returns a RemoteBearerTokenAcquirer configured with the given options.
 func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (*RemoteBearerTokenAcquirer, error) {
 	if options.GetToken == nil {
 		options.GetToken = DefaultTokenParser
@@ -72,7 +72,7 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (*Re
 		options.GetExpiration = DefaultExpirationParser
 	}
 
-	//TODO: we should inject timeout and buffer defaults values as well
+	//TODO: we should inject timeout and buffer defaults values as well.
 
 	return &RemoteBearerTokenAcquirer{
 		options:             options,
@@ -84,6 +84,8 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (*Re
 	}, nil
 }
 
+// Acquire provides the cached token or, if it's near its expiry time, contacts
+// the server for a new token to cache.
 func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 	if time.Now().Add(acquirer.options.Buffer).Before(acquirer.authValueExpiration) {
 		return acquirer.authValue, nil
