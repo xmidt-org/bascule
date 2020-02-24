@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/goph/emperror"
@@ -54,6 +55,7 @@ type RemoteBearerTokenAcquirer struct {
 	authValueExpiration    time.Time
 	httpClient             *http.Client
 	nonExpiringSpecialCase time.Time
+	lock                   sync.RWMutex
 }
 
 //SimpleBearer defines the field name mappings used by the default bearer token and expiration parsers.
@@ -87,9 +89,14 @@ func NewRemoteBearerTokenAcquirer(options RemoteBearerTokenAcquirerOptions) (*Re
 // Acquire provides the cached token or, if it's near its expiry time, contacts
 // the server for a new token to cache.
 func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
+	acquirer.lock.RLock()
 	if time.Now().Add(acquirer.options.Buffer).Before(acquirer.authValueExpiration) {
+		defer acquirer.lock.RUnlock()
 		return acquirer.authValue, nil
 	}
+	acquirer.lock.RUnlock()
+	acquirer.lock.Lock()
+	defer acquirer.lock.Unlock()
 
 	req, err := http.NewRequest("GET", acquirer.options.AuthURL, nil)
 	if err != nil {
