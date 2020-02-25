@@ -9,8 +9,8 @@ import (
 )
 
 //ErrEmptyCredentials is returned whenever an Acquirer is attempted to
-//be built with empty credentials
-//Use DefaultAcquirer for such no-op use case
+//be built with empty credentials.
+//Use DefaultAcquirer for such no-op use case.
 var ErrEmptyCredentials = errors.New("Empty credentials are not valid")
 
 // Acquirer gets an Authorization value that can be added to an http request.
@@ -23,7 +23,7 @@ type Acquirer interface {
 // DefaultAcquirer is a no-op Acquirer.
 type DefaultAcquirer struct{}
 
-//Acquire returns the zero values of the return types
+//Acquire returns the zero values of the return types.
 func (d *DefaultAcquirer) Acquire() (string, error) {
 	return "", nil
 }
@@ -51,7 +51,7 @@ func AddAuth(r *http.Request, acquirer Acquirer) error {
 	return nil
 }
 
-//FixedValueAcquirer implements Acquirer with a constant authorization value
+//FixedValueAcquirer implements Acquirer with a constant authorization value.
 type FixedValueAcquirer struct {
 	authValue string
 }
@@ -60,7 +60,7 @@ func (f *FixedValueAcquirer) Acquire() (string, error) {
 	return f.authValue, nil
 }
 
-// NewFixedAuthAcquirer returns a FixedValueAcquirer with the given authValue
+// NewFixedAuthAcquirer returns a FixedValueAcquirer with the given authValue.
 func NewFixedAuthAcquirer(authValue string) (*FixedValueAcquirer, error) {
 	if authValue != "" {
 		return &FixedValueAcquirer{

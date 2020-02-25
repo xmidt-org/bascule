@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -141,6 +142,47 @@ func TestRemoteBearerTokenAcquirerCaching(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(token, cachedToken)
 	assert.Equal(1, count)
+}
+
+func TestRemoteBearerTokenAcquirerExiting(t *testing.T) {
+	assert := assert.New(t)
+
+	count := 0
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		auth := SimpleBearer{
+			Token:            fmt.Sprintf("gopher%v", count),
+			ExpiresInSeconds: 1, //1 second
+		}
+		count++
+
+		marshaledAuth, err := json.Marshal(&auth)
+		assert.Nil(err)
+		rw.Write(marshaledAuth)
+	}))
+	defer server.Close()
+
+	// Use Client & URL from our local test server
+	auth, errConstructor := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
+		AuthURL: server.URL,
+		Timeout: time.Duration(5) * time.Second,
+		Buffer:  time.Second,
+	})
+	assert.Nil(errConstructor)
+	token, err := auth.Acquire()
+	assert.Nil(err)
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			_, err := auth.Acquire()
+			assert.Nil(err)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	cachedToken, err := auth.Acquire()
+	assert.Nil(err)
+	assert.NotEqual(token, cachedToken)
 }
 
 type customBearer struct {
