@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -164,21 +165,21 @@ func TestRemoteBearerTokenAcquirerExiting(t *testing.T) {
 	auth, errConstructor := NewRemoteBearerTokenAcquirer(RemoteBearerTokenAcquirerOptions{
 		AuthURL: server.URL,
 		Timeout: time.Duration(5) * time.Second,
-		Buffer:  time.Microsecond,
+		Buffer:  time.Second,
 	})
 	assert.Nil(errConstructor)
 	token, err := auth.Acquire()
 	assert.Nil(err)
-	time.Sleep(999 * time.Millisecond)
-	for i := 0; i < 200; i++ {
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
 		go func() {
 			_, err := auth.Acquire()
 			assert.Nil(err)
+			wg.Done()
 		}()
-		if i == 100 {
-			time.Sleep(time.Millisecond)
-		}
 	}
+	wg.Wait()
 	cachedToken, err := auth.Acquire()
 	assert.Nil(err)
 	assert.NotEqual(token, cachedToken)
