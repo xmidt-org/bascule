@@ -64,6 +64,60 @@ func TestBasicTokenFactory(t *testing.T) {
 	}
 }
 
+func TestNewBasicTokenFactoryFromList(t *testing.T) {
+	goodKey := `dXNlcjpwYXNz`
+	badKeyDecode := `dXNlcjpwYXN\\\`
+	badKeyNoColon := `dXNlcnBhc3M=`
+	goodMap := map[string]string{"user": "pass"}
+	emptyMap := map[string]string{}
+
+	tests := []struct {
+		description        string
+		keyList            []string
+		expectedDecodedMap BasicTokenFactory
+		expectedErr        error
+	}{
+		{
+			description:        "Success",
+			keyList:            []string{goodKey},
+			expectedDecodedMap: goodMap,
+		},
+		{
+			description:        "Success With Errors",
+			keyList:            []string{goodKey, badKeyDecode, badKeyNoColon},
+			expectedDecodedMap: goodMap,
+			expectedErr:        errors.New("multiple errors"),
+		},
+		{
+			description:        "Decode Error",
+			keyList:            []string{badKeyDecode},
+			expectedDecodedMap: emptyMap,
+			expectedErr:        errors.New("failed to base64-decode basic auth key"),
+		},
+		{
+			description:        "Success",
+			keyList:            []string{badKeyNoColon},
+			expectedDecodedMap: emptyMap,
+			expectedErr:        errors.New("malformed"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			assert := assert.New(t)
+			m, err := NewBasicTokenFactoryFromList(tc.keyList)
+			assert.Equal(tc.expectedDecodedMap, m)
+			if tc.expectedErr == nil || err == nil {
+				assert.Equal(tc.expectedErr, err)
+			} else {
+				assert.Contains(err.Error(), tc.expectedErr.Error())
+			}
+		})
+	}
+
+}
+
+//TODO: fix this test
 // func TestBearerTokenFactory(t *testing.T) {
 // 	parseFailErr := errors.New("parse fail test")
 // 	resolveFailErr := errors.New("resolve fail test")
