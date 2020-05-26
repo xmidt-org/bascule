@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -72,6 +73,38 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 	// "basic" is a placeholder here ... token types won't always map to the
 	// Authorization header.  For example, a JWT should have a type of "jwt" or some such, not "bearer"
 	return bascule.NewToken("basic", principal, bascule.NewAttributes()), nil
+}
+
+// NewBasicTokenFactoryFromList takes a list of base64 encoded basic auth keys,
+// decodes them, and supplies that list in map form of username to password.
+// If a username is encoded in two different auth keys, it will be overwritten
+// by the last occurence of that username with a password.  If anoth
+func NewBasicTokenFactoryFromList(encodedBasicAuthKeys []string) (BasicTokenFactory, error) {
+	btf := make(BasicTokenFactory)
+	errs := bascule.Errors{}
+
+	for _, encodedKey := range encodedBasicAuthKeys {
+		decoded, err := base64.StdEncoding.DecodeString(encodedKey)
+		if err != nil {
+			errs = append(errs, emperror.Wrap(err, fmt.Sprintf("failed to base64-decode basic auth key [%v]", encodedKey)))
+			continue
+		}
+
+		i := bytes.IndexByte(decoded, ':')
+		if i <= 0 {
+			errs = append(errs, fmt.Errorf("basic auth key [%v] is malformed", encodedKey))
+			continue
+		}
+
+		btf[string(decoded[:i])] = string(decoded[i+1:])
+	}
+
+	if len(errs) != 0 {
+		return btf, errs
+	}
+
+	// explicitly return nil so we don't have any empty error lists being returned.
+	return btf, nil
 }
 
 // BearerTokenFactory parses and does basic validation for a JWT token.
