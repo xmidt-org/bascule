@@ -2,12 +2,12 @@
 
 The library for authorization: both acquiring and validating.
 
-[![Build Status](https://travis-ci.com/xmidt-org/bascule.svg?branch=master)](https://travis-ci.com/xmidt-org/bascule)
-[![codecov.io](http://codecov.io/github/xmidt-org/bascule/coverage.svg?branch=master)](http://codecov.io/github/xmidt-org/bascule?branch=master)
+[![Build Status](https://travis-ci.com/xmidt-org/bascule.svg?branch=main)](https://travis-ci.com/xmidt-org/bascule)
+[![codecov.io](http://codecov.io/github/xmidt-org/bascule/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/bascule?branch=main)
 [![Code Climate](https://codeclimate.com/github/xmidt-org/bascule/badges/gpa.svg)](https://codeclimate.com/github/xmidt-org/bascule)
 [![Issue Count](https://codeclimate.com/github/xmidt-org/bascule/badges/issue_count.svg)](https://codeclimate.com/github/xmidt-org/bascule)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xmidt-org/bascule)](https://goreportcard.com/report/github.com/xmidt-org/bascule)
-[![Apache V2 License](http://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/xmidt-org/bascule/blob/master/LICENSE)
+[![Apache V2 License](http://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/xmidt-org/bascule/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/xmidt-org/bascule.svg)](CHANGELOG.md)
 [![GoDoc](https://godoc.org/github.com/xmidt-org/bascule?status.svg)](https://godoc.org/github.com/xmidt-org/bascule)
 
