@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
+- fixed references to the main branch [#61](https://github.com/xmidt-org/bascule/pull/61)
 
 ## [v0.8.1]
 - fixed data race in RemoteBearerTokenAcquirer [#55](https://github.com/xmidt-org/bascule/pull/55)
