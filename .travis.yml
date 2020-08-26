@@ -12,15 +12,30 @@ branches:
     - main
     - /^v[0-9]+\.[0-9]+\.[0-9]+$/
 
+addons:
+  sonarcloud:
+    organization: "xmidt-org"
+    token:
+      secure: "0am7scbUL7n2K/grA8cCN+c/s8H/oUhGsoiAepq6//dAJ7j5QjTspvzmVniZ6i+gtjzPdm4ccr8JslibqAksfAwSGYy2hZHtbibPtL2D2nBGaYg9RQTQD1TTPIdOLcrnyCdaE+Ueu2cbB0RmXK/fL+DAPS/NfOsrbWY7NJcu9298iEHZnrlYN7U1P9ENRkxIloLpeJEgkxbGn7T7rEnwbW1I2YE4UXJhGN6UzSXvyex/W4Gto3gDmTFarbLUopA6iZRAOJ6bgpGHNeb87X3AE0MnXBjiKfWUQKZrKBQeCWYkLjqYrsC5hTunL7daJcds4yELqbHIlAYilqr6WxDbu3FmEoH2Iw5bSpEFxuX/vB+GW4ESNEvRmc2xRsxx+FkNFRKRj34rd4lvNpN753po3eavUvPEb1Ze4qcIuABB5jSaBf7bjHou3TC8Per1wfXcBLC00bJUpWTaKUAdDuu5ESJIZoO3hwAYZtt6vBSdajfMgXEQZoUm1YHEuYYY4/Vbs10m3fX6YFPcOhaFHWB6MlwQEiOsLsxnmCDtfRhZplP02xgX5evdSzIvaHCRRlMdEQEPV0VBt0JKiUUtSzKDfxU0tgnE/AtCVAQMDQEOey1Iddyf7fYwUAfgbUtRHrie1gaPd4jAAdwiKumt9RrLgab9vt6ncH2i+eea5stT3O0="
+
 install:
   - GO111MODULE=on go mod vendor
+
+# default name is 'test'
 
 script:
   - if [ -n "$(gofmt -s -l . | grep -v "vendor")" ]; then diff -u <(echo -n) <(gofmt -d $(gofmt -s -l . | grep -v "vendor")); fi
   - GO111MODULE=on go test -v -race -coverprofile=coverage.txt ./...
+  - GO111MODULE=on go test -race -json ./... > report.json
 
 after_success:
+  - sonar-scanner -Dproject.settings=./.sonar-project.properties
   - bash <(curl -s https://codecov.io/bash)
+
+stages:
+  - test
+  - tag
+  - release
 
 jobs:
   include:
@@ -37,6 +52,8 @@ jobs:
         - export TODAY=`date +'%m/%d/%Y'`
         - export NOTES=$(cat CHANGELOG.md | perl -0777 -ne 'print "$ENV{TODAY}\n\n$1\n" if /.*## \[$ENV{TAG}\]\s(.*?)\s+## \[(v\d+.\d+.\d+)\].*/s')
         - if [[ "$TAG" != "" && "$TAG" != "$OLD_VERSION" ]]; then git tag -a "$TAG" -m "$NOTES"; git push origin --tags; echo $?; fi
+      after_success: skip
+
     - stage: release
       name: "Make a Release"
       if: branch != main
@@ -47,4 +64,3 @@ jobs:
           tags: true
         provider: releases
         api_key: "$GH_TOKEN"
-        skip_cleanup: true
