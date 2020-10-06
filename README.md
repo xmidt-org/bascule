@@ -1,4 +1,4 @@
-# comcast-bascule
+# bascule
 
 The library for authorization: both acquiring and validating.
 

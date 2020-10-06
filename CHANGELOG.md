@@ -5,8 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
 - fixed references to the main branch [#61](https://github.com/xmidt-org/bascule/pull/61)
+- fixed attributes to be case sensitive and simplified the Attributes interface [#64](https://github.com/xmidt-org/bascule/pull/64)
 
 ## [v0.8.1]
 - fixed data race in RemoteBearerTokenAcquirer [#55](https://github.com/xmidt-org/bascule/pull/55)
@@ -76,7 +79,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.9.0...HEAD
+[v0.9.0]: https://github.com/xmidt-org/bascule/compare/v0.8.1...v0.9.0
 [v0.8.1]: https://github.com/xmidt-org/bascule/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/xmidt-org/bascule/compare/v0.7.0...v0.8.0
 [v0.7.0]: https://github.com/xmidt-org/bascule/compare/v0.6.0...v0.7.0
