@@ -60,11 +60,11 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 // CreateListAttributeCheck returns a Validator that runs checks against the
 // content found in the key given.  It runs every check and returns all errors
 // it finds.
-func CreateListAttributeCheck(key string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
+func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
 	return func(ctx context.Context, token Token) error {
-		val, ok := token.Attributes().Get(key)
+		val, ok := GetNestedAttribute(token.Attributes(), keys...)
 		if !ok {
-			return fmt.Errorf("couldn't find attribute with key %v", key)
+			return fmt.Errorf("couldn't find attribute with keys %v", keys)
 		}
 		strVal, ok := val.([]interface{})
 		if !ok {
@@ -80,7 +80,7 @@ func CreateListAttributeCheck(key string, checks ...func(context.Context, []inte
 		if len(errs) == 0 {
 			return nil
 		}
-		return emperror.Wrap(errs, fmt.Sprintf("attribute checks of key %v failed", key))
+		return emperror.Wrap(errs, fmt.Sprintf("attribute checks of keys %v failed", keys))
 	}
 }
 

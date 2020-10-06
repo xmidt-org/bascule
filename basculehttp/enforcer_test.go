@@ -24,6 +24,7 @@ func TestEnforcer(t *testing.T) {
 		}),
 		WithEErrorResponseFunc(DefaultOnErrorResponse),
 	)
+	emptyAttributes := bascule.NewAttributes(map[string]interface{}{})
 	tests := []struct {
 		description        string
 		enforcer           func(http.Handler) http.Handler
@@ -36,7 +37,7 @@ func TestEnforcer(t *testing.T) {
 			enforcer:    e2,
 			auth: bascule.Authentication{
 				Authorization: "jwt",
-				Token:         bascule.NewToken("test", "", bascule.NewAttributes()),
+				Token:         bascule.NewToken("test", "", emptyAttributes),
 			},
 			expectedStatusCode: http.StatusOK,
 		},
@@ -63,7 +64,7 @@ func TestEnforcer(t *testing.T) {
 			enforcer:    e2,
 			auth: bascule.Authentication{
 				Authorization: "jwt",
-				Token:         bascule.NewToken("", "", bascule.NewAttributes()),
+				Token:         bascule.NewToken("", "", emptyAttributes),
 			},
 			expectedStatusCode: http.StatusForbidden,
 		},

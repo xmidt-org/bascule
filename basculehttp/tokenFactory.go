@@ -72,7 +72,7 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 	}
 	// "basic" is a placeholder here ... token types won't always map to the
 	// Authorization header.  For example, a JWT should have a type of "jwt" or some such, not "bearer"
-	return bascule.NewToken("basic", principal, bascule.NewAttributes()), nil
+	return bascule.NewToken("basic", principal, bascule.NewAttributes(map[string]interface{}{})), nil
 }
 
 // NewBasicTokenFactoryFromList takes a list of base64 encoded basic auth keys,
@@ -161,12 +161,15 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 		return nil, emperror.WrapWith(err, "failed to get map of claims", "claims struct", claims)
 	}
 
-	jwtClaims := bascule.NewAttributesFromMap(claimsMap)
+	jwtClaims := bascule.NewAttributes(claimsMap)
 
-	principal, ok := jwtClaims.GetString(jwtPrincipalKey)
-
+	principalVal, ok := jwtClaims.Get(jwtPrincipalKey)
 	if !ok {
-		return nil, emperror.WrapWith(ErrorInvalidPrincipal, "principal value of proper type not found", "principal", principal, "jwtClaims", claimsMap)
+		return nil, emperror.WrapWith(ErrorInvalidPrincipal, "principal value not found", "principal key", jwtPrincipalKey, "jwtClaims", claimsMap)
+	}
+	principal, ok := principalVal.(string)
+	if !ok {
+		return nil, emperror.WrapWith(ErrorInvalidPrincipal, "principal value not a string", "principal", principalVal)
 	}
 
 	return bascule.NewToken("jwt", principal, jwtClaims), nil

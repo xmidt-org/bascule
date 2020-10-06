@@ -25,7 +25,7 @@ func TestBasicTokenFactory(t *testing.T) {
 		{
 			description:   "Sucess",
 			value:         base64.StdEncoding.EncodeToString([]byte("user:pass")),
-			expectedToken: bascule.NewToken("basic", "user", bascule.NewAttributes()),
+			expectedToken: bascule.NewToken("basic", "user", bascule.NewAttributes(map[string]interface{}{})),
 		},
 		{
 			description: "Can't Decode Error",
