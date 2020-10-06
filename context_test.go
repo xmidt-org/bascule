@@ -17,7 +17,7 @@ func TestContext(t *testing.T) {
 		Token: simpleToken{
 			tokenType:  "test",
 			principal:  "test principal",
-			attributes: NewAttributesFromMap(map[string]interface{}{"testkey": "testval", "attr": 5}),
+			attributes: NewAttributes(map[string]interface{}{"testkey": "testval", "attr": 5}),
 		},
 		Request: Request{
 			URL:    u,

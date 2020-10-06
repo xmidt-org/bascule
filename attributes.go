@@ -2,27 +2,29 @@ package bascule
 
 import (
 	"time"
+
+	"github.com/xmidt-org/arrange"
 )
 
 var nilTime = time.Time{}
 
-type attributes map[string]interface{}
+type BasicAttributes map[string]interface{}
 
-func (a attributes) Get(key string) (interface{}, bool) {
+func (a BasicAttributes) Get(key string) (interface{}, bool) {
 	v, ok := a[key]
 	return v, ok
 }
 
 //NewAttributes builds an Attributes instance with
-//the given map as datasource. Default AttributeOptions are used.
+//the given map as datasource.
 func NewAttributes(m map[string]interface{}) Attributes {
-	return attributes(m)
+	return BasicAttributes(m)
 }
 
 // GetNestedAttribute uses multiple keys in order to obtain an attribute.
 func GetNestedAttribute(attributes Attributes, keys ...string) (interface{}, bool) {
 	// need at least one key.
-	if len(keys) == 0 {
+	if keys == nil || len(keys) == 0 {
 		return nil, false
 	}
 
@@ -32,7 +34,11 @@ func GetNestedAttribute(attributes Attributes, keys ...string) (interface{}, boo
 	)
 	result = attributes
 	for _, k := range keys {
-		a, ok := result.(Attributes)
+		var a Attributes
+		if result == nil {
+			return nil, false
+		}
+		ok = arrange.TryConvert(result, func(attr Attributes) { a = attr })
 		if !ok {
 			return nil, false
 		}

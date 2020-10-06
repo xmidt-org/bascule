@@ -35,7 +35,7 @@ func TestListenerDecorator(t *testing.T) {
 
 	ctx := bascule.WithAuthentication(context.Background(), bascule.Authentication{
 		Authorization: "jwt",
-		Token:         bascule.NewToken("", "", bascule.NewAttributes()),
+		Token:         bascule.NewToken("", "", bascule.NewAttributes(map[string]interface{}{})),
 		Request: bascule.Request{
 			URL:    u,
 			Method: "get",
