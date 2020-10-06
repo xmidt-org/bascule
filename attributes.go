@@ -38,7 +38,10 @@ func GetNestedAttribute(attributes Attributes, keys ...string) (interface{}, boo
 		if result == nil {
 			return nil, false
 		}
-		ok = arrange.TryConvert(result, func(attr Attributes) { a = attr })
+		ok = arrange.TryConvert(result,
+			func(attr Attributes) { a = attr },
+			func(m map[string]interface{}) { a = BasicAttributes(m) },
+		)
 		if !ok {
 			return nil, false
 		}

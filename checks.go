@@ -5,6 +5,9 @@ package bascule
 import (
 	"context"
 	"errors"
+	"fmt"
+
+	"github.com/goph/emperror"
 )
 
 const (
@@ -57,29 +60,29 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 // CreateListAttributeCheck returns a Validator that runs checks against the
 // content found in the key given.  It runs every check and returns all errors
 // it finds.
-// func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
-// 	return func(ctx context.Context, token Token) error {
-// 		val, ok := token.Attributes().Get(key)
-// 		if !ok {
-// 			return fmt.Errorf("couldn't find attribute with key %v", key)
-// 		}
-// 		strVal, ok := val.([]interface{})
-// 		if !ok {
-// 			return fmt.Errorf("unexpected attribute value, expected []interface{} type but received: %T", val)
-// 		}
-// 		errs := Errors{}
-// 		for _, check := range checks {
-// 			err := check(ctx, strVal)
-// 			if err != nil {
-// 				errs = append(errs, err)
-// 			}
-// 		}
-// 		if len(errs) == 0 {
-// 			return nil
-// 		}
-// 		return emperror.Wrap(errs, fmt.Sprintf("attribute checks of key %v failed", key))
-// 	}
-// }
+func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
+	return func(ctx context.Context, token Token) error {
+		val, ok := GetNestedAttribute(token.Attributes(), keys...)
+		if !ok {
+			return fmt.Errorf("couldn't find attribute with keys %v", keys)
+		}
+		strVal, ok := val.([]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected attribute value, expected []interface{} type but received: %T", val)
+		}
+		errs := Errors{}
+		for _, check := range checks {
+			err := check(ctx, strVal)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		if len(errs) == 0 {
+			return nil
+		}
+		return emperror.Wrap(errs, fmt.Sprintf("attribute checks of keys %v failed", keys))
+	}
+}
 
 // NonEmptyStringListCheck checks that the list of values given are a list of
 // one or more nonempty strings.
