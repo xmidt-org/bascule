@@ -75,6 +75,10 @@ func TestGetNestedAttribute(t *testing.T) {
 			description: "Missing Key Error",
 			keys:        []string{"c", "b", "a"},
 		},
+		{
+			description: "Wrong Key Case Error",
+			keys:        []string{"A", "B", "C"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
