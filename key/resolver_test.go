@@ -65,7 +65,8 @@ func TestSingleResolver(t *testing.T) {
 		assert.Equal(expectedPair, pair)
 		assert.Nil(err)
 
-		mock.AssertExpectationsForObjects(t, expectedPair.Mock, parser.Mock)
+		expectedPair.AssertExpectations(t)
+		parser.AssertExpectations(t)
 	}
 }
 
@@ -128,7 +129,8 @@ func TestMultiResolver(t *testing.T) {
 		assert.Equal(expectedPair, pair)
 		assert.Nil(err)
 
-		mock.AssertExpectationsForObjects(t, expectedPair.Mock, parser.Mock)
+		expectedPair.AssertExpectations(t)
+		parser.AssertExpectations(t)
 	}
 }
 
