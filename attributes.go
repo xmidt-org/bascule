@@ -18,12 +18,8 @@
 package bascule
 
 import (
-	"time"
-
 	"github.com/xmidt-org/arrange"
 )
-
-var nilTime = time.Time{}
 
 type BasicAttributes map[string]interface{}
 

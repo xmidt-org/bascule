@@ -27,10 +27,6 @@ import (
 	"github.com/goph/emperror"
 )
 
-const (
-	capabilitiesKey = "capabilities"
-)
-
 // CreateAllowAllCheck returns a Validator that never returns an error.
 func CreateAllowAllCheck() ValidatorFunc {
 	return func(_ context.Context, _ Token) error {

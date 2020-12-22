@@ -201,8 +201,3 @@ func TestRemoteBearerTokenAcquirerExiting(t *testing.T) {
 	assert.Nil(err)
 	assert.NotEqual(token, cachedToken)
 }
-
-type customBearer struct {
-	Token                string `json:"token"`
-	ExpiresOnUnixSeconds int64  `json:"expires_on"`
-}
