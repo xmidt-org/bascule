@@ -19,6 +19,7 @@ package bascule
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,5 @@ func TestValidators(t *testing.T) {
 	assert.Nil(err)
 	errs := validatorList.Check(context.Background(), NewToken("", "", emptyAttributes))
 	assert.NotNil(errs)
-	_, ok := errs.(Errors)
-	assert.True(ok)
+	assert.True(errors.As(errs, &Errors{}))
 }
