@@ -40,7 +40,7 @@ type Errors []error
 // Error concatenates the list of error strings to provide a single string
 // that can be used to represent the errors that occurred.
 func (e Errors) Error() string {
-	var errors []string
+	errors := make([]string, len(e))
 	for _, err := range e {
 		errors = append(errors, err.Error())
 	}
