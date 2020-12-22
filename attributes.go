@@ -37,7 +37,7 @@ func NewAttributes(m map[string]interface{}) Attributes {
 // GetNestedAttribute uses multiple keys in order to obtain an attribute.
 func GetNestedAttribute(attributes Attributes, keys ...string) (interface{}, bool) {
 	// need at least one key.
-	if keys == nil || len(keys) == 0 {
+	if len(keys) == 0 {
 		return nil, false
 	}
 

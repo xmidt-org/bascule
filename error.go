@@ -41,8 +41,8 @@ type Errors []error
 // that can be used to represent the errors that occurred.
 func (e Errors) Error() string {
 	errors := make([]string, len(e))
-	for _, err := range e {
-		errors = append(errors, err.Error())
+	for i, err := range e {
+		errors[i] = err.Error()
 	}
 	return fmt.Sprintf("multiple errors: [%v]", strings.Join(errors, ", "))
 }
