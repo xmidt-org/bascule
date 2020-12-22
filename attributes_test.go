@@ -25,7 +25,7 @@ import (
 
 func TestGet(t *testing.T) {
 	assert := assert.New(t)
-	attributes := Attributes(attrs)
+	attributes := attrs
 
 	val, ok := attributes.Get("testkey")
 	assert.Equal("testval", val)
