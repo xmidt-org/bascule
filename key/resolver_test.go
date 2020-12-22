@@ -101,6 +101,7 @@ func TestMultiResolver(t *testing.T) {
 	loader, err := expander.Expand(
 		map[string]interface{}{KeyIdParameterName: keyId},
 	)
+	assert.Nil(err)
 
 	expectedData, err := resource.ReadAll(loader)
 	assert.NotEmpty(expectedData)
