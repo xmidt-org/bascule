@@ -40,7 +40,7 @@ func TestBasicTokenFactory(t *testing.T) {
 		expectedErr   error
 	}{
 		{
-			description:   "Sucess",
+			description:   "Success",
 			value:         base64.StdEncoding.EncodeToString([]byte("user:pass")),
 			expectedToken: bascule.NewToken("basic", "user", bascule.NewAttributes(map[string]interface{}{})),
 		},
