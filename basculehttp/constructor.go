@@ -42,6 +42,12 @@ const (
 	DefaultHeaderDelimiter = " "
 )
 
+var (
+	errNoAuthHeader    = errors.New("no authorization header")
+	errBadAuthHeader   = errors.New("unexpected authorization header value")
+	errKeyNotSupported = errors.New("key not supported")
+)
+
 // ParseURL is a function that modifies the url given then returns it.
 type ParseURL func(*url.URL) (*url.URL, error)
 
@@ -79,8 +85,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			logger = bascule.GetDefaultLoggerFunc(request.Context())
 		}
 
-		// copy the URL before modifying it
-		urlVal := *request.URL
+		urlVal := *request.URL // copy the URL before modifying it
 		u, err := c.parseURL(&urlVal)
 		if err != nil {
 			c.error(logger, GetURLFailed, "", emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
@@ -90,16 +95,13 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
-			err := errors.New("no authorization header")
-			c.error(logger, MissingHeader, "", err)
+			c.error(logger, MissingHeader, "", errNoAuthHeader)
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
-
 		i := strings.Index(authorization, c.headerDelimiter)
 		if i < 1 {
-			err := errors.New("unexpected authorization header value")
-			c.error(logger, InvalidHeader, authorization, err)
+			c.error(logger, InvalidHeader, authorization, errBadAuthHeader)
 			response.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -107,11 +109,9 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		key := bascule.Authorization(
 			textproto.CanonicalMIMEHeaderKey(authorization[:i]),
 		)
-
 		tf, supported := c.authorizations[key]
 		if !supported {
-			err := fmt.Errorf("key not supported: [%v]", key)
-			c.error(logger, KeyNotSupported, authorization, err)
+			c.error(logger, KeyNotSupported, authorization, fmt.Errorf("%w: [%v]", errKeyNotSupported, key))
 			response.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -123,7 +123,6 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			WriteResponse(response, http.StatusForbidden, err)
 			return
 		}
-
 		ctx = bascule.WithAuthentication(
 			request.Context(),
 			bascule.Authentication{
