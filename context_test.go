@@ -28,7 +28,7 @@ import (
 func TestContext(t *testing.T) {
 	assert := assert.New(t)
 	u, err := url.ParseRequestURI("/a/b/c")
-	assert.Nil(err)
+	assert.NoError(err)
 	expectedAuth := Authentication{
 		Authorization: "authorization string",
 		Token: simpleToken{

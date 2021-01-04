@@ -48,7 +48,7 @@ func TestListenerDecorator(t *testing.T) {
 	assert.Equal(http.StatusForbidden, writer.Code)
 
 	u, err := url.ParseRequestURI("/")
-	assert.Nil(err)
+	assert.NoError(err)
 
 	ctx := bascule.WithAuthentication(context.Background(), bascule.Authentication{
 		Authorization: "jwt",

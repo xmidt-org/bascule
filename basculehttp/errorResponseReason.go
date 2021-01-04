@@ -41,5 +41,4 @@ type OnErrorResponse func(ErrorResponseReason, error)
 
 // default function does nothing
 func DefaultOnErrorResponse(_ ErrorResponseReason, _ error) {
-	return
 }

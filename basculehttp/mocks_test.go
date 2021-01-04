@@ -26,16 +26,6 @@ import (
 	"github.com/xmidt-org/bascule"
 )
 
-type mockJWSParser struct {
-	mock.Mock
-}
-
-func (parser *mockJWSParser) ParseJWS(token []byte) (jws.JWS, error) {
-	arguments := parser.Called(token)
-	jwsToken, _ := arguments.Get(0).(jws.JWS)
-	return jwsToken, arguments.Error(1)
-}
-
 type mockJWS struct {
 	mock.Mock
 }

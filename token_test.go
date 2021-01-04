@@ -25,18 +25,6 @@ import (
 
 var attrs = NewAttributes(map[string]interface{}{"testkey": "testval", "attr": 5})
 
-const (
-	boolGetter = iota
-	durationGetter
-	float64Getter
-	int64Getter
-	intSliceGetter
-	stringGetter
-	stringMapGetter
-	stringSliceGetter
-	timeGetter
-)
-
 func TestToken(t *testing.T) {
 	assert := assert.New(t)
 	tokenType := "test type"

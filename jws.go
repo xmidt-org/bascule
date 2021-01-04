@@ -62,17 +62,17 @@ func (c *ClaimsWithLeeway) Valid() error {
 	vErr := new(jwt.ValidationError)
 	now := jwt.TimeFunc().Unix()
 
-	if c.VerifyExpiresAt(now+c.Leeway.EXP, false) == false {
+	if !c.VerifyExpiresAt(now+c.Leeway.EXP, false) {
 		vErr.Inner = errors.New("Token is expired")
 		vErr.Errors |= jwt.ValidationErrorExpired
 	}
 
-	if c.VerifyIssuedAt(now-c.Leeway.IAT, false) == false {
+	if !c.VerifyIssuedAt(now-c.Leeway.IAT, false) {
 		vErr.Inner = errors.New("Token used before issued")
 		vErr.Errors |= jwt.ValidationErrorIssuedAt
 	}
 
-	if c.VerifyNotBefore(now-c.Leeway.NBF, false) == false {
+	if !c.VerifyNotBefore(now-c.Leeway.NBF, false) {
 		vErr.Inner = errors.New("Token is not valid yet")
 		vErr.Errors |= jwt.ValidationErrorNotValidYet
 	}

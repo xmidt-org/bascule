@@ -54,12 +54,12 @@ func TestDefaultParser(t *testing.T) {
 		t.Logf("%v", record)
 
 		data, err := ioutil.ReadFile(record.keyFilePath)
-		if !assert.Nil(err) {
+		if !assert.NoError(err) {
 			continue
 		}
 
 		pair, err := DefaultParser.ParseKey(context.Background(), record.purpose, data)
-		if !assert.Nil(err) && !assert.NotNil(pair) {
+		if !assert.NoError(err) && !assert.NotNil(pair) {
 			continue
 		}
 

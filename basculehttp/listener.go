@@ -55,8 +55,6 @@ func (l *listenerDecorator) decorate(next http.Handler) http.Handler {
 func NewListenerDecorator(listeners ...Listener) func(http.Handler) http.Handler {
 	l := &listenerDecorator{}
 
-	for _, listener := range listeners {
-		l.listeners = append(l.listeners, listener)
-	}
+	l.listeners = append(l.listeners, listeners...)
 	return l.decorate
 }

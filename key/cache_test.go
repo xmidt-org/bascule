@@ -42,7 +42,7 @@ func makeExpectedPairs(count int) (expectedKeyIDs []string, expectedPairs map[st
 func assertExpectationsForPairs(t *testing.T, pairs map[string]Pair) {
 	for _, pair := range pairs {
 		if mockPair, ok := pair.(*MockPair); ok {
-			mock.AssertExpectationsForObjects(t, mockPair.Mock)
+			mockPair.AssertExpectations(t)
 		}
 	}
 }
@@ -80,15 +80,15 @@ func TestSingleCacheResolveKey(t *testing.T) {
 			<-barrier
 			actualPair, err := cache.ResolveKey(context.Background(), keyID)
 			assert.Equal(expectedPair, actualPair)
-			assert.Nil(err)
+			assert.NoError(err)
 		}()
 	}
 
 	close(barrier)
 	waitGroup.Wait()
 
-	mock.AssertExpectationsForObjects(t, expectedPair.Mock)
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	expectedPair.AssertExpectations(t)
+	resolver.AssertExpectations(t)
 	assert.Equal(expectedPair, cache.load())
 }
 
@@ -123,7 +123,7 @@ func TestSingleCacheResolveKeyError(t *testing.T) {
 	close(barrier)
 	waitGroup.Wait()
 
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	resolver.AssertExpectations(t)
 	assert.Nil(cache.load())
 }
 
@@ -141,8 +141,8 @@ func TestSingleCacheUpdateKeys(t *testing.T) {
 	}
 
 	count, errors := cache.UpdateKeys(context.Background())
-	mock.AssertExpectationsForObjects(t, expectedPair.Mock)
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	expectedPair.AssertExpectations(t)
+	resolver.AssertExpectations(t)
 	assert.Equal(1, count)
 	assert.Nil(errors)
 }
@@ -161,11 +161,9 @@ func TestSingleCacheUpdateKeysError(t *testing.T) {
 	}
 
 	count, errors := cache.UpdateKeys(context.Background())
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	resolver.AssertExpectations(t)
 	assert.Equal(1, count)
 	assert.Equal([]error{expectedError}, errors)
-
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
 }
 
 func TestSingleCacheUpdateKeysSequence(t *testing.T) {
@@ -188,7 +186,7 @@ func TestSingleCacheUpdateKeysSequence(t *testing.T) {
 
 	firstPair, err := cache.ResolveKey(context.Background(), keyID)
 	assert.Equal(oldPair, firstPair)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	count, errors := cache.UpdateKeys(context.Background())
 	assert.Equal(1, count)
@@ -197,7 +195,7 @@ func TestSingleCacheUpdateKeysSequence(t *testing.T) {
 	// resolving should pull the key from the cache
 	firstPair, err = cache.ResolveKey(context.Background(), keyID)
 	assert.Equal(oldPair, firstPair)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	// this time, the mock will succeed
 	count, errors = cache.UpdateKeys(context.Background())
@@ -207,9 +205,9 @@ func TestSingleCacheUpdateKeysSequence(t *testing.T) {
 	// resolving should pull the *new* key from the cache
 	secondPair, err := cache.ResolveKey(context.Background(), keyID)
 	assert.Equal(newPair, secondPair)
-	assert.Nil(err)
+	assert.NoError(err)
 
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	resolver.AssertExpectations(t)
 }
 
 func TestMultiCacheResolveKey(t *testing.T) {
@@ -242,7 +240,7 @@ func TestMultiCacheResolveKey(t *testing.T) {
 				<-barrier
 				pair, err := cache.ResolveKey(context.Background(), keyID)
 				assert.Equal(expectedPair, pair)
-				assert.Nil(err)
+				assert.NoError(err)
 			}(keyID, expectedPairs[keyID])
 		}
 	}
@@ -250,7 +248,7 @@ func TestMultiCacheResolveKey(t *testing.T) {
 	close(barrier)
 	waitGroup.Wait()
 
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	resolver.AssertExpectations(t)
 	assertExpectationsForPairs(t, expectedPairs)
 }
 
@@ -292,7 +290,7 @@ func TestMultiCacheResolveKeyError(t *testing.T) {
 	close(barrier)
 	waitGroup.Wait()
 
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	resolver.AssertExpectations(t)
 }
 
 func TestMultiCacheUpdateKeys(t *testing.T) {
@@ -319,14 +317,14 @@ func TestMultiCacheUpdateKeys(t *testing.T) {
 	for _, keyID := range expectedKeyIDs {
 		pair, err := cache.ResolveKey(context.Background(), keyID)
 		assert.Equal(expectedPairs[keyID], pair)
-		assert.Nil(err)
+		assert.NoError(err)
 	}
 
 	count, errors = cache.UpdateKeys(context.Background())
 	assert.Equal(len(expectedKeyIDs), count)
 	assert.Len(errors, 0)
 
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	resolver.AssertExpectations(t)
 	assertExpectationsForPairs(t, expectedPairs)
 }
 
@@ -362,7 +360,7 @@ func TestMultiCacheUpdateKeysError(t *testing.T) {
 	assert.Equal(0, count)
 	assert.Len(errors, 0)
 
-	mock.AssertExpectationsForObjects(t, resolver.Mock)
+	resolver.AssertExpectations(t)
 }
 
 func TestMultiCacheUpdateKeysSequence(t *testing.T) {
@@ -386,7 +384,7 @@ func TestMultiCacheUpdateKeysSequence(t *testing.T) {
 
 	pair, err := cache.ResolveKey(context.Background(), keyID)
 	assert.Equal(oldPair, pair)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	// an error should leave the existing key alone
 	count, errors := cache.UpdateKeys(context.Background())
@@ -396,7 +394,7 @@ func TestMultiCacheUpdateKeysSequence(t *testing.T) {
 	// the key should resolve to the old key from the cache
 	pair, err = cache.ResolveKey(context.Background(), keyID)
 	assert.Equal(oldPair, pair)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	// again, this time the mock will succeed
 	count, errors = cache.UpdateKeys(context.Background())
@@ -406,7 +404,9 @@ func TestMultiCacheUpdateKeysSequence(t *testing.T) {
 	// resolving a key should show the new value now
 	pair, err = cache.ResolveKey(context.Background(), keyID)
 	assert.Equal(newPair, pair)
-	assert.Nil(err)
+	assert.NoError(err)
 
-	mock.AssertExpectationsForObjects(t, resolver.Mock, oldPair.Mock, newPair.Mock)
+	resolver.AssertExpectations(t)
+	oldPair.AssertExpectations(t)
+	newPair.AssertExpectations(t)
 }

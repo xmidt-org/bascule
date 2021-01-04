@@ -93,9 +93,9 @@ func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Reque
 }
 
 // NewBasicTokenFactoryFromList takes a list of base64 encoded basic auth keys,
-// decodes them, and supplies that list in map form of username to password.
-// If a username is encoded in two different auth keys, it will be overwritten
-// by the last occurence of that username with a password.  If anoth
+// decodes them, and supplies that list in map form of username to password. If
+// a username is encoded in two different auth keys, it will be overwritten by
+// the last occurrence of that username with a password.  If anoth
 func NewBasicTokenFactoryFromList(encodedBasicAuthKeys []string) (BasicTokenFactory, error) {
 	btf := make(BasicTokenFactory)
 	errs := bascule.Errors{}

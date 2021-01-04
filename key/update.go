@@ -80,7 +80,7 @@ func update(ctx context.Context, cache Cache, updateKeysTimeout time.Duration, u
 				updateKeysCtx, cancel = context.WithTimeout(ctx, updateKeysTimeout)
 			}
 			_, errs := cache.UpdateKeys(updateKeysCtx)
-			if len(errs) != 0 {
+			if len(errs) != 0 { //nolint:staticcheck // will be fixed with todo
 				// todo: log errors
 			}
 			cancel()

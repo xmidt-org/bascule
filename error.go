@@ -18,7 +18,6 @@
 package bascule
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -40,11 +39,19 @@ type Errors []error
 // Error concatenates the list of error strings to provide a single string
 // that can be used to represent the errors that occurred.
 func (e Errors) Error() string {
-	var errors []string
-	for _, err := range e {
-		errors = append(errors, err.Error())
+	var output strings.Builder
+	output.Write([]byte("multiple errors: ["))
+	for i, msg := range e {
+		if i > 0 {
+			output.WriteRune(',')
+			output.WriteRune(' ')
+		}
+
+		output.WriteString(msg.Error())
 	}
-	return fmt.Sprintf("multiple errors: [%v]", strings.Join(errors, ", "))
+	output.WriteRune(']')
+
+	return output.String()
 }
 
 // Errors returns the list of errors.

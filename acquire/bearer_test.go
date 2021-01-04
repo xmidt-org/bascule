@@ -96,7 +96,7 @@ func TestRemoteBearerTokenAcquirer(t *testing.T) {
 					return
 				}
 				marshaledAuth, err := json.Marshal(tc.authToken)
-				assert.Nil(err)
+				assert.NoError(err)
 				rw.Write(marshaledAuth)
 			}))
 			// Close the server when test finishes
@@ -114,7 +114,7 @@ func TestRemoteBearerTokenAcquirer(t *testing.T) {
 				RequestHeaders: map[string]string{"k0": "v0", "k1": "v1"},
 			})
 
-			assert.Nil(errConstructor)
+			assert.NoError(errConstructor)
 
 			token, err := auth.Acquire()
 
@@ -140,7 +140,7 @@ func TestRemoteBearerTokenAcquirerCaching(t *testing.T) {
 		count++
 
 		marshaledAuth, err := json.Marshal(&auth)
-		assert.Nil(err)
+		assert.NoError(err)
 		rw.Write(marshaledAuth)
 	}))
 	defer server.Close()
@@ -151,12 +151,12 @@ func TestRemoteBearerTokenAcquirerCaching(t *testing.T) {
 		Timeout: time.Duration(5) * time.Second,
 		Buffer:  time.Microsecond,
 	})
-	assert.Nil(errConstructor)
+	assert.NoError(errConstructor)
 	token, err := auth.Acquire()
-	assert.Nil(err)
+	assert.NoError(err)
 
 	cachedToken, err := auth.Acquire()
-	assert.Nil(err)
+	assert.NoError(err)
 	assert.Equal(token, cachedToken)
 	assert.Equal(1, count)
 }
@@ -173,7 +173,7 @@ func TestRemoteBearerTokenAcquirerExiting(t *testing.T) {
 		count++
 
 		marshaledAuth, err := json.Marshal(&auth)
-		assert.Nil(err)
+		assert.NoError(err)
 		rw.Write(marshaledAuth)
 	}))
 	defer server.Close()
@@ -184,25 +184,20 @@ func TestRemoteBearerTokenAcquirerExiting(t *testing.T) {
 		Timeout: time.Duration(5) * time.Second,
 		Buffer:  time.Second,
 	})
-	assert.Nil(errConstructor)
+	assert.NoError(errConstructor)
 	token, err := auth.Acquire()
-	assert.Nil(err)
+	assert.NoError(err)
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
 			_, err := auth.Acquire()
-			assert.Nil(err)
+			assert.NoError(err)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
 	cachedToken, err := auth.Acquire()
-	assert.Nil(err)
+	assert.NoError(err)
 	assert.NotEqual(token, cachedToken)
-}
-
-type customBearer struct {
-	Token                string `json:"token"`
-	ExpiresOnUnixSeconds int64  `json:"expires_on"`
 }

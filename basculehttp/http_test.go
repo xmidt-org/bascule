@@ -31,8 +31,8 @@ func TestErrorHeaderer(t *testing.T) {
 	expectedErr := "test error"
 	headers := map[string][]string{"test key": []string{"a", "b", "c", "d"}}
 	eh := NewErrorHeaderer(errors.New(expectedErr), headers)
-	e, ok := eh.(headerer)
-	assert.True(ok)
+	var e headerer
+	assert.True(errors.As(eh, &e))
 	err := eh.Error()
 	assert.Equal(expectedErr, err)
 	h := e.Headers()

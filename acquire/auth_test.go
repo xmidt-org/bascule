@@ -79,7 +79,7 @@ func TestFixedAuthAcquirer(t *testing.T) {
 
 		acquirer, err := NewFixedAuthAcquirer("Basic xyz==")
 		assert.NotNil(acquirer)
-		assert.Nil(err)
+		assert.NoError(err)
 
 		authValue, _ := acquirer.Acquire()
 		assert.Equal("Basic xyz==", authValue)
