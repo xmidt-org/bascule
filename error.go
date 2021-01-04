@@ -40,14 +40,17 @@ type Errors []error
 // that can be used to represent the errors that occurred.
 func (e Errors) Error() string {
 	var output strings.Builder
-	output.Write([]byte("multiple errors: "))
+	output.Write([]byte("multiple errors: ["))
 	for i, msg := range e {
 		if i > 0 {
 			output.WriteRune(',')
+			output.WriteRune(' ')
 		}
 
 		output.WriteString(msg.Error())
 	}
+	output.WriteRune(']')
+
 	return output.String()
 }
 
