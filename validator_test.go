@@ -30,7 +30,7 @@ func TestValidators(t *testing.T) {
 	assert := assert.New(t)
 	validatorList := Validators([]Validator{CreateNonEmptyTypeCheck(), CreateNonEmptyPrincipalCheck()})
 	err := validatorList.Check(context.Background(), NewToken("type", "principal", emptyAttributes))
-	assert.Nil(err)
+	assert.NoError(err)
 	errs := validatorList.Check(context.Background(), NewToken("", "", emptyAttributes))
 	assert.NotNil(errs)
 	assert.True(errors.As(errs, &Errors{}))

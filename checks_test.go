@@ -28,7 +28,7 @@ func TestCreateAllowAllCheck(t *testing.T) {
 	assert := assert.New(t)
 	f := CreateAllowAllCheck()
 	err := f(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{})))
-	assert.Nil(err)
+	assert.NoError(err)
 }
 
 func TestCreateValidTypeCheck(t *testing.T) {
@@ -36,7 +36,7 @@ func TestCreateValidTypeCheck(t *testing.T) {
 	assert := assert.New(t)
 	f := CreateValidTypeCheck([]string{"valid", "type"})
 	err := f(context.Background(), NewToken("valid", "", emptyAttributes))
-	assert.Nil(err)
+	assert.NoError(err)
 	err = f(context.Background(), NewToken("invalid", "", emptyAttributes))
 	assert.NotNil(err)
 }
@@ -46,7 +46,7 @@ func TestCreateNonEmptyTypeCheck(t *testing.T) {
 	assert := assert.New(t)
 	f := CreateNonEmptyTypeCheck()
 	err := f(context.Background(), NewToken("type", "", emptyAttributes))
-	assert.Nil(err)
+	assert.NoError(err)
 	err = f(context.Background(), NewToken("", "", emptyAttributes))
 	assert.NotNil(err)
 }
@@ -56,7 +56,7 @@ func TestCreateNonEmptyPrincipalCheck(t *testing.T) {
 	assert := assert.New(t)
 	f := CreateNonEmptyPrincipalCheck()
 	err := f(context.Background(), NewToken("", "principal", emptyAttributes))
-	assert.Nil(err)
+	assert.NoError(err)
 	err = f(context.Background(), NewToken("", "", emptyAttributes))
 	assert.NotNil(err)
 }
@@ -67,7 +67,7 @@ func TestCreateListAttributeCheck(t *testing.T) {
 
 	err := f(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{
 		"testkey": map[string]interface{}{"subkey": []interface{}{"a", "b", "c"}}})))
-	assert.Nil(err)
+	assert.NoError(err)
 
 	err = f(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{})))
 	assert.NotNil(err)

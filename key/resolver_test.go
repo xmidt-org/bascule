@@ -35,13 +35,13 @@ func TestSingleResolver(t *testing.T) {
 		URI: publicKeyFilePath,
 	}).NewLoader()
 
-	if !assert.Nil(err) {
+	if !assert.NoError(err) {
 		return
 	}
 
 	expectedData, err := resource.ReadAll(loader)
 	assert.NotEmpty(expectedData)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt, PurposeSign, PurposeEncrypt} {
 		t.Logf("purpose: %s", purpose)
@@ -63,7 +63,7 @@ func TestSingleResolver(t *testing.T) {
 
 		pair, err := resolver.ResolveKey(context.Background(), "does not matter")
 		assert.Equal(expectedPair, pair)
-		assert.Nil(err)
+		assert.NoError(err)
 
 		expectedPair.AssertExpectations(t)
 		parser.AssertExpectations(t)
@@ -95,18 +95,18 @@ func TestMultiResolver(t *testing.T) {
 		URI: publicKeyFilePathTemplate,
 	}).NewExpander()
 
-	if !assert.Nil(err) {
+	if !assert.NoError(err) {
 		return
 	}
 
 	loader, err := expander.Expand(
 		map[string]interface{}{KeyIdParameterName: keyId},
 	)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	expectedData, err := resource.ReadAll(loader)
 	assert.NotEmpty(expectedData)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	for _, purpose := range []Purpose{PurposeVerify, PurposeDecrypt, PurposeSign, PurposeEncrypt} {
 		t.Logf("purpose: %s", purpose)
@@ -127,7 +127,7 @@ func TestMultiResolver(t *testing.T) {
 
 		pair, err := resolver.ResolveKey(context.Background(), keyId)
 		assert.Equal(expectedPair, pair)
-		assert.Nil(err)
+		assert.NoError(err)
 
 		expectedPair.AssertExpectations(t)
 		parser.AssertExpectations(t)

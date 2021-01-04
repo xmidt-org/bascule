@@ -35,5 +35,5 @@ func TestValid(t *testing.T) {
 		},
 	}
 	err := claims.Valid()
-	assert.Nil(err)
+	assert.NoError(err)
 }
