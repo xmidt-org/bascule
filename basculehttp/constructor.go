@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"strings"
 
@@ -40,6 +39,14 @@ const (
 	// DefaultHeaderDelimiter is the character between the authorization and
 	// its key.
 	DefaultHeaderDelimiter = " "
+
+	// BasicAuthorization follows the RFC spec for Oauth 2.0 and is a canonical
+	// MIME header for Basic Authorization.
+	BasicAuthorization bascule.Authorization = "Basic"
+
+	// BasicAuthorization follows the RFC spec for Oauth 2.0 and is a canonical
+	// MIME header for Basic Authorization.
+	BearerAuthorization bascule.Authorization = "Bearer"
 )
 
 var (
@@ -106,9 +113,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			return
 		}
 
-		key := bascule.Authorization(
-			textproto.CanonicalMIMEHeaderKey(authorization[:i]),
-		)
+		key := bascule.Authorization(authorization[:i])
 		tf, supported := c.authorizations[key]
 		if !supported {
 			c.error(logger, KeyNotSupported, authorization, fmt.Errorf("%w: [%v]", errKeyNotSupported, key))
