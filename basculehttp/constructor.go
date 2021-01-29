@@ -39,6 +39,14 @@ const (
 	// DefaultHeaderDelimiter is the character between the authorization and
 	// its key.
 	DefaultHeaderDelimiter = " "
+
+	// BasicAuthorization follows the RFC spec for Oauth 2.0 and is a canonical
+	// MIME header for Basic Authorization.
+	BasicAuthorization bascule.Authorization = "Basic"
+
+	// BasicAuthorization follows the RFC spec for Oauth 2.0 and is a canonical
+	// MIME header for Basic Authorization.
+	BearerAuthorization bascule.Authorization = "Bearer"
 )
 
 var (
