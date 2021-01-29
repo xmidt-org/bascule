@@ -95,6 +95,14 @@ func TestConstructor(t *testing.T) {
 			endpoint:           "/test",
 		},
 		{
+			description:        "Key Wrong Case Error",
+			constructor:        c,
+			requestHeaderKey:   testHeader,
+			requestHeaderValue: "bAsIc=Y29kZXg6Y29kZXg=",
+			expectedStatusCode: http.StatusForbidden,
+			endpoint:           "/test",
+		},
+		{
 			description:        "Parse and Validate Error",
 			constructor:        c,
 			requestHeaderKey:   testHeader,

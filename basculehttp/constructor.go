@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"strings"
 
@@ -106,9 +105,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			return
 		}
 
-		key := bascule.Authorization(
-			textproto.CanonicalMIMEHeaderKey(authorization[:i]),
-		)
+		key := bascule.Authorization(authorization[:i])
 		tf, supported := c.authorizations[key]
 		if !supported {
 			c.error(logger, KeyNotSupported, authorization, fmt.Errorf("%w: [%v]", errKeyNotSupported, key))
