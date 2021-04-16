@@ -42,6 +42,7 @@ func TestConstructor(t *testing.T) {
 		}),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
+		WithUnauthorizedTokenType(BasicAuthorization),
 	)
 	c2 := NewConstructor(
 		WithHeaderName(""),
@@ -49,12 +50,13 @@ func TestConstructor(t *testing.T) {
 		WithCLogger(func(_ context.Context) bascule.Logger { return nil }),
 	)
 	tests := []struct {
-		description        string
-		constructor        func(http.Handler) http.Handler
-		requestHeaderKey   string
-		requestHeaderValue string
-		expectedStatusCode int
-		endpoint           string
+		description           string
+		constructor           func(http.Handler) http.Handler
+		requestHeaderKey      string
+		requestHeaderValue    string
+		expectedStatusCode    int
+		endpoint              string
+		unauthorizedTokenType string
 	}{
 		{
 			description:        "Success",
@@ -71,12 +73,22 @@ func TestConstructor(t *testing.T) {
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
-			description:        "No Authorization Header Error",
-			constructor:        c2,
-			requestHeaderKey:   DefaultHeaderName,
-			requestHeaderValue: "",
-			expectedStatusCode: http.StatusForbidden,
-			endpoint:           "/",
+			description:           "No Authorization Header Error Default",
+			constructor:           c2,
+			requestHeaderKey:      DefaultHeaderName,
+			requestHeaderValue:    "",
+			expectedStatusCode:    http.StatusUnauthorized,
+			endpoint:              "/",
+			unauthorizedTokenType: string(BearerAuthorization),
+		},
+		{
+			description:           "No Authorization Header Error",
+			constructor:           c,
+			requestHeaderKey:      DefaultHeaderName,
+			requestHeaderValue:    "",
+			expectedStatusCode:    http.StatusUnauthorized,
+			endpoint:              "/test",
+			unauthorizedTokenType: string(BasicAuthorization),
 		},
 		{
 			description:        "No Space in Auth Header Error",
@@ -121,6 +133,9 @@ func TestConstructor(t *testing.T) {
 			req.Header.Add(tc.requestHeaderKey, tc.requestHeaderValue)
 			handler.ServeHTTP(writer, req)
 			assert.Equal(tc.expectedStatusCode, writer.Code)
+			if tc.expectedStatusCode == http.StatusUnauthorized {
+				assert.Equal(tc.unauthorizedTokenType, writer.Header().Get("WWW-Authenticate"))
+			}
 		})
 	}
 }

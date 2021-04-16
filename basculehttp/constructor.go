@@ -47,6 +47,11 @@ const (
 	// BasicAuthorization follows the RFC spec for Oauth 2.0 and is a canonical
 	// MIME header for Basic Authorization.
 	BearerAuthorization bascule.Authorization = "Bearer"
+
+	// DefaultUnauthorizedTokenType is used as the default value for the
+	// Authentication type directive that's returned as part of the WWW-Authenticate
+	// response header to 401 Unauthorized requests.
+	DefaultUnauthorizedTokenType bascule.Authorization = BearerAuthorization
 )
 
 var (
@@ -77,12 +82,13 @@ func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
 }
 
 type constructor struct {
-	headerName      string
-	headerDelimiter string
-	authorizations  map[bascule.Authorization]TokenFactory
-	getLogger       func(context.Context) bascule.Logger
-	parseURL        ParseURL
-	onErrorResponse OnErrorResponse
+	headerName            string
+	headerDelimiter       string
+	unauthorizedTokenType bascule.Authorization
+	authorizations        map[bascule.Authorization]TokenFactory
+	getLogger             func(context.Context) bascule.Logger
+	parseURL              ParseURL
+	onErrorResponse       OnErrorResponse
 }
 
 func (c *constructor) decorate(next http.Handler) http.Handler {
@@ -103,7 +109,8 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		authorization := request.Header.Get(c.headerName)
 		if len(authorization) == 0 {
 			c.error(logger, MissingHeader, "", errNoAuthHeader)
-			response.WriteHeader(http.StatusForbidden)
+			response.Header().Set("WWW-Authenticate", string(c.unauthorizedTokenType))
+			response.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		i := strings.Index(authorization, c.headerDelimiter)
@@ -206,17 +213,26 @@ func WithCErrorResponseFunc(f OnErrorResponse) COption {
 	}
 }
 
+// WithUnauthorizedTokenType sets the authentication token type clients should
+// use after their requests failed with a 401.
+func WithUnauthorizedTokenType(unauthorizedTokenType bascule.Authorization) COption {
+	return func(c *constructor) {
+		c.unauthorizedTokenType = unauthorizedTokenType
+	}
+}
+
 // NewConstructor creates an Alice-style decorator function that acts as
 // middleware: parsing the http request to get a Token, which is added to the
 // context.
 func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 	c := &constructor{
-		headerName:      DefaultHeaderName,
-		headerDelimiter: DefaultHeaderDelimiter,
-		authorizations:  make(map[bascule.Authorization]TokenFactory),
-		getLogger:       bascule.GetDefaultLoggerFunc,
-		parseURL:        DefaultParseURLFunc,
-		onErrorResponse: DefaultOnErrorResponse,
+		headerName:            DefaultHeaderName,
+		headerDelimiter:       DefaultHeaderDelimiter,
+		authorizations:        make(map[bascule.Authorization]TokenFactory),
+		getLogger:             bascule.GetDefaultLoggerFunc,
+		parseURL:              DefaultParseURLFunc,
+		onErrorResponse:       DefaultOnErrorResponse,
+		unauthorizedTokenType: DefaultUnauthorizedTokenType,
 	}
 
 	for _, o := range options {
