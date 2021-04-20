@@ -17,6 +17,8 @@
 
 package basculehttp
 
+import "net/http"
+
 //go:generate stringer -type=ErrorResponseReason
 
 // ErrorResponseReason is an enum that specifies the reason parsing/validating
@@ -41,4 +43,22 @@ type OnErrorResponse func(ErrorResponseReason, error)
 
 // default function does nothing
 func DefaultOnErrorResponse(_ ErrorResponseReason, _ error) {
+}
+
+// OnErrorHTTPResponse allows users to decide what the response should be
+// for a given reason.
+type OnErrorHTTPResponse func(http.ResponseWriter, ErrorResponseReason)
+
+// DefaultOnErrorHTTPResponse will write a 401 status code along the
+// 'WWW-Authenticate: Bearer' header for all error cases related to building
+// the security token. For error checks that happen once a valid token has been
+// created will result in a 403.
+func DefaultOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReason) {
+	switch reason {
+	case ChecksNotFound, ChecksFailed:
+		w.WriteHeader(http.StatusForbidden)
+	default:
+		w.Header().Set("WWW-Authenticate", string(BearerAuthorization))
+		w.WriteHeader(http.StatusUnauthorized)
+	}
 }

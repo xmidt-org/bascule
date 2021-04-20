@@ -77,12 +77,50 @@ func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
 }
 
 type constructor struct {
-	headerName      string
-	headerDelimiter string
-	authorizations  map[bascule.Authorization]TokenFactory
-	getLogger       func(context.Context) log.Logger
-	parseURL        ParseURL
-	onErrorResponse OnErrorResponse
+	headerName          string
+	headerDelimiter     string
+	authorizations      map[bascule.Authorization]TokenFactory
+	getLogger           func(context.Context) log.Logger
+	parseURL            ParseURL
+	onErrorResponse     OnErrorResponse
+	onErrorHTTPResponse OnErrorHTTPResponse
+}
+
+func (c *constructor) authenticationOutput(logger log.Logger, request *http.Request) (bascule.Authentication, ErrorResponseReason, error) {
+	urlVal := *request.URL // copy the URL before modifying it
+	u, err := c.parseURL(&urlVal)
+	if err != nil {
+		return bascule.Authentication{}, GetURLFailed, emperror.WrapWith(err, "failed to get URL", "URL", request.URL)
+	}
+	authorization := request.Header.Get(c.headerName)
+	if len(authorization) == 0 {
+		return bascule.Authentication{}, MissingHeader, errNoAuthHeader
+	}
+	i := strings.Index(authorization, c.headerDelimiter)
+	if i < 1 {
+		return bascule.Authentication{}, InvalidHeader, errBadAuthHeader
+	}
+
+	key := bascule.Authorization(authorization[:i])
+	tf, supported := c.authorizations[key]
+	if !supported {
+		return bascule.Authentication{}, KeyNotSupported, fmt.Errorf("%w: [%v]", errKeyNotSupported, key)
+	}
+
+	ctx := request.Context()
+	token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
+	if err != nil {
+		return bascule.Authentication{}, ParseFailed, emperror.Wrap(err, "failed to parse and validate token")
+	}
+
+	return bascule.Authentication{
+		Authorization: key,
+		Token:         token,
+		Request: bascule.Request{
+			URL:    u,
+			Method: request.Method,
+		},
+	}, -1, nil
 }
 
 func (c *constructor) decorate(next http.Handler) http.Handler {
@@ -91,64 +129,26 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		if logger == nil {
 			logger = defaultGetLoggerFunc(request.Context())
 		}
-
-		urlVal := *request.URL // copy the URL before modifying it
-		u, err := c.parseURL(&urlVal)
+		authentication, errReason, err := c.authenticationOutput(logger, request)
 		if err != nil {
-			c.error(logger, GetURLFailed, "", emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
-			WriteResponse(response, http.StatusForbidden, err)
+			c.error(logger, response, errReason, request.Header.Get(c.headerName), err)
 			return
 		}
-
-		authorization := request.Header.Get(c.headerName)
-		if len(authorization) == 0 {
-			c.error(logger, MissingHeader, "", errNoAuthHeader)
-			response.WriteHeader(http.StatusForbidden)
-			return
-		}
-		i := strings.Index(authorization, c.headerDelimiter)
-		if i < 1 {
-			c.error(logger, InvalidHeader, authorization, errBadAuthHeader)
-			response.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		key := bascule.Authorization(authorization[:i])
-		tf, supported := c.authorizations[key]
-		if !supported {
-			c.error(logger, KeyNotSupported, authorization, fmt.Errorf("%w: [%v]", errKeyNotSupported, key))
-			response.WriteHeader(http.StatusForbidden)
-			return
-		}
-
-		ctx := request.Context()
-		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
-		if err != nil {
-			c.error(logger, ParseFailed, authorization, emperror.Wrap(err, "failed to parse and validate token"))
-			WriteResponse(response, http.StatusForbidden, err)
-			return
-		}
-		ctx = bascule.WithAuthentication(
+		ctx := bascule.WithAuthentication(
 			request.Context(),
-			bascule.Authentication{
-				Authorization: key,
-				Token:         token,
-				Request: bascule.Request{
-					URL:    u,
-					Method: request.Method,
-				},
-			},
+			authentication,
 		)
 		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication added to context",
-			"token", token, "key", key)
+			"token", authentication.Token, "key", authentication.Authorization)
 
 		next.ServeHTTP(response, request.WithContext(ctx))
 	})
 }
 
-func (c *constructor) error(logger log.Logger, e ErrorResponseReason, auth string, err error) {
+func (c *constructor) error(logger log.Logger, w http.ResponseWriter, e ErrorResponseReason, auth string, err error) {
 	log.With(logger, emperror.Context(err)...).Log(level.Key(), level.ErrorValue(), errorKey, err.Error(), "auth", auth)
 	c.onErrorResponse(e, err)
+	c.onErrorHTTPResponse(w, e)
 }
 
 // COption is any function that modifies the constructor - used to configure
@@ -206,17 +206,26 @@ func WithCErrorResponseFunc(f OnErrorResponse) COption {
 	}
 }
 
+// WithCErrorHTTPResponseFunc sets the function whose job is to translate
+// bascule errors into the appropriate HTTP response.
+func WithCErrorHTTPResponseFunc(f OnErrorHTTPResponse) COption {
+	return func(c *constructor) {
+		c.onErrorHTTPResponse = f
+	}
+}
+
 // NewConstructor creates an Alice-style decorator function that acts as
 // middleware: parsing the http request to get a Token, which is added to the
 // context.
 func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 	c := &constructor{
-		headerName:      DefaultHeaderName,
-		headerDelimiter: DefaultHeaderDelimiter,
-		authorizations:  make(map[bascule.Authorization]TokenFactory),
-		getLogger:       defaultGetLoggerFunc,
-		parseURL:        DefaultParseURLFunc,
-		onErrorResponse: DefaultOnErrorResponse,
+		headerName:          DefaultHeaderName,
+		headerDelimiter:     DefaultHeaderDelimiter,
+		authorizations:      make(map[bascule.Authorization]TokenFactory),
+		getLogger:           defaultGetLoggerFunc,
+		parseURL:            DefaultParseURLFunc,
+		onErrorResponse:     DefaultOnErrorResponse,
+		onErrorHTTPResponse: DefaultOnErrorHTTPResponse,
 	}
 
 	for _, o := range options {
