@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,6 @@ package bascule
 import (
 	"context"
 	"errors"
-	"fmt"
-
-	"github.com/goph/emperror"
 )
 
 // CreateAllowAllCheck returns a Validator that never returns an error.
@@ -68,49 +65,4 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 		}
 		return nil
 	}
-}
-
-// CreateListAttributeCheck returns a Validator that runs checks against the
-// content found in the key given.  It runs every check and returns all errors
-// it finds.
-func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
-	return func(ctx context.Context, token Token) error {
-		val, ok := GetNestedAttribute(token.Attributes(), keys...)
-		if !ok {
-			return fmt.Errorf("couldn't find attribute with keys %v", keys)
-		}
-		strVal, ok := val.([]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected attribute value, expected []interface{} type but received: %T", val)
-		}
-		errs := Errors{}
-		for _, check := range checks {
-			err := check(ctx, strVal)
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-		if len(errs) == 0 {
-			return nil
-		}
-		return emperror.Wrap(errs, fmt.Sprintf("attribute checks of keys %v failed", keys))
-	}
-}
-
-// NonEmptyStringListCheck checks that the list of values given are a list of
-// one or more nonempty strings.
-func NonEmptyStringListCheck(_ context.Context, vals []interface{}) error {
-	if len(vals) == 0 {
-		return errors.New("expected at least one value")
-	}
-	for _, val := range vals {
-		str, ok := val.(string)
-		if !ok {
-			return errors.New("expected value to be a string")
-		}
-		if len(str) == 0 {
-			return errors.New("expected string to be nonempty")
-		}
-	}
-	return nil
 }

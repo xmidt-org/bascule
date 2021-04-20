@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 func TestErrorHeaderer(t *testing.T) {
 	assert := assert.New(t)
 	expectedErr := "test error"
-	headers := map[string][]string{"test key": []string{"a", "b", "c", "d"}}
+	headers := map[string][]string{"test key": {"a", "b", "c", "d"}}
 	eh := NewErrorHeaderer(errors.New(expectedErr), headers)
 	var e headerer
 	assert.True(errors.As(eh, &e))
@@ -49,7 +49,7 @@ func TestWriteResponse(t *testing.T) {
 	assert := assert.New(t)
 	recorder := httptest.NewRecorder()
 	err := errors.New("test error")
-	headers := map[string][]string{"test key": []string{"a", "b", "c", "d"}}
+	headers := map[string][]string{"test key": {"a", "b", "c", "d"}}
 	WriteResponse(recorder, http.StatusOK, NewErrorHeaderer(err, headers))
 	assert.Equal(http.StatusOK, recorder.Code)
 	assert.Equal(http.Header(headers), recorder.Header())

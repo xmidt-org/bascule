@@ -24,6 +24,7 @@ import (
 
 	"github.com/goph/emperror"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/xmidt-org/bascule"
 )
@@ -42,7 +43,7 @@ const (
 type enforcer struct {
 	notFoundBehavior NotFoundBehavior
 	rules            map[bascule.Authorization]bascule.Validator
-	getLogger        func(context.Context) bascule.Logger
+	getLogger        func(context.Context) log.Logger
 	onErrorResponse  OnErrorResponse
 }
 
@@ -51,12 +52,12 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		ctx := request.Context()
 		logger := e.getLogger(ctx)
 		if logger == nil {
-			logger = bascule.GetDefaultLoggerFunc(ctx)
+			logger = defaultGetLoggerFunc(ctx)
 		}
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
 			err := errors.New("no authentication found")
-			logger.Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error())
+			logger.Log(level.Key(), level.ErrorValue(), errorKey, err.Error())
 			e.onErrorResponse(MissingAuthentication, err)
 			response.WriteHeader(http.StatusForbidden)
 			return
@@ -65,7 +66,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		if !ok {
 			err := errors.New("no rules found for authorization")
 			logger.Log(level.Key(), level.ErrorValue(),
-				bascule.ErrorKey, err.Error(), "rules", rules,
+				errorKey, err.Error(), "rules", rules,
 				"authorization", auth.Authorization, "behavior", e.notFoundBehavior)
 			switch e.notFoundBehavior {
 			case Forbid:
@@ -82,7 +83,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		} else {
 			err := rules.Check(ctx, auth.Token)
 			if err != nil {
-				logger.Log(append(emperror.Context(err), level.Key(), level.ErrorValue(), bascule.ErrorKey, err)...)
+				logger.Log(append(emperror.Context(err), level.Key(), level.ErrorValue(), errorKey, err)...)
 				e.onErrorResponse(ChecksFailed, err)
 				WriteResponse(response, http.StatusForbidden, err)
 				return
@@ -114,7 +115,7 @@ func WithRules(key bascule.Authorization, v bascule.Validator) EOption {
 
 // WithELogger sets the function to use to get the logger from the context.
 // If no logger is set, nothing is logged.
-func WithELogger(getLogger func(context.Context) bascule.Logger) EOption {
+func WithELogger(getLogger func(context.Context) log.Logger) EOption {
 	return func(e *enforcer) {
 		e.getLogger = getLogger
 	}
@@ -133,7 +134,7 @@ func WithEErrorResponseFunc(f OnErrorResponse) EOption {
 func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
 	e := &enforcer{
 		rules:           make(map[bascule.Authorization]bascule.Validator),
-		getLogger:       bascule.GetDefaultLoggerFunc,
+		getLogger:       defaultGetLoggerFunc,
 		onErrorResponse: DefaultOnErrorResponse,
 	}
 
