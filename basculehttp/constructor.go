@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ type constructor struct {
 	headerName      string
 	headerDelimiter string
 	authorizations  map[bascule.Authorization]TokenFactory
-	getLogger       func(context.Context) bascule.Logger
+	getLogger       func(context.Context) log.Logger
 	parseURL        ParseURL
 	onErrorResponse OnErrorResponse
 }
@@ -89,7 +89,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		logger := c.getLogger(request.Context())
 		if logger == nil {
-			logger = bascule.GetDefaultLoggerFunc(request.Context())
+			logger = defaultGetLoggerFunc(request.Context())
 		}
 
 		urlVal := *request.URL // copy the URL before modifying it
@@ -146,8 +146,8 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 	})
 }
 
-func (c *constructor) error(logger bascule.Logger, e ErrorResponseReason, auth string, err error) {
-	log.With(logger, emperror.Context(err)...).Log(level.Key(), level.ErrorValue(), bascule.ErrorKey, err.Error(), "auth", auth)
+func (c *constructor) error(logger log.Logger, e ErrorResponseReason, auth string, err error) {
+	log.With(logger, emperror.Context(err)...).Log(level.Key(), level.ErrorValue(), errorKey, err.Error(), "auth", auth)
 	c.onErrorResponse(e, err)
 }
 
@@ -183,7 +183,7 @@ func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 
 // WithCLogger sets the function to use to get the logger from the context.
 // If no logger is set, nothing is logged.
-func WithCLogger(getLogger func(context.Context) bascule.Logger) COption {
+func WithCLogger(getLogger func(context.Context) log.Logger) COption {
 	return func(c *constructor) {
 		c.getLogger = getLogger
 	}
@@ -214,7 +214,7 @@ func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 		headerName:      DefaultHeaderName,
 		headerDelimiter: DefaultHeaderDelimiter,
 		authorizations:  make(map[bascule.Authorization]TokenFactory),
-		getLogger:       bascule.GetDefaultLoggerFunc,
+		getLogger:       defaultGetLoggerFunc,
 		parseURL:        DefaultParseURLFunc,
 		onErrorResponse: DefaultOnErrorResponse,
 	}

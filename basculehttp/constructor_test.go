@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
-	"github.com/xmidt-org/bascule"
 )
 
 func TestConstructor(t *testing.T) {
@@ -37,8 +36,8 @@ func TestConstructor(t *testing.T) {
 		WithHeaderName(testHeader),
 		WithHeaderDelimiter(testDelimiter),
 		WithTokenFactory("Basic", BasicTokenFactory{"codex": "codex"}),
-		WithCLogger(func(_ context.Context) bascule.Logger {
-			return bascule.Logger(log.NewJSONLogger(log.NewSyncWriter(os.Stdout)))
+		WithCLogger(func(_ context.Context) log.Logger {
+			return log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
 		}),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
@@ -46,7 +45,7 @@ func TestConstructor(t *testing.T) {
 	c2 := NewConstructor(
 		WithHeaderName(""),
 		WithHeaderDelimiter(""),
-		WithCLogger(func(_ context.Context) bascule.Logger { return nil }),
+		WithCLogger(func(_ context.Context) log.Logger { return nil }),
 	)
 	tests := []struct {
 		description        string

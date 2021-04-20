@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  *
  */
 
-package bascule
+package basculehttp
 
 import (
 	"context"
@@ -26,21 +26,10 @@ import (
 var (
 	defaultLogger = log.NewNopLogger()
 
-	ErrorKey interface{} = "error"
+	errorKey interface{} = "error"
 )
 
-// logger we expect for the decorators
-type Logger interface {
-	Log(keyvals ...interface{}) error
-}
-
-// NewDefaultLogger returns the default logger, which doesn't do anything.
-func NewDefaultLogger() Logger {
+// defaultGetLoggerFunc returns the default logger, which doesn't do anything.
+func defaultGetLoggerFunc(_ context.Context) log.Logger {
 	return defaultLogger
-}
-
-// GetDefaultLoggerFunc a function that returns the default logger, which
-// doesn't do anything
-func GetDefaultLoggerFunc(ctx context.Context) Logger {
-	return NewDefaultLogger()
 }

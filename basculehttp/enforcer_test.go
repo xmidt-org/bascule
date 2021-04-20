@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,12 @@ import (
 func TestEnforcer(t *testing.T) {
 	e := NewEnforcer(
 		WithNotFoundBehavior(Allow),
-		WithELogger(func(_ context.Context) bascule.Logger { return nil }),
+		WithELogger(func(_ context.Context) log.Logger { return nil }),
 	)
 	e2 := NewEnforcer(
 		WithRules("jwt", bascule.Validators{bascule.CreateNonEmptyTypeCheck()}),
-		WithELogger(func(_ context.Context) bascule.Logger {
-			return bascule.Logger(log.NewJSONLogger(log.NewSyncWriter(os.Stdout)))
+		WithELogger(func(_ context.Context) log.Logger {
+			return log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
 		}),
 		WithEErrorResponseFunc(DefaultOnErrorResponse),
 	)
