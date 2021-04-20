@@ -6,9 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - fixed Authorization keys in the constructor to be case sensitive. [#74](https://github.com/xmidt-org/bascule/pull/74)
-- Removed unused checks. []()
-- Removed Logger interface in favor of the go-kit one. []()
-- Moved log.go to basculehttp and simplified code, with nothing exported. []()
+- Removed unused checks. [#79](https://github.com/xmidt-org/bascule/pull/79)
+- Removed Logger interface in favor of the go-kit one. [#79](https://github.com/xmidt-org/bascule/pull/79)
+- Moved log.go to basculehttp and simplified code, with nothing exported. [#79](https://github.com/xmidt-org/bascule/pull/79)
 
 ## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
