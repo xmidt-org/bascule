@@ -22,6 +22,7 @@ package bascule
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 // CreateAllowAllCheck returns a Validator that never returns an error.
@@ -64,5 +65,32 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 			return errors.New("empty token principal")
 		}
 		return nil
+	}
+}
+
+// CreateListAttributeCheck returns a Validator that runs checks against the
+// content found in the key given.  It runs every check and returns all errors
+// it finds.
+func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
+	return func(ctx context.Context, token Token) error {
+		val, ok := GetNestedAttribute(token.Attributes(), keys...)
+		if !ok {
+			return fmt.Errorf("couldn't find attribute with keys %v", keys)
+		}
+		strVal, ok := val.([]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected attribute value, expected []interface{} type but received: %T", val)
+		}
+		errs := Errors{}
+		for _, check := range checks {
+			err := check(ctx, strVal)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		if len(errs) == 0 {
+			return nil
+		}
+		return fmt.Errorf("attribute checks of keys %v failed: %v", keys, errs)
 	}
 }

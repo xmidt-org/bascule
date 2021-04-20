@@ -19,6 +19,7 @@ package bascule
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,4 +60,36 @@ func TestCreateNonEmptyPrincipalCheck(t *testing.T) {
 	assert.NoError(err)
 	err = f(context.Background(), NewToken("", "", emptyAttributes))
 	assert.NotNil(err)
+}
+
+func TestCreateListAttributeCheck(t *testing.T) {
+	testErr := errors.New("test err")
+	failFunc := func(_ context.Context, _ []interface{}) error {
+		return testErr
+	}
+	successFunc := func(_ context.Context, _ []interface{}) error {
+		return nil
+	}
+
+	assert := assert.New(t)
+	fGood := CreateListAttributeCheck([]string{"testkey", "subkey"}, successFunc)
+	f := CreateListAttributeCheck([]string{"testkey", "subkey"}, successFunc, failFunc)
+
+	err := fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{
+		"testkey": map[string]interface{}{"subkey": []interface{}{"a", "b", "c"}}})))
+	assert.NoError(err)
+
+	err = fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{})))
+	assert.Error(err)
+
+	err = fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{"testkey": ""})))
+	assert.Error(err)
+
+	err = fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{"testkey": map[string]interface{}{
+		"subkey": 5555}})))
+	assert.Error(err)
+
+	err = f(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{"testkey": map[string]interface{}{
+		"subkey": []interface{}{}}})))
+	assert.Error(err)
 }
