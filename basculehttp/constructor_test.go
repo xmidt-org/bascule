@@ -83,7 +83,7 @@ func TestConstructor(t *testing.T) {
 			constructor:        c,
 			requestHeaderKey:   testHeader,
 			requestHeaderValue: "abcd",
-			expectedStatusCode: http.StatusForbidden,
+			expectedStatusCode: http.StatusBadRequest,
 			endpoint:           "/test",
 		},
 		{
