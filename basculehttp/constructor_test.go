@@ -122,7 +122,7 @@ func TestConstructor(t *testing.T) {
 			handler.ServeHTTP(writer, req)
 			assert.Equal(tc.expectedStatusCode, writer.Code)
 			if tc.expectedStatusCode == http.StatusUnauthorized {
-				assert.Equal(string(BearerAuthorization), writer.Header().Get("WWW-Authenticate"))
+				assert.Equal(string(BearerAuthorization), writer.Header().Get(AuthTypeHeaderKey))
 			}
 		})
 	}
