@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Removed unused check. [#79](https://github.com/xmidt-org/bascule/pull/79)
 - Removed Logger interface in favor of the go-kit one. [#79](https://github.com/xmidt-org/bascule/pull/79)
 - Moved log.go to basculehttp and simplified code, with nothing exported. [#79](https://github.com/xmidt-org/bascule/pull/79)
+- Added constructor option for letting users decide what gets written on the HTTP response on errors. [#84](https://github.com/xmidt-org/bascule/pull/84)
 
 ## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
