@@ -41,6 +41,7 @@ func TestConstructor(t *testing.T) {
 		}),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
+		WithCErrorHTTPResponseFunc(LegacyOnErrorHTTPResponse),
 	)
 	c2 := NewConstructor(
 		WithHeaderName(""),
@@ -74,7 +75,7 @@ func TestConstructor(t *testing.T) {
 			constructor:        c2,
 			requestHeaderKey:   DefaultHeaderName,
 			requestHeaderValue: "",
-			expectedStatusCode: http.StatusForbidden,
+			expectedStatusCode: http.StatusUnauthorized,
 			endpoint:           "/",
 		},
 		{
@@ -90,7 +91,7 @@ func TestConstructor(t *testing.T) {
 			constructor:        c2,
 			requestHeaderKey:   DefaultHeaderName,
 			requestHeaderValue: "abcd ",
-			expectedStatusCode: http.StatusForbidden,
+			expectedStatusCode: http.StatusUnauthorized,
 			endpoint:           "/test",
 		},
 		{
@@ -120,6 +121,9 @@ func TestConstructor(t *testing.T) {
 			req.Header.Add(tc.requestHeaderKey, tc.requestHeaderValue)
 			handler.ServeHTTP(writer, req)
 			assert.Equal(tc.expectedStatusCode, writer.Code)
+			if tc.expectedStatusCode == http.StatusUnauthorized {
+				assert.Equal(string(BearerAuthorization), writer.Header().Get(AuthTypeHeaderKey))
+			}
 		})
 	}
 }

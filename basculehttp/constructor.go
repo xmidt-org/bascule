@@ -27,7 +27,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/goph/emperror"
 	"github.com/xmidt-org/bascule"
 )
 
@@ -77,78 +76,69 @@ func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
 }
 
 type constructor struct {
-	headerName      string
-	headerDelimiter string
-	authorizations  map[bascule.Authorization]TokenFactory
-	getLogger       func(context.Context) log.Logger
-	parseURL        ParseURL
-	onErrorResponse OnErrorResponse
+	headerName          string
+	headerDelimiter     string
+	authorizations      map[bascule.Authorization]TokenFactory
+	getLogger           func(context.Context) log.Logger
+	parseURL            ParseURL
+	onErrorResponse     OnErrorResponse
+	onErrorHTTPResponse OnErrorHTTPResponse
+}
+
+func (c *constructor) authenticationOutput(logger log.Logger, request *http.Request) (bascule.Authentication, ErrorResponseReason, error) {
+	urlVal := *request.URL // copy the URL before modifying it
+	u, err := c.parseURL(&urlVal)
+	if err != nil {
+		return bascule.Authentication{}, GetURLFailed, fmt.Errorf("failed to parse url '%v': %v", request.URL, err)
+	}
+	authorization := request.Header.Get(c.headerName)
+	if len(authorization) == 0 {
+		return bascule.Authentication{}, MissingHeader, errNoAuthHeader
+	}
+	i := strings.Index(authorization, c.headerDelimiter)
+	if i < 1 {
+		return bascule.Authentication{}, InvalidHeader, errBadAuthHeader
+	}
+
+	key := bascule.Authorization(authorization[:i])
+	tf, supported := c.authorizations[key]
+	if !supported {
+		return bascule.Authentication{}, KeyNotSupported, fmt.Errorf("%w: [%v]", errKeyNotSupported, key)
+	}
+
+	ctx := request.Context()
+	token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
+	if err != nil {
+		return bascule.Authentication{}, ParseFailed, fmt.Errorf("failed to parse and validate token: %v", err)
+	}
+
+	return bascule.Authentication{
+		Authorization: key,
+		Token:         token,
+		Request: bascule.Request{
+			URL:    u,
+			Method: request.Method,
+		},
+	}, -1, nil
 }
 
 func (c *constructor) decorate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		logger := c.getLogger(request.Context())
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := c.getLogger(r.Context())
 		if logger == nil {
-			logger = defaultGetLoggerFunc(request.Context())
+			logger = defaultGetLoggerFunc(r.Context())
 		}
-
-		urlVal := *request.URL // copy the URL before modifying it
-		u, err := c.parseURL(&urlVal)
+		auth, errReason, err := c.authenticationOutput(logger, r)
 		if err != nil {
-			c.error(logger, GetURLFailed, "", emperror.WrapWith(err, "failed to get URL", "URL", request.URL))
-			WriteResponse(response, http.StatusForbidden, err)
+			level.Error(logger).Log(errorKey, err, "auth", r.Header.Get(c.headerName))
+			c.onErrorResponse(errReason, err)
+			c.onErrorHTTPResponse(w, errReason)
 			return
 		}
-
-		authorization := request.Header.Get(c.headerName)
-		if len(authorization) == 0 {
-			c.error(logger, MissingHeader, "", errNoAuthHeader)
-			response.WriteHeader(http.StatusForbidden)
-			return
-		}
-		i := strings.Index(authorization, c.headerDelimiter)
-		if i < 1 {
-			c.error(logger, InvalidHeader, authorization, errBadAuthHeader)
-			response.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		key := bascule.Authorization(authorization[:i])
-		tf, supported := c.authorizations[key]
-		if !supported {
-			c.error(logger, KeyNotSupported, authorization, fmt.Errorf("%w: [%v]", errKeyNotSupported, key))
-			response.WriteHeader(http.StatusForbidden)
-			return
-		}
-
-		ctx := request.Context()
-		token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
-		if err != nil {
-			c.error(logger, ParseFailed, authorization, emperror.Wrap(err, "failed to parse and validate token"))
-			WriteResponse(response, http.StatusForbidden, err)
-			return
-		}
-		ctx = bascule.WithAuthentication(
-			request.Context(),
-			bascule.Authentication{
-				Authorization: key,
-				Token:         token,
-				Request: bascule.Request{
-					URL:    u,
-					Method: request.Method,
-				},
-			},
-		)
-		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication added to context",
-			"token", token, "key", key)
-
-		next.ServeHTTP(response, request.WithContext(ctx))
+		ctx := bascule.WithAuthentication(r.Context(), auth)
+		level.Debug(logger).Log("msg", "authentication added to context", "token", auth.Token, "key", auth.Authorization)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func (c *constructor) error(logger log.Logger, e ErrorResponseReason, auth string, err error) {
-	log.With(logger, emperror.Context(err)...).Log(level.Key(), level.ErrorValue(), errorKey, err.Error(), "auth", auth)
-	c.onErrorResponse(e, err)
 }
 
 // COption is any function that modifies the constructor - used to configure
@@ -206,17 +196,26 @@ func WithCErrorResponseFunc(f OnErrorResponse) COption {
 	}
 }
 
+// WithCErrorHTTPResponseFunc sets the function whose job is to translate
+// bascule errors into the appropriate HTTP response.
+func WithCErrorHTTPResponseFunc(f OnErrorHTTPResponse) COption {
+	return func(c *constructor) {
+		c.onErrorHTTPResponse = f
+	}
+}
+
 // NewConstructor creates an Alice-style decorator function that acts as
 // middleware: parsing the http request to get a Token, which is added to the
 // context.
 func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 	c := &constructor{
-		headerName:      DefaultHeaderName,
-		headerDelimiter: DefaultHeaderDelimiter,
-		authorizations:  make(map[bascule.Authorization]TokenFactory),
-		getLogger:       defaultGetLoggerFunc,
-		parseURL:        DefaultParseURLFunc,
-		onErrorResponse: DefaultOnErrorResponse,
+		headerName:          DefaultHeaderName,
+		headerDelimiter:     DefaultHeaderDelimiter,
+		authorizations:      make(map[bascule.Authorization]TokenFactory),
+		getLogger:           defaultGetLoggerFunc,
+		parseURL:            DefaultParseURLFunc,
+		onErrorResponse:     DefaultOnErrorResponse,
+		onErrorHTTPResponse: DefaultOnErrorHTTPResponse,
 	}
 
 	for _, o := range options {
