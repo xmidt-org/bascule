@@ -27,7 +27,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/goph/emperror"
 	"github.com/xmidt-org/bascule"
 )
 
@@ -90,7 +89,7 @@ func (c *constructor) authenticationOutput(logger log.Logger, request *http.Requ
 	urlVal := *request.URL // copy the URL before modifying it
 	u, err := c.parseURL(&urlVal)
 	if err != nil {
-		return bascule.Authentication{}, GetURLFailed, emperror.WrapWith(err, "failed to get URL", "URL", request.URL)
+		return bascule.Authentication{}, GetURLFailed, fmt.Errorf("failed to parse url '%v': %v", request.URL, err)
 	}
 	authorization := request.Header.Get(c.headerName)
 	if len(authorization) == 0 {
@@ -110,7 +109,7 @@ func (c *constructor) authenticationOutput(logger log.Logger, request *http.Requ
 	ctx := request.Context()
 	token, err := tf.ParseAndValidate(ctx, request, key, authorization[i+len(c.headerDelimiter):])
 	if err != nil {
-		return bascule.Authentication{}, ParseFailed, emperror.Wrap(err, "failed to parse and validate token")
+		return bascule.Authentication{}, ParseFailed, fmt.Errorf("failed to parse and validate token: %v", err)
 	}
 
 	return bascule.Authentication{
@@ -124,31 +123,22 @@ func (c *constructor) authenticationOutput(logger log.Logger, request *http.Requ
 }
 
 func (c *constructor) decorate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		logger := c.getLogger(request.Context())
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := c.getLogger(r.Context())
 		if logger == nil {
-			logger = defaultGetLoggerFunc(request.Context())
+			logger = defaultGetLoggerFunc(r.Context())
 		}
-		authentication, errReason, err := c.authenticationOutput(logger, request)
+		auth, errReason, err := c.authenticationOutput(logger, r)
 		if err != nil {
-			c.error(logger, response, errReason, request.Header.Get(c.headerName), err)
+			level.Error(logger).Log(errorKey, err, "auth", r.Header.Get(c.headerName))
+			c.onErrorResponse(errReason, err)
+			c.onErrorHTTPResponse(w, errReason)
 			return
 		}
-		ctx := bascule.WithAuthentication(
-			request.Context(),
-			authentication,
-		)
-		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication added to context",
-			"token", authentication.Token, "key", authentication.Authorization)
-
-		next.ServeHTTP(response, request.WithContext(ctx))
+		ctx := bascule.WithAuthentication(r.Context(), auth)
+		level.Debug(logger).Log("msg", "authentication added to context", "token", auth.Token, "key", auth.Authorization)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func (c *constructor) error(logger log.Logger, w http.ResponseWriter, e ErrorResponseReason, auth string, err error) {
-	log.With(logger, emperror.Context(err)...).Log(level.Key(), level.ErrorValue(), errorKey, err.Error(), "auth", auth)
-	c.onErrorResponse(e, err)
-	c.onErrorHTTPResponse(w, e)
 }
 
 // COption is any function that modifies the constructor - used to configure
