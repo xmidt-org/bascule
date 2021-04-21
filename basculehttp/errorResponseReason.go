@@ -69,8 +69,12 @@ func DefaultOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReaso
 }
 
 // LegacyOnErrorHTTPResponse will write a 403 status code back for any error
-// reason.
-func LegacyOnErrorHTTPResponse(w http.ResponseWriter, _ ErrorResponseReason) {
-
-	w.WriteHeader(http.StatusForbidden)
+// reason except for InvalidHeader for which a 400 is written.
+func LegacyOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReason) {
+	switch reason {
+	case InvalidHeader:
+		w.WriteHeader(http.StatusBadRequest)
+	default:
+		w.WriteHeader(http.StatusForbidden)
+	}
 }

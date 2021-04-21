@@ -81,3 +81,62 @@ func TestDefaultOnErrorHTTPResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestLegacyOnErrorHTTPResponse(t *testing.T) {
+	tcs := []struct {
+		Description  string
+		Reason       ErrorResponseReason
+		ExpectedCode int
+	}{
+		{
+			Description:  "MissingHeader",
+			Reason:       MissingHeader,
+			ExpectedCode: 403,
+		},
+		{
+			Description:  "InvalidHeader",
+			Reason:       InvalidHeader,
+			ExpectedCode: 400,
+		},
+		{
+			Description:  "KeyNotSupported",
+			Reason:       KeyNotSupported,
+			ExpectedCode: 403,
+		},
+		{
+			Description:  "ParseFailed",
+			Reason:       ParseFailed,
+			ExpectedCode: 403,
+		},
+		{
+			Description:  "GetURLFailed",
+			Reason:       GetURLFailed,
+			ExpectedCode: 403,
+		},
+		{
+			Description:  "MissingAuth",
+			Reason:       MissingAuthentication,
+			ExpectedCode: 403,
+		},
+		{
+			Description:  "ChecksNotFound",
+			Reason:       ChecksNotFound,
+			ExpectedCode: 403,
+		},
+		{
+			Description:  "ChecksFailed",
+			Reason:       ChecksFailed,
+			ExpectedCode: 403,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.Description, func(t *testing.T) {
+			assert := assert.New(t)
+			recorder := httptest.NewRecorder()
+			LegacyOnErrorHTTPResponse(recorder, tc.Reason)
+			assert.Equal(tc.ExpectedCode, recorder.Code)
+			assert.Empty(recorder.Header().Get(AuthTypeHeaderKey))
+		})
+	}
+}
