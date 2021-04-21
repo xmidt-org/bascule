@@ -36,6 +36,11 @@ const (
 	ChecksFailed
 )
 
+// AuthTypeHeaderKey is the header key that's used when requests are denied
+// with a 401 status code. It specifies the suggested token type that should
+// be used for a successful request.
+const AuthTypeHeaderKey = "WWW-Authenticate"
+
 // OnErrorResponse is a function that takes the error response reason and the
 // error and can do something with it.  This is useful for adding additional
 // metrics or logs.
@@ -58,12 +63,14 @@ func DefaultOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReaso
 	case ChecksNotFound, ChecksFailed:
 		w.WriteHeader(http.StatusForbidden)
 	default:
-		w.Header().Set("WWW-Authenticate", string(BearerAuthorization))
+		w.Header().Set(AuthTypeHeaderKey, string(BearerAuthorization))
 		w.WriteHeader(http.StatusUnauthorized)
 	}
 }
 
-// ForbiddenOnErrorHTTPResponse will write a 403 status code back for any error reason.
-func ForbiddenOnErrorHTTPResponse(w http.ResponseWriter, _ ErrorResponseReason) {
+// LegacyOnErrorHTTPResponse will write a 403 status code back for any error
+// reason.
+func LegacyOnErrorHTTPResponse(w http.ResponseWriter, _ ErrorResponseReason) {
+
 	w.WriteHeader(http.StatusForbidden)
 }

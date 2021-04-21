@@ -41,7 +41,7 @@ func TestConstructor(t *testing.T) {
 		}),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
-		WithCErrorHTTPResponseFunc(ForbiddenOnErrorHTTPResponse),
+		WithCErrorHTTPResponseFunc(LegacyOnErrorHTTPResponse),
 	)
 	c2 := NewConstructor(
 		WithHeaderName(""),
