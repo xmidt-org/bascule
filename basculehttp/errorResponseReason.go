@@ -62,3 +62,8 @@ func DefaultOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReaso
 		w.WriteHeader(http.StatusUnauthorized)
 	}
 }
+
+// ForbiddenOnErrorHTTPResponse will write a 403 status code back for any error reason.
+func ForbiddenOnErrorHTTPResponse(w http.ResponseWriter, _ ErrorResponseReason) {
+	w.WriteHeader(http.StatusForbidden)
+}
