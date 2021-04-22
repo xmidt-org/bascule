@@ -47,7 +47,7 @@ const (
 // options. The provided metrics are prometheus vectors which gives access to
 // more advanced operations such as CurryWith(labels).
 func ProvideMetrics() fx.Option {
-	return fx.Provide(
+	return fx.Options(
 		touchstone.CounterVec(
 			prometheus.CounterOpts{
 				Name:        AuthValidationOutcome,
