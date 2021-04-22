@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Comcast Cable Communications Management, LLC
+ * Copyright 2020 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,22 @@
 package basculehttp
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/SermoDigital/jose/jwt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/xmidt-org/bascule"
+	"go.uber.org/fx"
+)
+
+const (
+	defaultServer = "primary"
 )
 
 type MetricListener struct {
+	server    string
 	expLeeway time.Duration
 	nbfLeeway time.Duration
 	measures  *AuthValidationMeasures
@@ -42,7 +50,9 @@ func (m *MetricListener) OnAuthenticated(auth bascule.Authentication) {
 		return
 	}
 
-	m.measures.ValidationOutcome.With(prometheus.Labels{OutcomeLabel: "Accepted"}).Add(1)
+	m.measures.ValidationOutcome.
+		With(prometheus.Labels{OutcomeLabel: "Accepted"}).
+		Add(1)
 
 	c, ok := auth.Token.Attributes().Get("claims")
 	if !ok {
@@ -57,14 +67,18 @@ func (m *MetricListener) OnAuthenticated(auth bascule.Authentication) {
 	if nbf, nbfPresent := claims.NotBefore(); nbfPresent {
 		nbf = nbf.Add(-m.nbfLeeway)
 		offsetToNBF := now.Sub(nbf).Seconds()
-		m.measures.NBFHistogram.Observe(offsetToNBF)
+		m.measures.NBFHistogram.
+			With(prometheus.Labels{ServerLabel: m.server}).
+			Observe(offsetToNBF)
 	}
 
 	//how far did we land from the EXP (in seconds): ie. -1 means 1 sec before, 1 means 1 sec after
 	if exp, expPresent := claims.Expiration(); expPresent {
 		exp = exp.Add(m.expLeeway)
 		offsetToEXP := now.Sub(exp).Seconds()
-		m.measures.EXPHistogram.Observe(offsetToEXP)
+		m.measures.EXPHistogram.
+			With(prometheus.Labels{ServerLabel: m.server}).
+			Observe(offsetToEXP)
 	}
 }
 
@@ -72,7 +86,9 @@ func (m *MetricListener) OnErrorResponse(e ErrorResponseReason, _ error) {
 	if m.measures == nil {
 		return
 	}
-	m.measures.ValidationOutcome.With(prometheus.Labels{OutcomeLabel: e.String()}).Add(1)
+	m.measures.ValidationOutcome.
+		With(prometheus.Labels{ServerLabel: m.server, OutcomeLabel: e.String()}).
+		Add(1)
 }
 
 type Option func(m *MetricListener)
@@ -89,13 +105,38 @@ func WithNbfLeeway(n time.Duration) Option {
 	}
 }
 
-func NewMetricListener(m *AuthValidationMeasures, options ...Option) *MetricListener {
+func WithServer(s string) Option {
+	return func(m *MetricListener) {
+		if s != "" {
+			m.server = s
+		}
+	}
+}
+
+func NewMetricListener(m *AuthValidationMeasures, options ...Option) (*MetricListener, error) {
+	if m == nil {
+		return nil, errors.New("measures cannot be nil")
+	}
+
 	listener := MetricListener{
+		server:   defaultServer,
 		measures: m,
 	}
 
 	for _, o := range options {
 		o(&listener)
 	}
-	return &listener
+	return &listener, nil
+}
+
+func ProvideMetricListener(server string) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name: fmt.Sprintf("%s_bascule_validation_measures", server),
+			Target: func(m *AuthValidationMeasures, options ...Option) (*MetricListener, error) {
+				o := append(options, WithServer(server))
+				return NewMetricListener(m, o...)
+			},
+		},
+	)
 }
