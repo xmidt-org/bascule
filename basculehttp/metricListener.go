@@ -133,9 +133,9 @@ func ProvideMetricListener(server string) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
 			Name: fmt.Sprintf("%s_bascule_validation_measures", server),
-			Target: func(m *AuthValidationMeasures, options ...Option) (*MetricListener, error) {
+			Target: func(m AuthValidationMeasures, options ...Option) (*MetricListener, error) {
 				o := append(options, WithServer(server))
-				return NewMetricListener(m, o...)
+				return NewMetricListener(&m, o...)
 			},
 		},
 	)
