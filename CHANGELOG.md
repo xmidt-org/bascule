@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Moved log.go to basculehttp and simplified code, with nothing exported. [#79](https://github.com/xmidt-org/bascule/pull/79)
 - Added constructor option for letting users decide what gets written on the HTTP response on errors. [#84](https://github.com/xmidt-org/bascule/pull/84)
 - Added metric listener for auth validation outcome. [#81](https://github.com/xmidt-org/bascule/pull/81)
-- Moved checks to their own package and added capability checks. []()
+- Moved checks to their own package and added capability checks. [#85](https://github.com/xmidt-org/bascule/pull/85)
 
 ## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
