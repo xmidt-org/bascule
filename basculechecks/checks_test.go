@@ -15,7 +15,7 @@
  *
  */
 
-package bascule
+package basculechecks
 
 import (
 	"context"
@@ -23,42 +23,43 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xmidt-org/bascule"
 )
 
 func TestCreateAllowAllCheck(t *testing.T) {
 	assert := assert.New(t)
 	f := CreateAllowAllCheck()
-	err := f(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{})))
+	err := f(context.Background(), bascule.NewToken("", "", bascule.NewAttributes(map[string]interface{}{})))
 	assert.NoError(err)
 }
 
 func TestCreateValidTypeCheck(t *testing.T) {
-	emptyAttributes := NewAttributes(map[string]interface{}{})
+	emptyAttributes := bascule.NewAttributes(map[string]interface{}{})
 	assert := assert.New(t)
 	f := CreateValidTypeCheck([]string{"valid", "type"})
-	err := f(context.Background(), NewToken("valid", "", emptyAttributes))
+	err := f(context.Background(), bascule.NewToken("valid", "", emptyAttributes))
 	assert.NoError(err)
-	err = f(context.Background(), NewToken("invalid", "", emptyAttributes))
+	err = f(context.Background(), bascule.NewToken("invalid", "", emptyAttributes))
 	assert.NotNil(err)
 }
 
 func TestCreateNonEmptyTypeCheck(t *testing.T) {
-	emptyAttributes := NewAttributes(map[string]interface{}{})
+	emptyAttributes := bascule.NewAttributes(map[string]interface{}{})
 	assert := assert.New(t)
 	f := CreateNonEmptyTypeCheck()
-	err := f(context.Background(), NewToken("type", "", emptyAttributes))
+	err := f(context.Background(), bascule.NewToken("type", "", emptyAttributes))
 	assert.NoError(err)
-	err = f(context.Background(), NewToken("", "", emptyAttributes))
+	err = f(context.Background(), bascule.NewToken("", "", emptyAttributes))
 	assert.NotNil(err)
 }
 
 func TestCreateNonEmptyPrincipalCheck(t *testing.T) {
-	emptyAttributes := NewAttributes(map[string]interface{}{})
+	emptyAttributes := bascule.NewAttributes(map[string]interface{}{})
 	assert := assert.New(t)
 	f := CreateNonEmptyPrincipalCheck()
-	err := f(context.Background(), NewToken("", "principal", emptyAttributes))
+	err := f(context.Background(), bascule.NewToken("", "principal", emptyAttributes))
 	assert.NoError(err)
-	err = f(context.Background(), NewToken("", "", emptyAttributes))
+	err = f(context.Background(), bascule.NewToken("", "", emptyAttributes))
 	assert.NotNil(err)
 }
 
@@ -75,21 +76,21 @@ func TestCreateListAttributeCheck(t *testing.T) {
 	fGood := CreateListAttributeCheck([]string{"testkey", "subkey"}, successFunc)
 	f := CreateListAttributeCheck([]string{"testkey", "subkey"}, successFunc, failFunc)
 
-	err := fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{
+	err := fGood(context.Background(), bascule.NewToken("", "", bascule.NewAttributes(map[string]interface{}{
 		"testkey": map[string]interface{}{"subkey": []interface{}{"a", "b", "c"}}})))
 	assert.NoError(err)
 
-	err = fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{})))
+	err = fGood(context.Background(), bascule.NewToken("", "", bascule.NewAttributes(map[string]interface{}{})))
 	assert.Error(err)
 
-	err = fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{"testkey": ""})))
+	err = fGood(context.Background(), bascule.NewToken("", "", bascule.NewAttributes(map[string]interface{}{"testkey": ""})))
 	assert.Error(err)
 
-	err = fGood(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{"testkey": map[string]interface{}{
+	err = fGood(context.Background(), bascule.NewToken("", "", bascule.NewAttributes(map[string]interface{}{"testkey": map[string]interface{}{
 		"subkey": 5555}})))
 	assert.Error(err)
 
-	err = f(context.Background(), NewToken("", "", NewAttributes(map[string]interface{}{"testkey": map[string]interface{}{
+	err = f(context.Background(), bascule.NewToken("", "", bascule.NewAttributes(map[string]interface{}{"testkey": map[string]interface{}{
 		"subkey": []interface{}{}}})))
 	assert.Error(err)
 }

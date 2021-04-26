@@ -17,25 +17,27 @@
 
 // some factories to make common validation checks
 
-package bascule
+package basculechecks
 
 import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/xmidt-org/bascule"
 )
 
 // CreateAllowAllCheck returns a Validator that never returns an error.
-func CreateAllowAllCheck() ValidatorFunc {
-	return func(_ context.Context, _ Token) error {
+func CreateAllowAllCheck() bascule.ValidatorFunc {
+	return func(_ context.Context, _ bascule.Token) error {
 		return nil
 	}
 }
 
 // CreateValidTypeCheck returns a Validator that checks that the token's type
 // is one of the given valid types.
-func CreateValidTypeCheck(validTypes []string) ValidatorFunc {
-	return func(_ context.Context, token Token) error {
+func CreateValidTypeCheck(validTypes []string) bascule.ValidatorFunc {
+	return func(_ context.Context, token bascule.Token) error {
 		tt := token.Type()
 		for _, vt := range validTypes {
 			if tt == vt {
@@ -48,8 +50,8 @@ func CreateValidTypeCheck(validTypes []string) ValidatorFunc {
 
 // CreateNonEmptyTypeCheck returns a Validator that checks that the token's
 // type isn't an empty string.
-func CreateNonEmptyTypeCheck() ValidatorFunc {
-	return func(_ context.Context, token Token) error {
+func CreateNonEmptyTypeCheck() bascule.ValidatorFunc {
+	return func(_ context.Context, token bascule.Token) error {
 		if token.Type() == "" {
 			return errors.New("empty token type")
 		}
@@ -59,8 +61,8 @@ func CreateNonEmptyTypeCheck() ValidatorFunc {
 
 // CreateNonEmptyPrincipalCheck returns a Validator that checks that the
 // token's Principal isn't an empty string.
-func CreateNonEmptyPrincipalCheck() ValidatorFunc {
-	return func(_ context.Context, token Token) error {
+func CreateNonEmptyPrincipalCheck() bascule.ValidatorFunc {
+	return func(_ context.Context, token bascule.Token) error {
 		if token.Principal() == "" {
 			return errors.New("empty token principal")
 		}
@@ -71,9 +73,9 @@ func CreateNonEmptyPrincipalCheck() ValidatorFunc {
 // CreateListAttributeCheck returns a Validator that runs checks against the
 // content found in the key given.  It runs every check and returns all errors
 // it finds.
-func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) ValidatorFunc {
-	return func(ctx context.Context, token Token) error {
-		val, ok := GetNestedAttribute(token.Attributes(), keys...)
+func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) bascule.ValidatorFunc {
+	return func(ctx context.Context, token bascule.Token) error {
+		val, ok := bascule.GetNestedAttribute(token.Attributes(), keys...)
 		if !ok {
 			return fmt.Errorf("couldn't find attribute with keys %v", keys)
 		}
@@ -81,7 +83,7 @@ func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []i
 		if !ok {
 			return fmt.Errorf("unexpected attribute value, expected []interface{} type but received: %T", val)
 		}
-		errs := Errors{}
+		errs := bascule.Errors{}
 		for _, check := range checks {
 			err := check(ctx, strVal)
 			if err != nil {
