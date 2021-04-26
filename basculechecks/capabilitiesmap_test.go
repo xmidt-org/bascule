@@ -27,11 +27,11 @@ import (
 )
 
 func TestCapabilitiesMapCheck(t *testing.T) {
-	goodDefault := ConstCheck("default checker")
-	checkersMap := map[string]CapabilityChecker{
-		"a":        ConstCheck("meh"),
-		"bcedef":   ConstCheck("yay"),
-		"all":      ConstCheck("good"),
+	goodDefault := ConstEndpointCheck("default checker")
+	checkersMap := map[string]EndpointChecker{
+		"a":        ConstEndpointCheck("meh"),
+		"bcedef":   ConstEndpointCheck("yay"),
+		"all":      ConstEndpointCheck("good"),
 		"fallback": nil,
 	}
 	cm := CapabilitiesMap{
@@ -163,7 +163,7 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 					Method: "GET",
 				}
 			}
-			reason, err := tc.cm.Check(auth, ParsedValues{Endpoint: tc.endpoint})
+			reason, err := tc.cm.CheckAuthentication(auth, ParsedValues{Endpoint: tc.endpoint})
 			assert.Equal(tc.expectedReason, reason)
 			if err == nil || tc.expectedErr == nil {
 				assert.Equal(tc.expectedErr, err)

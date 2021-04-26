@@ -27,6 +27,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/bascule/basculechecks"
 )
 
 func TestEnforcer(t *testing.T) {
@@ -35,7 +36,7 @@ func TestEnforcer(t *testing.T) {
 		WithELogger(func(_ context.Context) log.Logger { return nil }),
 	)
 	e2 := NewEnforcer(
-		WithRules("jwt", bascule.Validators{bascule.CreateNonEmptyTypeCheck()}),
+		WithRules("jwt", bascule.Validators{basculechecks.NonEmptyType()}),
 		WithELogger(func(_ context.Context) log.Logger {
 			return log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
 		}),

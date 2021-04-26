@@ -48,10 +48,10 @@ func PartnerKeys() []string {
 	return partnerKeys
 }
 
-// CapabilityChecker is an object that can determine if a capability provides
+// EndpointChecker is an object that can determine if a value provides
 // authorization to the endpoint.
-type CapabilityChecker interface {
-	Authorized(string, string, string) bool
+type EndpointChecker interface {
+	Authorized(value string, reqURL string, method string) bool
 }
 
 // CapabilitiesValidator checks the capabilities provided in a
@@ -59,38 +59,36 @@ type CapabilityChecker interface {
 // can also provide a function to be used in authorization middleware that
 // pulls the Authentication object from a context before checking it.
 type CapabilitiesValidator struct {
-	Checker CapabilityChecker
+	Checker  EndpointChecker
+	ErrorOut bool
 }
 
-// CreateValidator creates a function that determines whether or not a
-// client is authorized to make a request to an endpoint.  It uses the
-// bascule.Authentication from the context to get the information needed by the
-// CapabilityChecker to determine authorization.
-func (c CapabilitiesValidator) CreateValidator(errorOut bool) bascule.ValidatorFunc {
-	return func(ctx context.Context, _ bascule.Token) error {
-		auth, ok := bascule.FromContext(ctx)
-		if !ok {
-			if errorOut {
-				return ErrNoAuth
-			}
-			return nil
+// Check determines whether or not a client is authorized to make a request to
+// an endpoint.  It uses the bascule.Authentication from the context to get the
+// information needed by the EndpointChecker to determine authorization.
+func (c CapabilitiesValidator) Check(ctx context.Context, _ bascule.Token) error {
+	auth, ok := bascule.FromContext(ctx)
+	if !ok {
+		if c.ErrorOut {
+			return ErrNoAuth
 		}
-
-		_, err := c.Check(auth, ParsedValues{})
-		if err != nil && errorOut {
-			return err
-		}
-
 		return nil
 	}
+
+	_, err := c.CheckAuthentication(auth, ParsedValues{})
+	if err != nil && c.ErrorOut {
+		return err
+	}
+
+	return nil
 }
 
-// Check takes the needed values out of the given Authentication object in
+// CheckAuthentication takes the needed values out of the given Authentication object in
 // order to determine if a request is authorized.  It determines this through
-// iterating through each capability and calling the CapabilityChecker.  If no
+// iterating through each capability and calling the EndpointChecker.  If no
 // capability authorizes the client for the given endpoint and method, it is
 // unauthorized.
-func (c CapabilitiesValidator) Check(auth bascule.Authentication, _ ParsedValues) (string, error) {
+func (c CapabilitiesValidator) CheckAuthentication(auth bascule.Authentication, _ ParsedValues) (string, error) {
 	if auth.Token == nil {
 		return TokenMissingValues, ErrNoToken
 	}
@@ -111,7 +109,7 @@ func (c CapabilitiesValidator) Check(auth bascule.Authentication, _ ParsedValues
 	return "", nil
 }
 
-// checkCapabilities uses a CapabilityChecker to check if each capability
+// checkCapabilities uses a EndpointChecker to check if each capability
 // provided is authorized.  If an authorized capability is found, no error is
 // returned.
 func (c CapabilitiesValidator) checkCapabilities(capabilities []string, reqURL string, method string) error {

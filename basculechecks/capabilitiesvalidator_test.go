@@ -35,7 +35,7 @@ func TestCapabilitiesChecker(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestCapabilitiesValidatorFunc(t *testing.T) {
+func TestCapabilitiesValidatorCheck(t *testing.T) {
 	capabilities := []string{
 		"test",
 		"a",
@@ -95,9 +95,10 @@ func TestCapabilitiesValidatorFunc(t *testing.T) {
 				ctx = bascule.WithAuthentication(ctx, auth)
 			}
 			c := CapabilitiesValidator{
-				Checker: ConstCheck("it's a match"),
+				Checker:  ConstEndpointCheck("it's a match"),
+				ErrorOut: tc.errorOut,
 			}
-			err := c.CreateValidator(tc.errorOut)(ctx, bascule.NewToken("", "", nil))
+			err := c.Check(ctx, bascule.NewToken("", "", nil))
 			if tc.errExpected {
 				assert.NotNil(err)
 				return
@@ -107,7 +108,7 @@ func TestCapabilitiesValidatorFunc(t *testing.T) {
 	}
 }
 
-func TestCapabilitiesValidatorCheck(t *testing.T) {
+func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 	capabilities := []string{
 		"test",
 		"a",
@@ -120,7 +121,7 @@ func TestCapabilitiesValidatorCheck(t *testing.T) {
 		includeToken      bool
 		includeAttributes bool
 		includeURL        bool
-		checker           CapabilityChecker
+		checker           EndpointChecker
 		expectedReason    string
 		expectedErr       error
 	}{
@@ -128,7 +129,7 @@ func TestCapabilitiesValidatorCheck(t *testing.T) {
 			description:       "Success",
 			includeAttributes: true,
 			includeURL:        true,
-			checker:           ConstCheck("it's a match"),
+			checker:           ConstEndpointCheck("it's a match"),
 			expectedErr:       nil,
 		},
 		{
@@ -152,7 +153,7 @@ func TestCapabilitiesValidatorCheck(t *testing.T) {
 			description:       "Check Capabilities Error",
 			includeAttributes: true,
 			includeURL:        true,
-			checker:           AlwaysCheck(false),
+			checker:           AlwaysEndpointCheck(false),
 			expectedReason:    NoCapabilitiesMatch,
 			expectedErr:       ErrNoValidCapabilityFound,
 		},
@@ -180,7 +181,7 @@ func TestCapabilitiesValidatorCheck(t *testing.T) {
 					Method: "GET",
 				}
 			}
-			reason, err := c.Check(a, pv)
+			reason, err := c.CheckAuthentication(a, pv)
 			assert.Equal(tc.expectedReason, reason)
 			if err == nil || tc.expectedErr == nil {
 				assert.Equal(tc.expectedErr, err)
@@ -217,7 +218,7 @@ func TestCheckCapabilities(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
 			c := CapabilitiesValidator{
-				Checker: ConstCheck(tc.goodCapability),
+				Checker: ConstEndpointCheck(tc.goodCapability),
 			}
 			err := c.checkCapabilities(capabilities, "", "")
 			if err == nil || tc.expectedErr == nil {

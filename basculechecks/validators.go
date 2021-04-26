@@ -15,8 +15,6 @@
  *
  */
 
-// some factories to make common validation checks
-
 package basculechecks
 
 import (
@@ -27,16 +25,16 @@ import (
 	"github.com/xmidt-org/bascule"
 )
 
-// CreateAllowAllCheck returns a Validator that never returns an error.
-func CreateAllowAllCheck() bascule.ValidatorFunc {
+// AllowAll returns a Validator that never returns an error.
+func AllowAll() bascule.ValidatorFunc {
 	return func(_ context.Context, _ bascule.Token) error {
 		return nil
 	}
 }
 
-// CreateValidTypeCheck returns a Validator that checks that the token's type
-// is one of the given valid types.
-func CreateValidTypeCheck(validTypes []string) bascule.ValidatorFunc {
+// ValidType returns a Validator that checks that the token's type is one of the
+// given valid types.
+func ValidType(validTypes []string) bascule.ValidatorFunc {
 	return func(_ context.Context, token bascule.Token) error {
 		tt := token.Type()
 		for _, vt := range validTypes {
@@ -48,9 +46,9 @@ func CreateValidTypeCheck(validTypes []string) bascule.ValidatorFunc {
 	}
 }
 
-// CreateNonEmptyTypeCheck returns a Validator that checks that the token's
-// type isn't an empty string.
-func CreateNonEmptyTypeCheck() bascule.ValidatorFunc {
+// NonEmptyType returns a Validator that checks that the token's type isn't an
+// empty string.
+func NonEmptyType() bascule.ValidatorFunc {
 	return func(_ context.Context, token bascule.Token) error {
 		if token.Type() == "" {
 			return errors.New("empty token type")
@@ -59,9 +57,9 @@ func CreateNonEmptyTypeCheck() bascule.ValidatorFunc {
 	}
 }
 
-// CreateNonEmptyPrincipalCheck returns a Validator that checks that the
-// token's Principal isn't an empty string.
-func CreateNonEmptyPrincipalCheck() bascule.ValidatorFunc {
+// NonEmptyPrincipal returns a Validator that checks that the token's Principal
+// isn't an empty string.
+func NonEmptyPrincipal() bascule.ValidatorFunc {
 	return func(_ context.Context, token bascule.Token) error {
 		if token.Principal() == "" {
 			return errors.New("empty token principal")
@@ -70,10 +68,9 @@ func CreateNonEmptyPrincipalCheck() bascule.ValidatorFunc {
 	}
 }
 
-// CreateListAttributeCheck returns a Validator that runs checks against the
-// content found in the key given.  It runs every check and returns all errors
-// it finds.
-func CreateListAttributeCheck(keys []string, checks ...func(context.Context, []interface{}) error) bascule.ValidatorFunc {
+// AttributeList returns a Validator that runs checks against the content found
+// in the key given.  It runs every check and returns all errors it finds.
+func AttributeList(keys []string, checks ...func(context.Context, []interface{}) error) bascule.ValidatorFunc {
 	return func(ctx context.Context, token bascule.Token) error {
 		val, ok := bascule.GetNestedAttribute(token.Attributes(), keys...)
 		if !ok {

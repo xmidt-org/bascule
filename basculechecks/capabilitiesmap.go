@@ -34,16 +34,16 @@ var (
 // be some regex values, allowing for bucketing of urls that contain some kind
 // of ID or otherwise variable portion of a URL.
 type CapabilitiesMap struct {
-	Checkers       map[string]CapabilityChecker
-	DefaultChecker CapabilityChecker
+	Checkers       map[string]EndpointChecker
+	DefaultChecker EndpointChecker
 }
 
-// Check uses the parsed endpoint value to determine which CapabilityChecker to
+// Check uses the parsed endpoint value to determine which EndpointChecker to
 // run against the capabilities in the auth provided.  If there is no
-// CapabilityChecker for the endpoint, the default is used.  As long as one
-// capability is found to be authorized by the CapabilityChecker, no error is
+// EndpointChecker for the endpoint, the default is used.  As long as one
+// capability is found to be authorized by the EndpointChecker, no error is
 // returned.
-func (c CapabilitiesMap) Check(auth bascule.Authentication, vs ParsedValues) (string, error) {
+func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs ParsedValues) (string, error) {
 	if auth.Token == nil {
 		return TokenMissingValues, ErrNoToken
 	}
@@ -61,7 +61,7 @@ func (c CapabilitiesMap) Check(auth bascule.Authentication, vs ParsedValues) (st
 		return reason, err
 	}
 
-	// determine which CapabilityChecker to use.
+	// determine which EndpointChecker to use.
 	checker, ok := c.Checkers[vs.Endpoint]
 	if !ok || checker == nil {
 		checker = c.DefaultChecker

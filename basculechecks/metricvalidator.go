@@ -22,18 +22,15 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/go-kit/kit/log"
 	"github.com/spf13/cast"
 	"github.com/xmidt-org/bascule"
 )
-
-var defaultLogger = log.NewNopLogger()
 
 // CapabilitiesChecker is an object that can determine if a request is
 // authorized given a bascule.Authentication object.  If it's not authorized, a
 // reason and error are given for logging and metrics.
 type CapabilitiesChecker interface {
-	Check(auth bascule.Authentication, vals ParsedValues) (string, error)
+	CheckAuthentication(auth bascule.Authentication, vals ParsedValues) (string, error)
 }
 
 // ParsedValues are values determined from the bascule Authentication.
@@ -58,62 +55,61 @@ type MetricValidator struct {
 	C         CapabilitiesChecker
 	Measures  *AuthCapabilityCheckMeasures
 	Endpoints []*regexp.Regexp
+	ErrorOut  bool
 }
 
-// CreateValidator provides a function for authorization middleware.  The
-// function parses the information needed for the CapabilitiesChecker, calls it
-// to determine if the request is authorized, and maintains the results in a
-// metric.  The function can actually mark the request as unauthorized or just
-// update the metric and allow the request, depending on configuration.  This
-// allows for monitoring before being more strict with authorization.
-func (m MetricValidator) CreateValidator(errorOut bool) bascule.ValidatorFunc {
-	return func(ctx context.Context, _ bascule.Token) error {
-		// if we're not supposed to error out, the outcome should be accepted on failure
-		failureOutcome := AcceptedOutcome
-		if errorOut {
-			// if we actually error out, the outcome is the request being rejected
-			failureOutcome = RejectedOutcome
-		}
+// Check is a function for authorization middleware.  The function parses the
+// information needed for the CapabilitiesChecker, calls it to determine if the
+// request is authorized, and maintains the results in a metric.  The function
+// can mark the request as unauthorized or only update the metric and allow the
+// request, depending on configuration.  This allows for monitoring before being
+// more strict with authorization.
+func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
+	// if we're not supposed to error out, the outcome should be accepted on failure
+	failureOutcome := AcceptedOutcome
+	if m.ErrorOut {
+		// if we actually error out, the outcome is the request being rejected
+		failureOutcome = RejectedOutcome
+	}
 
-		auth, ok := bascule.FromContext(ctx)
-		if !ok {
-			m.Measures.CapabilityCheckOutcome.With(OutcomeLabel, failureOutcome, ReasonLabel, TokenMissing, ClientIDLabel, "", PartnerIDLabel, "", EndpointLabel, "").Add(1)
-			if errorOut {
-				return ErrNoAuth
-			}
-			return nil
+	auth, ok := bascule.FromContext(ctx)
+	if !ok {
+		m.Measures.CapabilityCheckOutcome.With(OutcomeLabel, failureOutcome, ReasonLabel, TokenMissing, ClientIDLabel, "", PartnerIDLabel, "", EndpointLabel, "").Add(1)
+		if m.ErrorOut {
+			return ErrNoAuth
 		}
-
-		client, partnerID, endpoint, reason, err := m.prepMetrics(auth)
-		labels := []string{ClientIDLabel, client, PartnerIDLabel, partnerID, EndpointLabel, endpoint}
-		if err != nil {
-			labels = append(labels, OutcomeLabel, failureOutcome, ReasonLabel, reason)
-			m.Measures.CapabilityCheckOutcome.With(labels...).Add(1)
-			if errorOut {
-				return err
-			}
-			return nil
-		}
-
-		v := ParsedValues{
-			Endpoint: endpoint,
-			Partner:  partnerID,
-		}
-
-		reason, err = m.C.Check(auth, v)
-		if err != nil {
-			labels = append(labels, OutcomeLabel, failureOutcome, ReasonLabel, reason)
-			m.Measures.CapabilityCheckOutcome.With(labels...).Add(1)
-			if errorOut {
-				return err
-			}
-			return nil
-		}
-
-		labels = append(labels, OutcomeLabel, AcceptedOutcome, ReasonLabel, "")
-		m.Measures.CapabilityCheckOutcome.With(labels...).Add(1)
 		return nil
 	}
+
+	client, partnerID, endpoint, reason, err := m.prepMetrics(auth)
+	labels := []string{ClientIDLabel, client, PartnerIDLabel, partnerID, EndpointLabel, endpoint}
+	if err != nil {
+		labels = append(labels, OutcomeLabel, failureOutcome, ReasonLabel, reason)
+		m.Measures.CapabilityCheckOutcome.With(labels...).Add(1)
+		if m.ErrorOut {
+			return err
+		}
+		return nil
+	}
+
+	v := ParsedValues{
+		Endpoint: endpoint,
+		Partner:  partnerID,
+	}
+
+	reason, err = m.C.CheckAuthentication(auth, v)
+	if err != nil {
+		labels = append(labels, OutcomeLabel, failureOutcome, ReasonLabel, reason)
+		m.Measures.CapabilityCheckOutcome.With(labels...).Add(1)
+		if m.ErrorOut {
+			return err
+		}
+		return nil
+	}
+
+	labels = append(labels, OutcomeLabel, AcceptedOutcome, ReasonLabel, "")
+	m.Measures.CapabilityCheckOutcome.With(labels...).Add(1)
+	return nil
 }
 
 // prepMetrics gathers the information needed for metric label information.  It

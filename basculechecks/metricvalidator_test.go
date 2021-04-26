@@ -31,7 +31,7 @@ import (
 	"github.com/xmidt-org/bascule"
 )
 
-func TestMetricValidatorFunc(t *testing.T) {
+func TestMetricValidatorCheck(t *testing.T) {
 	goodURL, err := url.Parse("/test")
 	require.Nil(t, err)
 	capabilities := []string{
@@ -123,7 +123,7 @@ func TestMetricValidatorFunc(t *testing.T) {
 			}
 			mockCapabilitiesChecker := new(mockCapabilitiesChecker)
 			if tc.checkCallExpected {
-				mockCapabilitiesChecker.On("Check", mock.Anything, mock.Anything).Return(tc.checkReason, tc.checkErr).Once()
+				mockCapabilitiesChecker.On("CheckAuthentication", mock.Anything, mock.Anything).Return(tc.checkReason, tc.checkErr).Once()
 			}
 
 			counter := generic.NewCounter("test_capability_check")
@@ -134,8 +134,9 @@ func TestMetricValidatorFunc(t *testing.T) {
 			m := MetricValidator{
 				C:        mockCapabilitiesChecker,
 				Measures: &mockMeasures,
+				ErrorOut: tc.errorOut,
 			}
-			err := m.CreateValidator(tc.errorOut)(ctx, nil)
+			err := m.Check(ctx, nil)
 			mockCapabilitiesChecker.AssertExpectations(t)
 			if tc.errExpected {
 				assert.NotNil(err)

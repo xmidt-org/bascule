@@ -58,7 +58,7 @@ const (
 	UndeterminedCapabilities = "undetermined_capabilities"
 	EmptyCapabilitiesList    = "empty_capabilities_list"
 	TokenMissingValues       = "auth_is_missing_values"
-	NoCapabilityChecker      = "no_capability_checker"
+	NoEndpointChecker        = "no_capability_checker"
 	NoCapabilitiesMatch      = "no_capabilities_match"
 	EmptyParsedURL           = "empty_parsed_URL"
 )

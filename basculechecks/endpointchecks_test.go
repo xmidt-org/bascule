@@ -24,18 +24,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAlwaysCheck(t *testing.T) {
+func TestAlwaysEndpointCheck(t *testing.T) {
 	assert := assert.New(t)
-	alwaysTrue := AlwaysCheck(true)
+	alwaysTrue := AlwaysEndpointCheck(true)
 	assert.True(alwaysTrue.Authorized("a", "b", "c"))
-	alwaysFalse := AlwaysCheck(false)
+	alwaysFalse := AlwaysEndpointCheck(false)
 	assert.False(alwaysFalse.Authorized("a", "b", "c"))
 }
 
-func TestConstCapabilityChecker(t *testing.T) {
+func TestConstEndpointChecker(t *testing.T) {
 	var v interface{}
-	v = ConstCheck("test")
-	_, ok := v.(CapabilityChecker)
+	v = ConstEndpointCheck("test")
+	_, ok := v.(EndpointChecker)
 	assert.True(t, ok)
 }
 
@@ -59,19 +59,19 @@ func TestConstCheck(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
-			c := ConstCheck("perfectmatch")
+			c := ConstEndpointCheck("perfectmatch")
 			ok := c.Authorized(tc.capability, "ignored1", "ignored2")
 			assert.Equal(tc.okExpected, ok)
 		})
 	}
 }
 
-func TestEndpointRegexCapabilityChecker(t *testing.T) {
+func TestEndpointRegexEndpointChecker(t *testing.T) {
 	assert := assert.New(t)
 	var v interface{}
 	v, err := NewEndpointRegexCheck("test", "")
 	assert.Nil(err)
-	_, ok := v.(CapabilityChecker)
+	_, ok := v.(EndpointChecker)
 	assert.True(ok)
 }
 func TestNewEndpointRegexError(t *testing.T) {

@@ -23,21 +23,21 @@ import (
 	"strings"
 )
 
-// AlwaysCheck is a CapabilityChecker that always returns either true or false.
-type AlwaysCheck bool
+// AlwaysEndpointCheck is a EndpointChecker that always returns either true or false.
+type AlwaysEndpointCheck bool
 
 // Authorized returns the saved boolean value, rather than checking the
 // parameters given.
-func (a AlwaysCheck) Authorized(_, _, _ string) bool {
+func (a AlwaysEndpointCheck) Authorized(_, _, _ string) bool {
 	return bool(a)
 }
 
-// ConstCheck is a basic capability checker that determines a capability is
+// ConstEndpointCheck is a basic EndpointChecker that determines a capability is
 // authorized if it matches the ConstCheck's string.
-type ConstCheck string
+type ConstEndpointCheck string
 
 // Authorized validates the capability provided against the stored string.
-func (c ConstCheck) Authorized(capability, _, _ string) bool {
+func (c ConstEndpointCheck) Authorized(capability, _, _ string) bool {
 	return string(c) == capability
 }
 
@@ -50,7 +50,7 @@ type EndpointRegexCheck struct {
 }
 
 // NewEndpointRegexCheck creates an object that implements the
-// CapabilityChecker interface.  It takes a prefix that is expected at the
+// EndpointChecker interface.  It takes a prefix that is expected at the
 // beginning of a capability and a string that, if provided in the capability,
 // authorizes all methods for that endpoint.  After the prefix, the
 // EndpointRegexCheck expects there to be an endpoint regular expression and an
