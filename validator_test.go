@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,21 @@ import (
 
 func TestValidators(t *testing.T) {
 	emptyAttributes := NewAttributes(map[string]interface{}{})
+	testErr := errors.New("test err")
+	var (
+		failFunc ValidatorFunc = func(_ context.Context, _ Token) error {
+			return testErr
+		}
+		successFunc ValidatorFunc = func(_ context.Context, _ Token) error {
+			return nil
+		}
+	)
 	assert := assert.New(t)
-	validatorList := Validators([]Validator{CreateNonEmptyTypeCheck(), CreateNonEmptyPrincipalCheck()})
-	err := validatorList.Check(context.Background(), NewToken("type", "principal", emptyAttributes))
+	validatorF := Validators([]Validator{successFunc, failFunc})
+	validatorS := Validators([]Validator{successFunc, successFunc, successFunc})
+	err := validatorS.Check(context.Background(), NewToken("type", "principal", emptyAttributes))
 	assert.NoError(err)
-	errs := validatorList.Check(context.Background(), NewToken("", "", emptyAttributes))
+	errs := validatorF.Check(context.Background(), NewToken("", "", emptyAttributes))
 	assert.NotNil(errs)
 	assert.True(errors.As(errs, &Errors{}))
 }
