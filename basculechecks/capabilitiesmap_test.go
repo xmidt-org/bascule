@@ -118,7 +118,7 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 			cm:             cm,
 			token:          nil,
 			includeURL:     true,
-			expectedReason: TokenMissingValues,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNoToken,
 		},
 		{
@@ -126,7 +126,7 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 			cm:             cm,
 			token:          goodToken,
 			includeURL:     false,
-			expectedReason: TokenMissingValues,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNoURL,
 		},
 		{

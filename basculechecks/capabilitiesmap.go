@@ -45,11 +45,11 @@ type CapabilitiesMap struct {
 // returned.
 func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs ParsedValues) (string, error) {
 	if auth.Token == nil {
-		return TokenMissingValues, ErrNoToken
+		return MissingValues, ErrNoToken
 	}
 
 	if auth.Request.URL == nil {
-		return TokenMissingValues, ErrNoURL
+		return MissingValues, ErrNoURL
 	}
 
 	if vs.Endpoint == "" {

@@ -199,14 +199,14 @@ func TestPrepMetrics(t *testing.T) {
 		},
 		{
 			description:    "Nil Token Error",
-			expectedReason: TokenMissingValues,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNoToken,
 		},
 		{
 			description:    "Nil Token Attributes Error",
 			url:            goodURL,
 			includeToken:   true,
-			expectedReason: TokenMissingValues,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNilAttributes,
 		},
 		{
@@ -249,7 +249,7 @@ func TestPrepMetrics(t *testing.T) {
 			includeToken:      true,
 			includeAttributes: true,
 			expectedPartner:   "partner",
-			expectedReason:    TokenMissingValues,
+			expectedReason:    MissingValues,
 			expectedErr:       ErrNoURL,
 		},
 	}

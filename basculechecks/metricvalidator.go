@@ -117,11 +117,11 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 // on the metric when a request is unauthorized.
 func (m MetricValidator) prepMetrics(auth bascule.Authentication) (string, string, string, string, error) {
 	if auth.Token == nil {
-		return "", "", "", TokenMissingValues, ErrNoToken
+		return "", "", "", MissingValues, ErrNoToken
 	}
 	client := auth.Token.Principal()
 	if auth.Token.Attributes() == nil {
-		return client, "", "", TokenMissingValues, ErrNilAttributes
+		return client, "", "", MissingValues, ErrNilAttributes
 	}
 
 	partnerVal, ok := bascule.GetNestedAttribute(auth.Token.Attributes(), PartnerKeys()...)
@@ -135,7 +135,7 @@ func (m MetricValidator) prepMetrics(auth bascule.Authentication) (string, strin
 	partnerID := DeterminePartnerMetric(partnerIDs)
 
 	if auth.Request.URL == nil {
-		return client, partnerID, "", TokenMissingValues, ErrNoURL
+		return client, partnerID, "", MissingValues, ErrNoURL
 	}
 	escapedURL := auth.Request.URL.EscapedPath()
 	endpoint := determineEndpointMetric(m.Endpoints, escapedURL)

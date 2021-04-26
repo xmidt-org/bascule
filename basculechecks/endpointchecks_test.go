@@ -24,19 +24,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var _ EndpointChecker = ConstEndpointCheck("test")
+
 func TestAlwaysEndpointCheck(t *testing.T) {
 	assert := assert.New(t)
 	alwaysTrue := AlwaysEndpointCheck(true)
 	assert.True(alwaysTrue.Authorized("a", "b", "c"))
 	alwaysFalse := AlwaysEndpointCheck(false)
 	assert.False(alwaysFalse.Authorized("a", "b", "c"))
-}
-
-func TestConstEndpointChecker(t *testing.T) {
-	var v interface{}
-	v = ConstEndpointCheck("test")
-	_, ok := v.(EndpointChecker)
-	assert.True(t, ok)
 }
 
 func TestConstCheck(t *testing.T) {

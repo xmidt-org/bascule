@@ -28,12 +28,7 @@ import (
 	"github.com/xmidt-org/bascule"
 )
 
-func TestCapabilitiesChecker(t *testing.T) {
-	var v interface{}
-	v = CapabilitiesValidator{}
-	_, ok := v.(CapabilitiesChecker)
-	assert.True(t, ok)
-}
+var _ CapabilitiesChecker = CapabilitiesValidator{}
 
 func TestCapabilitiesValidatorCheck(t *testing.T) {
 	capabilities := []string{
@@ -134,7 +129,7 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 		},
 		{
 			description:    "No Token Error",
-			expectedReason: TokenMissingValues,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNoToken,
 		},
 		{
@@ -146,7 +141,7 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 		{
 			description:       "No URL Error",
 			includeAttributes: true,
-			expectedReason:    TokenMissingValues,
+			expectedReason:    MissingValues,
 			expectedErr:       ErrNoURL,
 		},
 		{

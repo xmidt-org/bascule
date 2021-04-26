@@ -90,7 +90,7 @@ func (c CapabilitiesValidator) Check(ctx context.Context, _ bascule.Token) error
 // unauthorized.
 func (c CapabilitiesValidator) CheckAuthentication(auth bascule.Authentication, _ ParsedValues) (string, error) {
 	if auth.Token == nil {
-		return TokenMissingValues, ErrNoToken
+		return MissingValues, ErrNoToken
 	}
 	vals, reason, err := getCapabilities(auth.Token.Attributes())
 	if err != nil {
@@ -98,7 +98,7 @@ func (c CapabilitiesValidator) CheckAuthentication(auth bascule.Authentication, 
 	}
 
 	if auth.Request.URL == nil {
-		return TokenMissingValues, ErrNoURL
+		return MissingValues, ErrNoURL
 	}
 	reqURL := auth.Request.URL.EscapedPath()
 	method := auth.Request.Method
