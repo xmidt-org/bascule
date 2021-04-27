@@ -22,8 +22,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/goph/emperror"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/xmidt-org/bascule"
@@ -83,7 +81,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		} else {
 			err := rules.Check(ctx, auth.Token)
 			if err != nil {
-				logger.Log(append(emperror.Context(err), level.Key(), level.ErrorValue(), errorKey, err)...)
+				logger.Log(level.Key(), level.ErrorValue(), errorKey, err)
 				e.onErrorResponse(ChecksFailed, err)
 				WriteResponse(response, http.StatusForbidden, err)
 				return

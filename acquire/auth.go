@@ -19,9 +19,9 @@
 package acquire
 
 import (
+	"fmt"
 	"net/http"
 
-	"github.com/goph/emperror"
 	"github.com/pkg/errors"
 )
 
@@ -58,7 +58,7 @@ func AddAuth(r *http.Request, acquirer Acquirer) error {
 	auth, err := acquirer.Acquire()
 
 	if err != nil {
-		return emperror.Wrap(err, "failed to acquire auth for request")
+		return fmt.Errorf("failed to acquire auth for request: %w", err)
 	}
 
 	if auth != "" {

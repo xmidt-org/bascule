@@ -30,8 +30,10 @@ func TestAlwaysEndpointCheck(t *testing.T) {
 	assert := assert.New(t)
 	alwaysTrue := AlwaysEndpointCheck(true)
 	assert.True(alwaysTrue.Authorized("a", "b", "c"))
+	assert.Equal("always true", alwaysTrue.Name())
 	alwaysFalse := AlwaysEndpointCheck(false)
 	assert.False(alwaysFalse.Authorized("a", "b", "c"))
+	assert.Equal("always false", alwaysFalse.Name())
 }
 
 func TestConstCheck(t *testing.T) {
@@ -57,6 +59,7 @@ func TestConstCheck(t *testing.T) {
 			c := ConstEndpointCheck("perfectmatch")
 			ok := c.Authorized(tc.capability, "ignored1", "ignored2")
 			assert.Equal(tc.okExpected, ok)
+			assert.Equal("const", c.Name())
 		})
 	}
 }
@@ -139,6 +142,7 @@ func TestEndpointRegexCheck(t *testing.T) {
 			e, err := NewEndpointRegexCheck(tc.prefix, tc.acceptAllMethod)
 			require.Nil(err)
 			require.NotEmpty(e)
+			assert.Equal("regex", e.Name())
 			ok := e.Authorized(tc.capability, tc.url, tc.method)
 			assert.Equal(tc.okExpected, ok)
 		})

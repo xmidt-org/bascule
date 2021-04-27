@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/goph/emperror"
 	"github.com/spf13/cast"
 	"github.com/xmidt-org/bascule"
 )
@@ -52,6 +51,7 @@ func PartnerKeys() []string {
 // authorization to the endpoint.
 type EndpointChecker interface {
 	Authorized(value string, reqURL string, method string) bool
+	Name() string
 }
 
 // CapabilitiesValidator checks the capabilities provided in a
@@ -77,7 +77,8 @@ func (c CapabilitiesValidator) Check(ctx context.Context, _ bascule.Token) error
 
 	_, err := c.CheckAuthentication(auth, ParsedValues{})
 	if err != nil && c.ErrorOut {
-		return err
+		return fmt.Errorf("endpoint auth for %v on %v failed: %v",
+			auth.Request.Method, auth.Request.URL.EscapedPath(), err)
 	}
 
 	return nil
@@ -118,7 +119,8 @@ func (c CapabilitiesValidator) checkCapabilities(capabilities []string, reqURL s
 			return nil
 		}
 	}
-	return emperror.With(ErrNoValidCapabilityFound, "capabilitiesFound", capabilities, "urlToMatch", reqURL, "methodToMatch", method)
+	return fmt.Errorf("%w in [%v] with %v endpoint checker",
+		ErrNoValidCapabilityFound, capabilities, c.Checker.Name())
 
 }
 
