@@ -32,6 +32,13 @@ func (a AlwaysEndpointCheck) Authorized(_, _, _ string) bool {
 	return bool(a)
 }
 
+func (a AlwaysEndpointCheck) Name() string {
+	if a {
+		return "always true"
+	}
+	return "always false"
+}
+
 // ConstEndpointCheck is a basic EndpointChecker that determines a capability is
 // authorized if it matches the ConstCheck's string.
 type ConstEndpointCheck string
@@ -39,6 +46,10 @@ type ConstEndpointCheck string
 // Authorized validates the capability provided against the stored string.
 func (c ConstEndpointCheck) Authorized(capability, _, _ string) bool {
 	return string(c) == capability
+}
+
+func (c ConstEndpointCheck) Name() string {
+	return "const"
 }
 
 // EndpointRegexCheck uses a regular expression to validate an endpoint and
@@ -95,4 +106,8 @@ func (e EndpointRegexCheck) Authorized(capability string, urlToMatch string, met
 	}
 
 	return true
+}
+
+func (e EndpointRegexCheck) Name() string {
+	return "regex"
 }

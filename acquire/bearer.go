@@ -24,8 +24,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/goph/emperror"
 )
 
 // TokenParser defines the function signature of a bearer token extractor from a payload.
@@ -39,7 +37,7 @@ func DefaultTokenParser(data []byte) (string, error) {
 	var bearer SimpleBearer
 
 	if errUnmarshal := json.Unmarshal(data, &bearer); errUnmarshal != nil {
-		return "", emperror.Wrap(errUnmarshal, "unable to parse bearer token")
+		return "", fmt.Errorf("unable to parse bearer token: %w", errUnmarshal)
 	}
 	return bearer.Token, nil
 }
@@ -49,7 +47,7 @@ func DefaultExpirationParser(data []byte) (time.Time, error) {
 	var bearer SimpleBearer
 
 	if errUnmarshal := json.Unmarshal(data, &bearer); errUnmarshal != nil {
-		return time.Time{}, emperror.Wrap(errUnmarshal, "unable to parse bearer token expiration")
+		return time.Time{}, fmt.Errorf("unable to parse bearer token expiration: %w", errUnmarshal)
 	}
 	return time.Now().Add(time.Duration(bearer.ExpiresInSeconds) * time.Second), nil
 }
@@ -117,7 +115,7 @@ func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 
 	req, err := http.NewRequest("GET", acquirer.options.AuthURL, nil)
 	if err != nil {
-		return "", emperror.Wrap(err, "failed to create new request for Bearer")
+		return "", fmt.Errorf("failed to create new request for Bearer: %v", err)
 	}
 
 	for key, value := range acquirer.options.RequestHeaders {
@@ -126,7 +124,8 @@ func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 
 	resp, errHTTP := acquirer.httpClient.Do(req)
 	if errHTTP != nil {
-		return "", emperror.Wrapf(errHTTP, "error making request to '%v' to acquire bearer token", acquirer.options.AuthURL)
+		return "", fmt.Errorf("error making request to '%v' to acquire bearer token: %v",
+			acquirer.options.AuthURL, errHTTP)
 	}
 	defer resp.Body.Close()
 
@@ -136,16 +135,16 @@ func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 
 	respBody, errRead := ioutil.ReadAll(resp.Body)
 	if errRead != nil {
-		return "", emperror.Wrap(errRead, "error reading HTTP response body")
+		return "", fmt.Errorf("error reading HTTP response body: %v", errRead)
 	}
 
 	token, err := acquirer.options.GetToken(respBody)
 	if err != nil {
-		return "", emperror.Wrap(err, "error parsing bearer token from http response body")
+		return "", fmt.Errorf("error parsing bearer token from http response body: %v", err)
 	}
 	expiration, err := acquirer.options.GetExpiration(respBody)
 	if err != nil {
-		return "", emperror.Wrap(err, "error parsing bearer token expiration from http response body")
+		return "", fmt.Errorf("error parsing bearer token expiration from http response body: %v", err)
 	}
 
 	acquirer.authValue, acquirer.authValueExpiration = "Bearer "+token, expiration

@@ -26,7 +26,6 @@ import (
 	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/goph/emperror"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/key"
 )
@@ -42,7 +41,7 @@ var (
 	ErrorNoProtectedHeader = errors.New("missing protected header")
 	ErrorNoSigningMethod   = errors.New("signing method (alg) is missing or unrecognized")
 	ErrorUnexpectedPayload = errors.New("payload isn't a map of strings to interfaces")
-	ErrorInvalidPrincipal  = errors.New("principal must be a non-empty string")
+	ErrorInvalidPrincipal  = errors.New("invalid principal")
 	ErrorInvalidToken      = errors.New("token isn't valid")
 	ErrorUnexpectedClaims  = errors.New("claims wasn't MapClaims as expected")
 )
@@ -71,7 +70,7 @@ type BasicTokenFactory map[string]string
 func (btf BasicTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	decoded, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return nil, emperror.WrapWith(err, "could not decode string")
+		return nil, fmt.Errorf("could not decode string: %v", err)
 	}
 
 	i := bytes.IndexByte(decoded, ':')
@@ -103,7 +102,7 @@ func NewBasicTokenFactoryFromList(encodedBasicAuthKeys []string) (BasicTokenFact
 	for _, encodedKey := range encodedBasicAuthKeys {
 		decoded, err := base64.StdEncoding.DecodeString(encodedKey)
 		if err != nil {
-			errs = append(errs, emperror.Wrap(err, fmt.Sprintf("failed to base64-decode basic auth key [%v]", encodedKey)))
+			errs = append(errs, fmt.Errorf("failed to base64-decode basic auth key [%v]: %v", encodedKey, err))
 			continue
 		}
 
@@ -149,7 +148,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 
 		pair, err := btf.Resolver.ResolveKey(ctx, keyID)
 		if err != nil {
-			return nil, emperror.Wrap(err, "failed to resolve key")
+			return nil, fmt.Errorf("failed to resolve key: %v", err)
 		}
 		return pair.Public(), nil
 	}
@@ -161,7 +160,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 
 	jwsToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
 	if err != nil {
-		return nil, emperror.Wrap(err, "failed to parse JWS")
+		return nil, fmt.Errorf("failed to parse JWS: %v", err)
 	}
 	if !jwsToken.Valid {
 		return nil, ErrorInvalidToken
@@ -170,23 +169,23 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	claims, ok := jwsToken.Claims.(*bascule.ClaimsWithLeeway)
 
 	if !ok {
-		return nil, emperror.Wrap(ErrorUnexpectedClaims, "failed to parse JWS")
+		return nil, fmt.Errorf("failed to parse JWS: %w", ErrorUnexpectedClaims)
 	}
 
 	claimsMap, err := claims.GetMap()
 	if err != nil {
-		return nil, emperror.WrapWith(err, "failed to get map of claims", "claims struct", claims)
+		return nil, fmt.Errorf("failed to get map of claims with object [%v]: %v", claims, err)
 	}
 
 	jwtClaims := bascule.NewAttributes(claimsMap)
 
 	principalVal, ok := jwtClaims.Get(jwtPrincipalKey)
 	if !ok {
-		return nil, emperror.WrapWith(ErrorInvalidPrincipal, "principal value not found", "principal key", jwtPrincipalKey, "jwtClaims", claimsMap)
+		return nil, fmt.Errorf("%w: principal value not found at key %v", ErrorInvalidPrincipal, jwtPrincipalKey)
 	}
 	principal, ok := principalVal.(string)
 	if !ok {
-		return nil, emperror.WrapWith(ErrorInvalidPrincipal, "principal value not a string", "principal", principalVal)
+		return nil, fmt.Errorf("%w: principal value [%v] not a string", ErrorInvalidPrincipal, principalVal)
 	}
 
 	return bascule.NewToken("jwt", principal, jwtClaims), nil

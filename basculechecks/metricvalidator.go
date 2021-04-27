@@ -102,7 +102,8 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		labels = append(labels, OutcomeLabel, failureOutcome, ReasonLabel, reason)
 		m.Measures.CapabilityCheckOutcome.With(labels...).Add(1)
 		if m.ErrorOut {
-			return err
+			return fmt.Errorf("endpoint auth for %v on %v failed: %v",
+				auth.Request.Method, auth.Request.URL.EscapedPath(), err)
 		}
 		return nil
 	}

@@ -19,8 +19,8 @@ package basculechecks
 
 import (
 	"errors"
+	"fmt"
 
-	"github.com/goph/emperror"
 	"github.com/xmidt-org/bascule"
 )
 
@@ -72,10 +72,8 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 	// if the checker is nil, we treat it like a checker that always returns
 	// false.
 	if checker == nil {
-		return NoCapabilitiesMatch, emperror.With(ErrNoValidCapabilityFound,
-			"capabilitiesFound", capabilities, "request URL", reqURL,
-			"request method", method, "parsed URL", vs.Endpoint,
-			"checker", checker)
+		return NoCapabilitiesMatch, fmt.Errorf("%w in [%v] with nil endpoint checker",
+			ErrNoValidCapabilityFound, capabilities)
 	}
 
 	// if one of the capabilities is good, then the request is authorized
@@ -86,9 +84,7 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 		}
 	}
 
-	return NoCapabilitiesMatch, emperror.With(ErrNoValidCapabilityFound,
-		"capabilitiesFound", capabilities, "request URL", reqURL,
-		"request method", method, "parsed URL", vs.Endpoint,
-		"checker", checker)
+	return NoCapabilitiesMatch, fmt.Errorf("%w in [%v] with %v endpoint checker",
+		ErrNoValidCapabilityFound, capabilities, checker.Name())
 
 }
