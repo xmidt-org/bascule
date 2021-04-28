@@ -24,7 +24,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/go-kit/kit/metrics/generic"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -126,9 +126,15 @@ func TestMetricValidatorCheck(t *testing.T) {
 				mockCapabilitiesChecker.On("CheckAuthentication", mock.Anything, mock.Anything).Return(tc.checkReason, tc.checkErr).Once()
 			}
 
-			counter := generic.NewCounter("test_capability_check")
 			mockMeasures := AuthCapabilityCheckMeasures{
-				CapabilityCheckOutcome: counter,
+				CapabilityCheckOutcome: prometheus.NewCounterVec(
+					prometheus.CounterOpts{
+						Name: "testMetadataCounter",
+						Help: "testMetadataCounter",
+					},
+					[]string{ServerLabel, OutcomeLabel, ReasonLabel, ClientIDLabel,
+						PartnerIDLabel, EndpointLabel},
+				),
 			}
 
 			m := MetricValidator{

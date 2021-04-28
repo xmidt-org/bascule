@@ -11,7 +11,6 @@ require (
 	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.0
 	github.com/xmidt-org/arrange v0.1.9
-	github.com/xmidt-org/themis v0.4.4
 	github.com/xmidt-org/touchstone v0.0.3
 	github.com/xmidt-org/webpa-common v1.11.5
 	go.uber.org/fx v1.13.1
