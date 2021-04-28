@@ -61,7 +61,7 @@ const (
 // ProvideMetrics provides the metrics relevant to this package as uber/fx options.
 // This is now deprecated in favor of ProvideMetricsVec.
 func ProvideMetrics() fx.Option {
-	return fx.Provide(
+	return fx.Options(
 		touchstone.CounterVec(prometheus.CounterOpts{
 			Name:        AuthCapabilityCheckOutcome,
 			Help:        capabilityCheckHelpMsg,
