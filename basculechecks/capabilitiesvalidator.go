@@ -32,6 +32,7 @@ var (
 	ErrNoToken                = errors.New("no token found in Auth")
 	ErrNoValidCapabilityFound = errors.New("no valid capability for endpoint")
 	ErrNilAttributes          = errors.New("nil attributes interface")
+	ErrNoMethod               = errors.New("no method found in Auth")
 	ErrNoURL                  = errors.New("invalid URL found in Auth")
 )
 
@@ -92,6 +93,9 @@ func (c CapabilitiesValidator) Check(ctx context.Context, _ bascule.Token) error
 func (c CapabilitiesValidator) CheckAuthentication(auth bascule.Authentication, _ ParsedValues) (string, error) {
 	if auth.Token == nil {
 		return MissingValues, ErrNoToken
+	}
+	if len(auth.Request.Method) == 0 {
+		return MissingValues, ErrNoMethod
 	}
 	vals, reason, err := getCapabilities(auth.Token.Attributes())
 	if err != nil {

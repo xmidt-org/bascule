@@ -84,6 +84,7 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 			ClientIDLabel:  "",
 			PartnerIDLabel: "",
 			EndpointLabel:  "",
+			MethodLabel:    "",
 		}).Add(1)
 		if m.ErrorOut {
 			return ErrNoAuth
@@ -97,6 +98,7 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		ClientIDLabel:  client,
 		PartnerIDLabel: partnerID,
 		EndpointLabel:  endpoint,
+		MethodLabel:    auth.Request.Method,
 		OutcomeLabel:   AcceptedOutcome,
 		ReasonLabel:    "",
 	}
@@ -137,6 +139,9 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 func (m MetricValidator) prepMetrics(auth bascule.Authentication) (string, string, string, string, error) {
 	if auth.Token == nil {
 		return "", "", "", MissingValues, ErrNoToken
+	}
+	if len(auth.Request.Method) == 0 {
+		return "", "", "", MissingValues, ErrNoMethod
 	}
 	client := auth.Token.Principal()
 	if auth.Token.Attributes() == nil {

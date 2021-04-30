@@ -34,6 +34,7 @@ const (
 	ReasonLabel    = "reason"
 	ClientIDLabel  = "clientid"
 	EndpointLabel  = "endpoint"
+	MethodLabel    = "method"
 	PartnerIDLabel = "partnerid"
 	ServerLabel    = "server"
 )
@@ -67,7 +68,7 @@ func ProvideMetrics() fx.Option {
 			Help:        capabilityCheckHelpMsg,
 			ConstLabels: nil,
 		}, ServerLabel, OutcomeLabel, ReasonLabel, ClientIDLabel,
-			PartnerIDLabel, EndpointLabel),
+			PartnerIDLabel, EndpointLabel, MethodLabel),
 	)
 }
 
