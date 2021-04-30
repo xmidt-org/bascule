@@ -27,13 +27,31 @@ import (
 )
 
 var (
-	ErrNoVals                 = errors.New("expected at least one value")
-	ErrNoAuth                 = errors.New("couldn't get request info: authorization not found")
-	ErrNoToken                = errors.New("no token found in Auth")
-	ErrNoValidCapabilityFound = errors.New("no valid capability for endpoint")
-	ErrNilAttributes          = errors.New("nil attributes interface")
-	ErrNoMethod               = errors.New("no method found in Auth")
-	ErrNoURL                  = errors.New("invalid URL found in Auth")
+	ErrNoAuth = errors.New("couldn't get request info: authorization not found")
+	ErrNoVals = errWithReason{
+		err:    errors.New("expected at least one value"),
+		reason: EmptyCapabilitiesList,
+	}
+	ErrNoToken = errWithReason{
+		err:    errors.New("no token found in Auth"),
+		reason: MissingValues,
+	}
+	ErrNoValidCapabilityFound = errWithReason{
+		err:    errors.New("no valid capability for endpoint"),
+		reason: NoCapabilitiesMatch,
+	}
+	ErrNilAttributes = errWithReason{
+		err:    errors.New("nil attributes interface"),
+		reason: MissingValues,
+	}
+	ErrNoMethod = errWithReason{
+		err:    errors.New("no method found in Auth"),
+		reason: MissingValues,
+	}
+	ErrNoURL = errWithReason{
+		err:    errors.New("invalid URL found in Auth"),
+		reason: MissingValues,
+	}
 )
 
 const (
@@ -76,7 +94,7 @@ func (c CapabilitiesValidator) Check(ctx context.Context, _ bascule.Token) error
 		return nil
 	}
 
-	_, err := c.CheckAuthentication(auth, ParsedValues{})
+	err := c.CheckAuthentication(auth, ParsedValues{})
 	if err != nil && c.ErrorOut {
 		return fmt.Errorf("endpoint auth for %v on %v failed: %v",
 			auth.Request.Method, auth.Request.URL.EscapedPath(), err)
@@ -90,28 +108,24 @@ func (c CapabilitiesValidator) Check(ctx context.Context, _ bascule.Token) error
 // iterating through each capability and calling the EndpointChecker.  If no
 // capability authorizes the client for the given endpoint and method, it is
 // unauthorized.
-func (c CapabilitiesValidator) CheckAuthentication(auth bascule.Authentication, _ ParsedValues) (string, error) {
+func (c CapabilitiesValidator) CheckAuthentication(auth bascule.Authentication, _ ParsedValues) error {
 	if auth.Token == nil {
-		return MissingValues, ErrNoToken
+		return ErrNoToken
 	}
 	if len(auth.Request.Method) == 0 {
-		return MissingValues, ErrNoMethod
+		return ErrNoMethod
 	}
-	vals, reason, err := getCapabilities(auth.Token.Attributes())
+	vals, err := getCapabilities(auth.Token.Attributes())
 	if err != nil {
-		return reason, err
+		return err
 	}
 
 	if auth.Request.URL == nil {
-		return MissingValues, ErrNoURL
+		return ErrNoURL
 	}
 	reqURL := auth.Request.URL.EscapedPath()
 	method := auth.Request.Method
-	err = c.checkCapabilities(vals, reqURL, method)
-	if err != nil {
-		return NoCapabilitiesMatch, err
-	}
-	return "", nil
+	return c.checkCapabilities(vals, reqURL, method)
 }
 
 // checkCapabilities uses a EndpointChecker to check if each capability
@@ -130,25 +144,33 @@ func (c CapabilitiesValidator) checkCapabilities(capabilities []string, reqURL s
 
 // getCapabilities runs some error checks while getting the list of
 // capabilities from the attributes.
-func getCapabilities(attributes bascule.Attributes) ([]string, string, error) {
+func getCapabilities(attributes bascule.Attributes) ([]string, error) {
 	if attributes == nil {
-		return []string{}, UndeterminedCapabilities, ErrNilAttributes
+		return []string{}, ErrNilAttributes
 	}
 
 	val, ok := attributes.Get(CapabilityKey)
 	if !ok {
-		return []string{}, UndeterminedCapabilities, fmt.Errorf("couldn't get capabilities using key %v", CapabilityKey)
+		err := errWithReason{
+			err:    fmt.Errorf("couldn't get capabilities using key %v", CapabilityKey),
+			reason: UndeterminedCapabilities,
+		}
+		return []string{}, err
 	}
 
 	vals, err := cast.ToStringSliceE(val)
 	if err != nil {
-		return []string{}, UndeterminedCapabilities, fmt.Errorf("capabilities \"%v\" not the expected string slice: %v", val, err)
+		err = errWithReason{
+			err:    fmt.Errorf("capabilities \"%v\" not the expected string slice: %v", val, err),
+			reason: UndeterminedCapabilities,
+		}
+		return []string{}, err
 	}
 
 	if len(vals) == 0 {
-		return []string{}, EmptyCapabilitiesList, ErrNoVals
+		return []string{}, ErrNoVals
 	}
 
-	return vals, "", nil
+	return vals, nil
 
 }

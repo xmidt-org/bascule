@@ -18,6 +18,7 @@
 package basculechecks
 
 import (
+	"errors"
 	"net/url"
 	"testing"
 
@@ -144,7 +145,7 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 			token:          badToken,
 			includeURL:     true,
 			endpoint:       "b",
-			expectedReason: UndeterminedCapabilities,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNilAttributes,
 		},
 	}
@@ -163,8 +164,13 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 					Method: "GET",
 				}
 			}
-			reason, err := tc.cm.CheckAuthentication(auth, ParsedValues{Endpoint: tc.endpoint})
-			assert.Equal(tc.expectedReason, reason)
+			err := tc.cm.CheckAuthentication(auth, ParsedValues{Endpoint: tc.endpoint})
+			if tc.expectedReason != "" {
+				var r Reasoner
+				if assert.True(errors.As(err, &r)) {
+					assert.Equal(tc.expectedReason, r.Reason())
+				}
+			}
 			if err == nil || tc.expectedErr == nil {
 				assert.Equal(tc.expectedErr, err)
 				return

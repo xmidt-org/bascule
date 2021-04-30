@@ -47,13 +47,16 @@ func TestMetricValidatorCheck(t *testing.T) {
 			"allowedPartners": []string{"meh"},
 		},
 	})
+	cErr := errWithReason{
+		err:    errors.New("check test error"),
+		reason: NoCapabilitiesMatch,
+	}
 
 	tests := []struct {
 		description       string
 		includeAuth       bool
 		attributes        bascule.Attributes
 		checkCallExpected bool
-		checkReason       string
 		checkErr          error
 		errorOut          bool
 		errExpected       bool
@@ -135,8 +138,7 @@ func TestMetricValidatorCheck(t *testing.T) {
 			includeAuth:       true,
 			attributes:        goodAttributes,
 			checkCallExpected: true,
-			checkReason:       NoCapabilitiesMatch,
-			checkErr:          errors.New("test check error"),
+			checkErr:          cErr,
 			errorOut:          true,
 			errExpected:       true,
 			expectedLabels: prometheus.Labels{
@@ -151,8 +153,7 @@ func TestMetricValidatorCheck(t *testing.T) {
 			includeAuth:       true,
 			attributes:        goodAttributes,
 			checkCallExpected: true,
-			checkReason:       NoCapabilitiesMatch,
-			checkErr:          errors.New("test check error"),
+			checkErr:          cErr,
 			errorOut:          false,
 			expectedLabels: prometheus.Labels{
 				ServerLabel:    "testserver",
@@ -194,7 +195,8 @@ func TestMetricValidatorCheck(t *testing.T) {
 				tc.expectedLabels[EndpointLabel] = "not_recognized"
 				tc.expectedLabels[MethodLabel] = auth.Request.Method
 				tc.expectedLabels[ClientIDLabel] = auth.Token.Principal()
-				mockCapabilitiesChecker.On("CheckAuthentication", mock.Anything, mock.Anything).Return(tc.checkReason, tc.checkErr).Once()
+				mockCapabilitiesChecker.On("CheckAuthentication", mock.Anything, mock.Anything).
+					Return(tc.checkErr).Once()
 			}
 
 			mockMeasures := AuthCapabilityCheckMeasures{
@@ -248,6 +250,7 @@ func TestPrepMetrics(t *testing.T) {
 		partnerIDs        interface{}
 		url               string
 		includeToken      bool
+		includeMethod     bool
 		includeAttributes bool
 		includeURL        bool
 		expectedPartner   string
@@ -260,6 +263,7 @@ func TestPrepMetrics(t *testing.T) {
 			partnerIDs:        []string{"partner"},
 			url:               goodURL,
 			includeToken:      true,
+			includeMethod:     true,
 			includeAttributes: true,
 			includeURL:        true,
 			expectedPartner:   "partner",
@@ -272,6 +276,7 @@ func TestPrepMetrics(t *testing.T) {
 			partnerIDs:        []string{"partner"},
 			url:               matchingURL,
 			includeToken:      true,
+			includeMethod:     true,
 			includeAttributes: true,
 			includeURL:        true,
 			expectedPartner:   "partner",
@@ -285,9 +290,16 @@ func TestPrepMetrics(t *testing.T) {
 			expectedErr:    ErrNoToken,
 		},
 		{
+			description:    "No Method Error",
+			includeToken:   true,
+			expectedReason: MissingValues,
+			expectedErr:    ErrNoMethod,
+		},
+		{
 			description:    "Nil Token Attributes Error",
 			url:            goodURL,
 			includeToken:   true,
+			includeMethod:  true,
 			expectedReason: MissingValues,
 			expectedErr:    ErrNilAttributes,
 		},
@@ -296,6 +308,7 @@ func TestPrepMetrics(t *testing.T) {
 			noPartnerID:       true,
 			url:               goodURL,
 			includeToken:      true,
+			includeMethod:     true,
 			includeAttributes: true,
 			expectedPartner:   "",
 			expectedEndpoint:  "",
@@ -307,6 +320,7 @@ func TestPrepMetrics(t *testing.T) {
 			partnerIDs:        []int{0, 1, 2},
 			url:               goodURL,
 			includeToken:      true,
+			includeMethod:     true,
 			includeAttributes: true,
 			expectedPartner:   "",
 			expectedEndpoint:  "",
@@ -318,6 +332,7 @@ func TestPrepMetrics(t *testing.T) {
 			partnerIDs:        struct{ string }{},
 			url:               goodURL,
 			includeToken:      true,
+			includeMethod:     true,
 			includeAttributes: true,
 			expectedPartner:   "",
 			expectedEndpoint:  "",
@@ -329,6 +344,7 @@ func TestPrepMetrics(t *testing.T) {
 			partnerIDs:        []string{"partner"},
 			url:               goodURL,
 			includeToken:      true,
+			includeMethod:     true,
 			includeAttributes: true,
 			expectedPartner:   "partner",
 			expectedReason:    MissingValues,
@@ -362,9 +378,7 @@ func TestPrepMetrics(t *testing.T) {
 			}
 			auth := bascule.Authentication{
 				Authorization: "testAuth",
-				Request: bascule.Request{
-					Method: "get",
-				},
+				Request:       bascule.Request{},
 			}
 			if tc.includeToken {
 				auth.Token = token
@@ -374,14 +388,22 @@ func TestPrepMetrics(t *testing.T) {
 				require.Nil(err)
 				auth.Request.URL = u
 			}
+			if tc.includeMethod {
+				auth.Request.Method = "get"
+			}
 
-			c, partner, endpoint, reason, err := m.prepMetrics(auth)
-			if tc.includeToken {
+			c, partner, endpoint, err := m.prepMetrics(auth)
+			if tc.includeToken && tc.includeMethod {
 				assert.Equal(client, c)
 			}
 			assert.Equal(tc.expectedPartner, partner)
 			assert.Equal(tc.expectedEndpoint, endpoint)
-			assert.Equal(tc.expectedReason, reason)
+			if tc.expectedReason != "" {
+				var r Reasoner
+				if assert.True(errors.As(err, &r)) {
+					assert.Equal(tc.expectedReason, r.Reason())
+				}
+			}
 			if err == nil || tc.expectedErr == nil {
 				assert.Equal(tc.expectedErr, err)
 			} else {

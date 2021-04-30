@@ -144,7 +144,7 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			description:    "Get Capabilities Error",
 			includeToken:   true,
 			includeMethod:  true,
-			expectedReason: UndeterminedCapabilities,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNilAttributes,
 		},
 		{
@@ -189,8 +189,13 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			if tc.includeMethod {
 				a.Request.Method = "GET"
 			}
-			reason, err := c.CheckAuthentication(a, pv)
-			assert.Equal(tc.expectedReason, reason)
+			err := c.CheckAuthentication(a, pv)
+			if tc.expectedReason != "" {
+				var r Reasoner
+				if assert.True(errors.As(err, &r)) {
+					assert.Equal(tc.expectedReason, r.Reason())
+				}
+			}
 			if err == nil || tc.expectedErr == nil {
 				assert.Equal(tc.expectedErr, err)
 				return
@@ -263,7 +268,7 @@ func TestGetCapabilities(t *testing.T) {
 			description:    "Nil Attributes Error",
 			nilAttributes:  true,
 			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
+			expectedReason: MissingValues,
 			expectedErr:    ErrNilAttributes,
 		},
 		{
@@ -314,9 +319,14 @@ func TestGetCapabilities(t *testing.T) {
 			if tc.nilAttributes {
 				attributes = nil
 			}
-			vals, reason, err := getCapabilities(attributes)
+			vals, err := getCapabilities(attributes)
 			assert.Equal(tc.expectedVals, vals)
-			assert.Equal(tc.expectedReason, reason)
+			if tc.expectedReason != "" {
+				var r Reasoner
+				if assert.True(errors.As(err, &r)) {
+					assert.Equal(tc.expectedReason, r.Reason())
+				}
+			}
 			if err == nil || tc.expectedErr == nil {
 				assert.Equal(tc.expectedErr, err)
 			} else {

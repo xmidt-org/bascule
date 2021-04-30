@@ -19,6 +19,7 @@ package basculechecks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -29,10 +30,16 @@ import (
 )
 
 // CapabilitiesChecker is an object that can determine if a request is
-// authorized given a bascule.Authentication object.  If it's not authorized, a
-// reason and error are given for logging and metrics.
+// authorized given a bascule.Authentication object.  If it's not authorized, an
+//  error is given for logging and metrics.
 type CapabilitiesChecker interface {
-	CheckAuthentication(auth bascule.Authentication, vals ParsedValues) (string, error)
+	CheckAuthentication(auth bascule.Authentication, vals ParsedValues) error
+}
+
+// Reasoner is an error that provides a failure reason to use as a value for a
+// metric label.
+type Reasoner interface {
+	Reason() string
 }
 
 // ParsedValues are values determined from the bascule Authentication.
@@ -92,7 +99,7 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		return nil
 	}
 
-	client, partnerID, endpoint, reason, err := m.prepMetrics(auth)
+	client, partnerID, endpoint, err := m.prepMetrics(auth)
 	labels := prometheus.Labels{
 		ServerLabel:    m.Server,
 		ClientIDLabel:  client,
@@ -104,7 +111,11 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 	}
 	if err != nil {
 		labels[OutcomeLabel] = failureOutcome
-		labels[ReasonLabel] = reason
+		labels[ReasonLabel] = UnknownReason
+		var r Reasoner
+		if errors.As(err, &r) {
+			labels[ReasonLabel] = r.Reason()
+		}
 		m.Measures.CapabilityCheckOutcome.With(labels).Add(1)
 		if m.ErrorOut {
 			return err
@@ -117,10 +128,14 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		Partner:  partnerID,
 	}
 
-	reason, err = m.C.CheckAuthentication(auth, v)
+	err = m.C.CheckAuthentication(auth, v)
 	if err != nil {
 		labels[OutcomeLabel] = failureOutcome
-		labels[ReasonLabel] = reason
+		labels[ReasonLabel] = UnknownReason
+		var r Reasoner
+		if errors.As(err, &r) {
+			labels[ReasonLabel] = r.Reason()
+		}
 		m.Measures.CapabilityCheckOutcome.With(labels).Add(1)
 		if m.ErrorOut {
 			return fmt.Errorf("endpoint auth for %v on %v failed: %v",
@@ -136,34 +151,42 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 // prepMetrics gathers the information needed for metric label information.  It
 // gathers the client ID, partnerID, and endpoint (bucketed) for more information
 // on the metric when a request is unauthorized.
-func (m MetricValidator) prepMetrics(auth bascule.Authentication) (string, string, string, string, error) {
+func (m MetricValidator) prepMetrics(auth bascule.Authentication) (string, string, string, error) {
 	if auth.Token == nil {
-		return "", "", "", MissingValues, ErrNoToken
+		return "", "", "", ErrNoToken
 	}
 	if len(auth.Request.Method) == 0 {
-		return "", "", "", MissingValues, ErrNoMethod
+		return "", "", "", ErrNoMethod
 	}
 	client := auth.Token.Principal()
 	if auth.Token.Attributes() == nil {
-		return client, "", "", MissingValues, ErrNilAttributes
+		return client, "", "", ErrNilAttributes
 	}
 
 	partnerVal, ok := bascule.GetNestedAttribute(auth.Token.Attributes(), PartnerKeys()...)
 	if !ok {
-		return client, "", "", UndeterminedPartnerID, fmt.Errorf("couldn't get partner IDs from attributes using keys %v", PartnerKeys())
+		err := errWithReason{
+			err:    fmt.Errorf("couldn't get partner IDs from attributes using keys %v", PartnerKeys()),
+			reason: UndeterminedPartnerID,
+		}
+		return client, "", "", err
 	}
 	partnerIDs, err := cast.ToStringSliceE(partnerVal)
 	if err != nil {
-		return client, "", "", UndeterminedPartnerID, fmt.Errorf("partner IDs \"%v\" couldn't be cast to string slice: %v", partnerVal, err)
+		err = errWithReason{
+			err:    fmt.Errorf("partner IDs \"%v\" couldn't be cast to string slice: %v", partnerVal, err),
+			reason: UndeterminedPartnerID,
+		}
+		return client, "", "", err
 	}
 	partnerID := DeterminePartnerMetric(partnerIDs)
 
 	if auth.Request.URL == nil {
-		return client, partnerID, "", MissingValues, ErrNoURL
+		return client, partnerID, "", ErrNoURL
 	}
 	escapedURL := auth.Request.URL.EscapedPath()
 	endpoint := determineEndpointMetric(m.Endpoints, escapedURL)
-	return client, partnerID, endpoint, "", nil
+	return client, partnerID, endpoint, nil
 }
 
 // DeterminePartnerMetric takes a list of partners and decides what the partner
