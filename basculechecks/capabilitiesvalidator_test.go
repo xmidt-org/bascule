@@ -114,6 +114,7 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 	tests := []struct {
 		description       string
 		includeToken      bool
+		includeMethod     bool
 		includeAttributes bool
 		includeURL        bool
 		checker           EndpointChecker
@@ -122,6 +123,7 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 	}{
 		{
 			description:       "Success",
+			includeMethod:     true,
 			includeAttributes: true,
 			includeURL:        true,
 			checker:           ConstEndpointCheck("it's a match"),
@@ -133,20 +135,29 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			expectedErr:    ErrNoToken,
 		},
 		{
+			description:    "No Method Error",
+			includeToken:   true,
+			expectedReason: MissingValues,
+			expectedErr:    ErrNoMethod,
+		},
+		{
 			description:    "Get Capabilities Error",
 			includeToken:   true,
+			includeMethod:  true,
 			expectedReason: UndeterminedCapabilities,
 			expectedErr:    ErrNilAttributes,
 		},
 		{
 			description:       "No URL Error",
 			includeAttributes: true,
+			includeMethod:     true,
 			expectedReason:    MissingValues,
 			expectedErr:       ErrNoURL,
 		},
 		{
 			description:       "Check Capabilities Error",
 			includeAttributes: true,
+			includeMethod:     true,
 			includeURL:        true,
 			checker:           AlwaysEndpointCheck(false),
 			expectedReason:    NoCapabilitiesMatch,
@@ -172,9 +183,11 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 				goodURL, err := url.Parse("/test")
 				require.Nil(err)
 				a.Request = bascule.Request{
-					URL:    goodURL,
-					Method: "GET",
+					URL: goodURL,
 				}
+			}
+			if tc.includeMethod {
+				a.Request.Method = "GET"
 			}
 			reason, err := c.CheckAuthentication(a, pv)
 			assert.Equal(tc.expectedReason, reason)

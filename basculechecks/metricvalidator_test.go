@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/touchstone/touchtest"
 )
 
 func TestMetricValidatorCheck(t *testing.T) {
@@ -56,6 +57,7 @@ func TestMetricValidatorCheck(t *testing.T) {
 		checkErr          error
 		errorOut          bool
 		errExpected       bool
+		expectedLabels    prometheus.Labels
 	}{
 		{
 			description:       "Success",
@@ -63,15 +65,39 @@ func TestMetricValidatorCheck(t *testing.T) {
 			attributes:        goodAttributes,
 			checkCallExpected: true,
 			errorOut:          true,
+			expectedLabels: prometheus.Labels{
+				ServerLabel:    "testserver",
+				PartnerIDLabel: "meh",
+				OutcomeLabel:   AcceptedOutcome,
+				ReasonLabel:    "",
+			},
 		},
 		{
 			description: "Include Auth Error",
 			errorOut:    true,
 			errExpected: true,
+			expectedLabels: prometheus.Labels{
+				ServerLabel:    "testserver",
+				OutcomeLabel:   RejectedOutcome,
+				ReasonLabel:    TokenMissing,
+				ClientIDLabel:  "",
+				PartnerIDLabel: "",
+				EndpointLabel:  "",
+				MethodLabel:    "",
+			},
 		},
 		{
 			description: "Include Auth Suppressed Error",
 			errorOut:    false,
+			expectedLabels: prometheus.Labels{
+				ServerLabel:    "testserver",
+				OutcomeLabel:   AcceptedOutcome,
+				ReasonLabel:    TokenMissing,
+				ClientIDLabel:  "",
+				PartnerIDLabel: "",
+				EndpointLabel:  "",
+				MethodLabel:    "",
+			},
 		},
 		{
 			description: "Prep Metrics Error",
@@ -79,12 +105,30 @@ func TestMetricValidatorCheck(t *testing.T) {
 			attributes:  nil,
 			errorOut:    true,
 			errExpected: true,
+			expectedLabels: prometheus.Labels{
+				ServerLabel:    "testserver",
+				OutcomeLabel:   RejectedOutcome,
+				ReasonLabel:    MissingValues,
+				ClientIDLabel:  "princ",
+				PartnerIDLabel: "",
+				EndpointLabel:  "",
+				MethodLabel:    "GET",
+			},
 		},
 		{
 			description: "Prep Metrics Suppressed Error",
 			includeAuth: true,
 			attributes:  nil,
 			errorOut:    false,
+			expectedLabels: prometheus.Labels{
+				ServerLabel:    "testserver",
+				OutcomeLabel:   AcceptedOutcome,
+				ReasonLabel:    MissingValues,
+				ClientIDLabel:  "princ",
+				PartnerIDLabel: "",
+				EndpointLabel:  "",
+				MethodLabel:    "GET",
+			},
 		},
 		{
 			description:       "Check Error",
@@ -95,6 +139,12 @@ func TestMetricValidatorCheck(t *testing.T) {
 			checkErr:          errors.New("test check error"),
 			errorOut:          true,
 			errExpected:       true,
+			expectedLabels: prometheus.Labels{
+				ServerLabel:    "testserver",
+				OutcomeLabel:   RejectedOutcome,
+				ReasonLabel:    NoCapabilitiesMatch,
+				PartnerIDLabel: "meh",
+			},
 		},
 		{
 			description:       "Check Suppressed Error",
@@ -104,11 +154,29 @@ func TestMetricValidatorCheck(t *testing.T) {
 			checkReason:       NoCapabilitiesMatch,
 			checkErr:          errors.New("test check error"),
 			errorOut:          false,
+			expectedLabels: prometheus.Labels{
+				ServerLabel:    "testserver",
+				OutcomeLabel:   AcceptedOutcome,
+				ReasonLabel:    NoCapabilitiesMatch,
+				PartnerIDLabel: "meh",
+			},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
+			testAssert := touchtest.New(t)
+			expectedRegistry := prometheus.NewPedanticRegistry()
+			expectedCounter := prometheus.NewCounterVec(
+				prometheus.CounterOpts{
+					Name: "testCounter",
+					Help: "testCounter",
+				},
+				[]string{ServerLabel, OutcomeLabel, ReasonLabel, ClientIDLabel,
+					PartnerIDLabel, EndpointLabel, MethodLabel},
+			)
+			expectedRegistry.Register(expectedCounter)
+			actualRegistry := prometheus.NewPedanticRegistry()
 
 			ctx := context.Background()
 			auth := bascule.Authentication{
@@ -123,24 +191,30 @@ func TestMetricValidatorCheck(t *testing.T) {
 			}
 			mockCapabilitiesChecker := new(mockCapabilitiesChecker)
 			if tc.checkCallExpected {
+				tc.expectedLabels[EndpointLabel] = "not_recognized"
+				tc.expectedLabels[MethodLabel] = auth.Request.Method
+				tc.expectedLabels[ClientIDLabel] = auth.Token.Principal()
 				mockCapabilitiesChecker.On("CheckAuthentication", mock.Anything, mock.Anything).Return(tc.checkReason, tc.checkErr).Once()
 			}
 
 			mockMeasures := AuthCapabilityCheckMeasures{
 				CapabilityCheckOutcome: prometheus.NewCounterVec(
 					prometheus.CounterOpts{
-						Name: "testMetadataCounter",
-						Help: "testMetadataCounter",
+						Name: "testCounter",
+						Help: "testCounter",
 					},
 					[]string{ServerLabel, OutcomeLabel, ReasonLabel, ClientIDLabel,
-						PartnerIDLabel, EndpointLabel},
+						PartnerIDLabel, EndpointLabel, MethodLabel},
 				),
 			}
+			actualRegistry.MustRegister(mockMeasures.CapabilityCheckOutcome)
+			expectedCounter.With(tc.expectedLabels).Inc()
 
 			m := MetricValidator{
 				C:        mockCapabilitiesChecker,
 				Measures: &mockMeasures,
 				ErrorOut: tc.errorOut,
+				Server:   "testserver",
 			}
 			err := m.Check(ctx, nil)
 			mockCapabilitiesChecker.AssertExpectations(t)
@@ -149,6 +223,8 @@ func TestMetricValidatorCheck(t *testing.T) {
 				return
 			}
 			assert.Nil(err)
+			testAssert.Expect(expectedRegistry)
+			assert.True(testAssert.GatherAndCompare(actualRegistry))
 		})
 	}
 }
