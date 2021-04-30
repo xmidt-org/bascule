@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Moved checks to their own package and added capability checks. [#85](https://github.com/xmidt-org/bascule/pull/85)
 - Removed emperror package dependency. [#94](https://github.com/xmidt-org/bascule/pull/94)
 - Converted basculechecks to use touchstone metrics. [#95](https://github.com/xmidt-org/bascule/pull/95)
+- Added method label to metric validator. [#96](https://github.com/xmidt-org/bascule/pull/96)
 
 ## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
