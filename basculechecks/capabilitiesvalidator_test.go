@@ -251,12 +251,20 @@ func TestGetCapabilities(t *testing.T) {
 		description      string
 		nilAttributes    bool
 		missingAttribute bool
+		key              []string
 		keyValue         interface{}
 		expectedVals     []string
 		expectedErr      error
 	}{
 		{
 			description:  "Success",
+			key:          []string{"test", "a", "b"},
+			keyValue:     goodKeyVal,
+			expectedVals: goodKeyVal,
+			expectedErr:  nil,
+		},
+		{
+			description:  "Success with default key",
 			keyValue:     goodKeyVal,
 			expectedVals: goodKeyVal,
 			expectedErr:  nil,
@@ -303,6 +311,12 @@ func TestGetCapabilities(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
 			m := map[string]interface{}{CapabilityKey: tc.keyValue}
+			if len(tc.key) > 0 {
+				m = map[string]interface{}{tc.key[len(tc.key)-1]: tc.keyValue}
+				for i := len(tc.key) - 2; i >= 0; i-- {
+					m = map[string]interface{}{tc.key[i]: m}
+				}
+			}
 			if tc.missingAttribute {
 				m = map[string]interface{}{}
 			}
@@ -310,7 +324,7 @@ func TestGetCapabilities(t *testing.T) {
 			if tc.nilAttributes {
 				attributes = nil
 			}
-			vals, err := getCapabilities(attributes)
+			vals, err := getCapabilities(attributes, tc.key)
 			assert.Equal(tc.expectedVals, vals)
 			if tc.expectedErr == nil {
 				assert.NoError(err)
