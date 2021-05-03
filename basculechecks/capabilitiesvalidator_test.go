@@ -20,6 +20,7 @@ package basculechecks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -118,7 +119,6 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 		includeAttributes bool
 		includeURL        bool
 		checker           EndpointChecker
-		expectedReason    string
 		expectedErr       error
 	}{
 		{
@@ -130,28 +130,24 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			expectedErr:       nil,
 		},
 		{
-			description:    "No Token Error",
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoToken,
+			description: "No Token Error",
+			expectedErr: ErrNoToken,
 		},
 		{
-			description:    "No Method Error",
-			includeToken:   true,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoMethod,
+			description:  "No Method Error",
+			includeToken: true,
+			expectedErr:  ErrNoMethod,
 		},
 		{
-			description:    "Get Capabilities Error",
-			includeToken:   true,
-			includeMethod:  true,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNilAttributes,
+			description:   "Get Capabilities Error",
+			includeToken:  true,
+			includeMethod: true,
+			expectedErr:   ErrNilAttributes,
 		},
 		{
 			description:       "No URL Error",
 			includeAttributes: true,
 			includeMethod:     true,
-			expectedReason:    MissingValues,
 			expectedErr:       ErrNoURL,
 		},
 		{
@@ -160,7 +156,6 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			includeMethod:     true,
 			includeURL:        true,
 			checker:           AlwaysEndpointCheck(false),
-			expectedReason:    NoCapabilitiesMatch,
 			expectedErr:       ErrNoValidCapabilityFound,
 		},
 	}
@@ -190,17 +185,17 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 				a.Request.Method = "GET"
 			}
 			err := c.CheckAuthentication(a, pv)
-			if tc.expectedReason != "" {
-				var r Reasoner
-				if assert.True(errors.As(err, &r)) {
-					assert.Equal(tc.expectedReason, r.Reason())
-				}
-			}
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
+			if tc.expectedErr == nil {
+				assert.NoError(err)
 				return
 			}
-			assert.Contains(err.Error(), tc.expectedErr.Error())
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }
@@ -234,11 +229,17 @@ func TestCheckCapabilities(t *testing.T) {
 				Checker: ConstEndpointCheck(tc.goodCapability),
 			}
 			err := c.checkCapabilities(capabilities, "", "")
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
+			if tc.expectedErr == nil {
+				assert.NoError(err)
 				return
 			}
-			assert.Contains(err.Error(), tc.expectedErr.Error())
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }
@@ -315,10 +316,13 @@ func TestGetCapabilities(t *testing.T) {
 				assert.NoError(err)
 				return
 			}
-			assert.True(errors.Is(err, tc.expectedErr))
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
 			// every error should be a reasoner.
 			var r Reasoner
-			assert.True(errors.As(err, &r))
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }

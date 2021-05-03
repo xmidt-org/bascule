@@ -20,6 +20,7 @@ package basculechecks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
 	"testing"
@@ -390,10 +391,13 @@ func TestPrepMetrics(t *testing.T) {
 				assert.NoError(err)
 				return
 			}
-			assert.True(errors.Is(err, tc.expectedErr))
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
 			// every error should be a reasoner.
 			var r Reasoner
-			assert.True(errors.As(err, &r))
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }
