@@ -236,8 +236,6 @@ func TestPrepMetrics(t *testing.T) {
 		goodURL        = "/asnkfn/aefkijeoij/aiogj"
 		matchingURL    = "/fnvvdsjkfji/mac:12345544322345334/geigosj"
 		client         = "special"
-		prepErr        = errors.New("couldn't get partner IDs from attributes")
-		badValErr      = errors.New("couldn't be cast to string slice")
 		goodEndpoint   = `/fnvvdsjkfji/.*/geigosj\b`
 		goodRegex      = regexp.MustCompile(goodEndpoint)
 		unusedEndpoint = `/a/b\b`
@@ -255,7 +253,6 @@ func TestPrepMetrics(t *testing.T) {
 		includeURL        bool
 		expectedPartner   string
 		expectedEndpoint  string
-		expectedReason    string
 		expectedErr       error
 	}{
 		{
@@ -268,7 +265,6 @@ func TestPrepMetrics(t *testing.T) {
 			includeURL:        true,
 			expectedPartner:   "partner",
 			expectedEndpoint:  "not_recognized",
-			expectedReason:    "",
 			expectedErr:       nil,
 		},
 		{
@@ -281,27 +277,23 @@ func TestPrepMetrics(t *testing.T) {
 			includeURL:        true,
 			expectedPartner:   "partner",
 			expectedEndpoint:  goodEndpoint,
-			expectedReason:    "",
 			expectedErr:       nil,
 		},
 		{
-			description:    "Nil Token Error",
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoToken,
+			description: "Nil Token Error",
+			expectedErr: ErrNoToken,
 		},
 		{
-			description:    "No Method Error",
-			includeToken:   true,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoMethod,
+			description:  "No Method Error",
+			includeToken: true,
+			expectedErr:  ErrNoMethod,
 		},
 		{
-			description:    "Nil Token Attributes Error",
-			url:            goodURL,
-			includeToken:   true,
-			includeMethod:  true,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNilAttributes,
+			description:   "Nil Token Attributes Error",
+			url:           goodURL,
+			includeToken:  true,
+			includeMethod: true,
+			expectedErr:   ErrNilAttributes,
 		},
 		{
 			description:       "No Partner ID Error",
@@ -312,8 +304,7 @@ func TestPrepMetrics(t *testing.T) {
 			includeAttributes: true,
 			expectedPartner:   "",
 			expectedEndpoint:  "",
-			expectedReason:    UndeterminedPartnerID,
-			expectedErr:       prepErr,
+			expectedErr:       ErrGettingPartnerIDs,
 		},
 		{
 			description:       "Non String Slice Partner ID Error",
@@ -324,8 +315,7 @@ func TestPrepMetrics(t *testing.T) {
 			includeAttributes: true,
 			expectedPartner:   "",
 			expectedEndpoint:  "",
-			expectedReason:    UndeterminedPartnerID,
-			expectedErr:       badValErr,
+			expectedErr:       ErrPartnerIDsNotStringSlice,
 		},
 		{
 			description:       "Non Slice Partner ID Error",
@@ -336,8 +326,7 @@ func TestPrepMetrics(t *testing.T) {
 			includeAttributes: true,
 			expectedPartner:   "",
 			expectedEndpoint:  "",
-			expectedReason:    UndeterminedPartnerID,
-			expectedErr:       badValErr,
+			expectedErr:       ErrPartnerIDsNotStringSlice,
 		},
 		{
 			description:       "Nil URL Error",
@@ -347,7 +336,6 @@ func TestPrepMetrics(t *testing.T) {
 			includeMethod:     true,
 			includeAttributes: true,
 			expectedPartner:   "partner",
-			expectedReason:    MissingValues,
 			expectedErr:       ErrNoURL,
 		},
 	}
@@ -398,17 +386,14 @@ func TestPrepMetrics(t *testing.T) {
 			}
 			assert.Equal(tc.expectedPartner, partner)
 			assert.Equal(tc.expectedEndpoint, endpoint)
-			if tc.expectedReason != "" {
-				var r Reasoner
-				if assert.True(errors.As(err, &r)) {
-					assert.Equal(tc.expectedReason, r.Reason())
-				}
+			if tc.expectedErr == nil {
+				assert.NoError(err)
+				return
 			}
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
-			} else {
-				assert.Contains(err.Error(), tc.expectedErr.Error())
-			}
+			assert.True(errors.Is(err, tc.expectedErr))
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r))
 		})
 	}
 }

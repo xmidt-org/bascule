@@ -29,6 +29,17 @@ import (
 	"go.uber.org/fx"
 )
 
+var (
+	ErrGettingPartnerIDs = errWithReason{
+		err:    errors.New("couldn't get partner IDs from attributes"),
+		reason: UndeterminedPartnerID,
+	}
+	ErrPartnerIDsNotStringSlice = errWithReason{
+		err:    errors.New("expected a string slice"),
+		reason: UndeterminedPartnerID,
+	}
+)
+
 // CapabilitiesChecker is an object that can determine if a request is
 // authorized given a bascule.Authentication object.  If it's not authorized, an
 //  error is given for logging and metrics.
@@ -165,18 +176,13 @@ func (m MetricValidator) prepMetrics(auth bascule.Authentication) (string, strin
 
 	partnerVal, ok := bascule.GetNestedAttribute(auth.Token.Attributes(), PartnerKeys()...)
 	if !ok {
-		err := errWithReason{
-			err:    fmt.Errorf("couldn't get partner IDs from attributes using keys %v", PartnerKeys()),
-			reason: UndeterminedPartnerID,
-		}
+		err := fmt.Errorf("%w using keys %v", ErrGettingPartnerIDs, PartnerKeys())
 		return client, "", "", err
 	}
 	partnerIDs, err := cast.ToStringSliceE(partnerVal)
 	if err != nil {
-		err = errWithReason{
-			err:    fmt.Errorf("partner IDs \"%v\" couldn't be cast to string slice: %v", partnerVal, err),
-			reason: UndeterminedPartnerID,
-		}
+		err = fmt.Errorf("%w for partner IDs \"%v\": %v",
+			ErrPartnerIDsNotStringSlice, partnerVal, err)
 		return client, "", "", err
 	}
 	partnerID := DeterminePartnerMetric(partnerIDs)

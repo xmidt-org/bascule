@@ -246,65 +246,55 @@ func TestCheckCapabilities(t *testing.T) {
 func TestGetCapabilities(t *testing.T) {
 	goodKeyVal := []string{"cap1", "cap2"}
 	emptyVal := []string{}
-	getCapabilitiesErr := errors.New("couldn't get capabilities using key")
-	badCapabilitiesErr := errors.New("not the expected string slice")
 	tests := []struct {
 		description      string
 		nilAttributes    bool
 		missingAttribute bool
 		keyValue         interface{}
 		expectedVals     []string
-		expectedReason   string
 		expectedErr      error
 	}{
 		{
-			description:    "Success",
-			keyValue:       goodKeyVal,
-			expectedVals:   goodKeyVal,
-			expectedReason: "",
-			expectedErr:    nil,
+			description:  "Success",
+			keyValue:     goodKeyVal,
+			expectedVals: goodKeyVal,
+			expectedErr:  nil,
 		},
 		{
-			description:    "Nil Attributes Error",
-			nilAttributes:  true,
-			expectedVals:   emptyVal,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNilAttributes,
+			description:   "Nil Attributes Error",
+			nilAttributes: true,
+			expectedVals:  emptyVal,
+			expectedErr:   ErrNilAttributes,
 		},
 		{
 			description:      "No Attribute Error",
 			missingAttribute: true,
 			expectedVals:     emptyVal,
-			expectedReason:   UndeterminedCapabilities,
-			expectedErr:      getCapabilitiesErr,
+			expectedErr:      ErrGettingCapabilities,
 		},
 		{
-			description:    "Nil Capabilities Error",
-			keyValue:       nil,
-			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    badCapabilitiesErr,
+			description:  "Nil Capabilities Error",
+			keyValue:     nil,
+			expectedVals: emptyVal,
+			expectedErr:  ErrCapabilityNotStringSlice,
 		},
 		{
-			description:    "Non List Capabilities Error",
-			keyValue:       struct{ string }{"abcd"},
-			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    badCapabilitiesErr,
+			description:  "Non List Capabilities Error",
+			keyValue:     struct{ string }{"abcd"},
+			expectedVals: emptyVal,
+			expectedErr:  ErrCapabilityNotStringSlice,
 		},
 		{
-			description:    "Non String List Capabilities Error",
-			keyValue:       []int{0, 1, 2},
-			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    badCapabilitiesErr,
+			description:  "Non String List Capabilities Error",
+			keyValue:     []int{0, 1, 2},
+			expectedVals: emptyVal,
+			expectedErr:  ErrCapabilityNotStringSlice,
 		},
 		{
-			description:    "Empty Capabilities Error",
-			keyValue:       emptyVal,
-			expectedVals:   emptyVal,
-			expectedReason: EmptyCapabilitiesList,
-			expectedErr:    ErrNoVals,
+			description:  "Empty Capabilities Error",
+			keyValue:     emptyVal,
+			expectedVals: emptyVal,
+			expectedErr:  ErrNoVals,
 		},
 	}
 
@@ -321,17 +311,14 @@ func TestGetCapabilities(t *testing.T) {
 			}
 			vals, err := getCapabilities(attributes)
 			assert.Equal(tc.expectedVals, vals)
-			if tc.expectedReason != "" {
-				var r Reasoner
-				if assert.True(errors.As(err, &r)) {
-					assert.Equal(tc.expectedReason, r.Reason())
-				}
+			if tc.expectedErr == nil {
+				assert.NoError(err)
+				return
 			}
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
-			} else {
-				assert.Contains(err.Error(), tc.expectedErr.Error())
-			}
+			assert.True(errors.Is(err, tc.expectedErr))
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r))
 		})
 	}
 }

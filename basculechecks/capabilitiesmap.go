@@ -75,12 +75,9 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 	// if the checker is nil, we treat it like a checker that always returns
 	// false.
 	if checker == nil {
-		err := errWithReason{
-			err: fmt.Errorf("%w in [%v] with nil endpoint checker",
-				ErrNoValidCapabilityFound, capabilities),
-			reason: NoCapabilitiesMatch,
-		}
-		return err
+		// ErrNoValidCapabilityFound is a Reasoner.
+		return fmt.Errorf("%w in [%v] with nil endpoint checker",
+			ErrNoValidCapabilityFound, capabilities)
 	}
 
 	// if one of the capabilities is good, then the request is authorized
@@ -91,11 +88,6 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 		}
 	}
 
-	err = errWithReason{
-		err: fmt.Errorf("%w in [%v] with %v endpoint checker",
-			ErrNoValidCapabilityFound, capabilities, checker.Name()),
-		reason: NoCapabilitiesMatch,
-	}
-	return err
-
+	return fmt.Errorf("%w in [%v] with %v endpoint checker",
+		ErrNoValidCapabilityFound, capabilities, checker.Name())
 }

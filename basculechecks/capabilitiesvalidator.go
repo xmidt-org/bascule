@@ -52,6 +52,14 @@ var (
 		err:    errors.New("invalid URL found in Auth"),
 		reason: MissingValues,
 	}
+	ErrGettingCapabilities = errWithReason{
+		err:    errors.New("couldn't get capabilities from attributes"),
+		reason: UndeterminedCapabilities,
+	}
+	ErrCapabilityNotStringSlice = errWithReason{
+		err:    errors.New("expected a string slice"),
+		reason: UndeterminedCapabilities,
+	}
 )
 
 const (
@@ -151,20 +159,14 @@ func getCapabilities(attributes bascule.Attributes) ([]string, error) {
 
 	val, ok := attributes.Get(CapabilityKey)
 	if !ok {
-		err := errWithReason{
-			err:    fmt.Errorf("couldn't get capabilities using key %v", CapabilityKey),
-			reason: UndeterminedCapabilities,
-		}
-		return []string{}, err
+		return []string{}, fmt.Errorf("%w using key path %v",
+			ErrGettingCapabilities, CapabilityKey)
 	}
 
 	vals, err := cast.ToStringSliceE(val)
 	if err != nil {
-		err = errWithReason{
-			err:    fmt.Errorf("capabilities \"%v\" not the expected string slice: %v", val, err),
-			reason: UndeterminedCapabilities,
-		}
-		return []string{}, err
+		return []string{}, fmt.Errorf("%w for capabilities \"%v\": %v",
+			ErrCapabilityNotStringSlice, val, err)
 	}
 
 	if len(vals) == 0 {
