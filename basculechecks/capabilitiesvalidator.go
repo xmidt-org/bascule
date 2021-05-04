@@ -87,7 +87,7 @@ type EndpointChecker interface {
 // pulls the Authentication object from a context before checking it.
 type CapabilitiesValidator struct {
 	Checker  EndpointChecker
-	Key      []string
+	KeyPath  []string
 	ErrorOut bool
 }
 
@@ -124,7 +124,7 @@ func (c CapabilitiesValidator) CheckAuthentication(auth bascule.Authentication, 
 	if len(auth.Request.Method) == 0 {
 		return ErrNoMethod
 	}
-	vals, err := getCapabilities(auth.Token.Attributes(), c.Key)
+	vals, err := getCapabilities(auth.Token.Attributes(), c.KeyPath)
 	if err != nil {
 		return err
 	}
@@ -153,19 +153,19 @@ func (c CapabilitiesValidator) checkCapabilities(capabilities []string, reqURL s
 
 // getCapabilities runs some error checks while getting the list of
 // capabilities from the attributes.
-func getCapabilities(attributes bascule.Attributes, key []string) ([]string, error) {
+func getCapabilities(attributes bascule.Attributes, keyPath []string) ([]string, error) {
 	if attributes == nil {
 		return []string{}, ErrNilAttributes
 	}
 
-	if len(key) == 0 {
-		key = []string{CapabilityKey}
+	if len(keyPath) == 0 {
+		keyPath = []string{CapabilityKey}
 	}
 
-	val, ok := bascule.GetNestedAttribute(attributes, key...)
+	val, ok := bascule.GetNestedAttribute(attributes, keyPath...)
 	if !ok {
 		return []string{}, fmt.Errorf("%w using key path %v",
-			ErrGettingCapabilities, CapabilityKey)
+			ErrGettingCapabilities, keyPath)
 	}
 
 	vals, err := cast.ToStringSliceE(val)

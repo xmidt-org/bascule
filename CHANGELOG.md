@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Converted basculechecks to use touchstone metrics. [#95](https://github.com/xmidt-org/bascule/pull/95)
 - Added method label to metric validator. [#96](https://github.com/xmidt-org/bascule/pull/96)
 - Update errors to include reason used by metric validator. [#97](https://github.com/xmidt-org/bascule/pull/97)
-- Made Capability Key comfigurable for CapabilitiesValidator and CapabilitiesMap. [#98](https://github.com/xmidt-org/bascule/pull/98)
+- Made Capability Key configurable for CapabilitiesValidator and CapabilitiesMap. [#98](https://github.com/xmidt-org/bascule/pull/98)
 
 ## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)

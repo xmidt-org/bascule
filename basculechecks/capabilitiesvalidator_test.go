@@ -310,13 +310,7 @@ func TestGetCapabilities(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
-			m := map[string]interface{}{CapabilityKey: tc.keyValue}
-			if len(tc.key) > 0 {
-				m = map[string]interface{}{tc.key[len(tc.key)-1]: tc.keyValue}
-				for i := len(tc.key) - 2; i >= 0; i-- {
-					m = map[string]interface{}{tc.key[i]: m}
-				}
-			}
+			m := buildDummyAttributes(tc.key, tc.keyValue)
 			if tc.missingAttribute {
 				m = map[string]interface{}{}
 			}
@@ -339,4 +333,17 @@ func TestGetCapabilities(t *testing.T) {
 			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
+}
+
+func buildDummyAttributes(keyPath []string, val interface{}) map[string]interface{} {
+	keyLen := len(keyPath)
+	if keyLen == 0 {
+		return map[string]interface{}{CapabilityKey: val}
+	}
+	m := map[string]interface{}{keyPath[keyLen-1]: val}
+	// we want to move out from the inner most map.
+	for i := keyLen - 2; i >= 0; i-- {
+		m = map[string]interface{}{keyPath[i]: m}
+	}
+	return m
 }

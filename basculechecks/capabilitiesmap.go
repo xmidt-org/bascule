@@ -39,7 +39,7 @@ var (
 type CapabilitiesMap struct {
 	Checkers       map[string]EndpointChecker
 	DefaultChecker EndpointChecker
-	Key            []string
+	KeyPath        []string
 }
 
 // Check uses the parsed endpoint value to determine which EndpointChecker to
@@ -60,7 +60,7 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 		return ErrEmptyEndpoint
 	}
 
-	capabilities, err := getCapabilities(auth.Token.Attributes(), c.Key)
+	capabilities, err := getCapabilities(auth.Token.Attributes(), c.KeyPath)
 	if err != nil {
 		return err
 	}
