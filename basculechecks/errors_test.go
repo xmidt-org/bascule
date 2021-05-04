@@ -18,15 +18,24 @@
 package basculechecks
 
 import (
-	"github.com/stretchr/testify/mock"
-	"github.com/xmidt-org/bascule"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-type mockCapabilitiesChecker struct {
-	mock.Mock
-}
+func TestErrorWithReason(t *testing.T) {
+	assert := assert.New(t)
+	testErr := errors.New("test err")
+	e := errWithReason{
+		err:    testErr,
+		reason: "who knows",
+	}
+	var r Reasoner = e
+	assert.Equal("who knows", r.Reason())
 
-func (m *mockCapabilitiesChecker) CheckAuthentication(auth bascule.Authentication, v ParsedValues) error {
-	args := m.Called(auth, v)
-	return args.Error(0)
+	var ee error = e
+	assert.Equal("test err", ee.Error())
+
+	assert.Equal(testErr, e.Unwrap())
 }

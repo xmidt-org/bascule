@@ -26,7 +26,10 @@ import (
 
 var (
 	ErrNilDefaultChecker = errors.New("default checker cannot be nil")
-	ErrEmptyEndpoint     = errors.New("endpoint provided is empty")
+	ErrEmptyEndpoint     = errWithReason{
+		err:    errors.New("endpoint provided is empty"),
+		reason: EmptyParsedURL,
+	}
 )
 
 // CapabilitiesMap runs a capability check based on the value of the parsedURL,
@@ -43,22 +46,22 @@ type CapabilitiesMap struct {
 // EndpointChecker for the endpoint, the default is used.  As long as one
 // capability is found to be authorized by the EndpointChecker, no error is
 // returned.
-func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs ParsedValues) (string, error) {
+func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs ParsedValues) error {
 	if auth.Token == nil {
-		return MissingValues, ErrNoToken
+		return ErrNoToken
 	}
 
 	if auth.Request.URL == nil {
-		return MissingValues, ErrNoURL
+		return ErrNoURL
 	}
 
 	if vs.Endpoint == "" {
-		return EmptyParsedURL, ErrEmptyEndpoint
+		return ErrEmptyEndpoint
 	}
 
-	capabilities, reason, err := getCapabilities(auth.Token.Attributes())
+	capabilities, err := getCapabilities(auth.Token.Attributes())
 	if err != nil {
-		return reason, err
+		return err
 	}
 
 	// determine which EndpointChecker to use.
@@ -72,7 +75,8 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 	// if the checker is nil, we treat it like a checker that always returns
 	// false.
 	if checker == nil {
-		return NoCapabilitiesMatch, fmt.Errorf("%w in [%v] with nil endpoint checker",
+		// ErrNoValidCapabilityFound is a Reasoner.
+		return fmt.Errorf("%w in [%v] with nil endpoint checker",
 			ErrNoValidCapabilityFound, capabilities)
 	}
 
@@ -80,11 +84,10 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 	// for this endpoint.
 	for _, capability := range capabilities {
 		if checker.Authorized(capability, reqURL, method) {
-			return "", nil
+			return nil
 		}
 	}
 
-	return NoCapabilitiesMatch, fmt.Errorf("%w in [%v] with %v endpoint checker",
+	return fmt.Errorf("%w in [%v] with %v endpoint checker",
 		ErrNoValidCapabilityFound, capabilities, checker.Name())
-
 }

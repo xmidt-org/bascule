@@ -44,6 +44,7 @@ const (
 	RejectedOutcome = "rejected"
 	AcceptedOutcome = "accepted"
 	// reasons
+	UnknownReason            = "unknown"
 	TokenMissing             = "auth_missing"
 	UndeterminedPartnerID    = "undetermined_partner_ID"
 	UndeterminedCapabilities = "undetermined_capabilities"

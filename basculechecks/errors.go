@@ -17,16 +17,19 @@
 
 package basculechecks
 
-import (
-	"github.com/stretchr/testify/mock"
-	"github.com/xmidt-org/bascule"
-)
-
-type mockCapabilitiesChecker struct {
-	mock.Mock
+type errWithReason struct {
+	err    error
+	reason string
 }
 
-func (m *mockCapabilitiesChecker) CheckAuthentication(auth bascule.Authentication, v ParsedValues) error {
-	args := m.Called(auth, v)
-	return args.Error(0)
+func (e errWithReason) Error() string {
+	return e.err.Error()
+}
+
+func (e errWithReason) Reason() string {
+	return e.reason
+}
+
+func (e errWithReason) Unwrap() error {
+	return e.err
 }

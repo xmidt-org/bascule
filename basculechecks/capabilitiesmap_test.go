@@ -18,6 +18,8 @@
 package basculechecks
 
 import (
+	"errors"
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -57,13 +59,12 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 		bascule.NewAttributes(map[string]interface{}{CapabilityKey: defaultCapabilities}))
 	badToken := bascule.NewToken("", "", nil)
 	tests := []struct {
-		description    string
-		cm             CapabilitiesMap
-		token          bascule.Token
-		includeURL     bool
-		endpoint       string
-		expectedReason string
-		expectedErr    error
+		description string
+		cm          CapabilitiesMap
+		token       bascule.Token
+		includeURL  bool
+		endpoint    string
+		expectedErr error
 	}{
 		{
 			description: "Success",
@@ -87,65 +88,58 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 			endpoint:    "fallback",
 		},
 		{
-			description:    "No Match Error",
-			cm:             cm,
-			token:          goodToken,
-			includeURL:     true,
-			endpoint:       "b",
-			expectedReason: NoCapabilitiesMatch,
-			expectedErr:    ErrNoValidCapabilityFound,
+			description: "No Match Error",
+			cm:          cm,
+			token:       goodToken,
+			includeURL:  true,
+			endpoint:    "b",
+			expectedErr: ErrNoValidCapabilityFound,
 		},
 		{
-			description:    "No Match with Default Checker Error",
-			cm:             cm,
-			token:          defaultToken,
-			includeURL:     true,
-			endpoint:       "bcedef",
-			expectedReason: NoCapabilitiesMatch,
-			expectedErr:    ErrNoValidCapabilityFound,
+			description: "No Match with Default Checker Error",
+			cm:          cm,
+			token:       defaultToken,
+			includeURL:  true,
+			endpoint:    "bcedef",
+			expectedErr: ErrNoValidCapabilityFound,
 		},
 		{
-			description:    "No Match Nil Default Checker Error",
-			cm:             nilCM,
-			token:          defaultToken,
-			includeURL:     true,
-			endpoint:       "bcedef",
-			expectedReason: NoCapabilitiesMatch,
-			expectedErr:    ErrNoValidCapabilityFound,
+			description: "No Match Nil Default Checker Error",
+			cm:          nilCM,
+			token:       defaultToken,
+			includeURL:  true,
+			endpoint:    "bcedef",
+			expectedErr: ErrNoValidCapabilityFound,
 		},
 		{
-			description:    "No Token Error",
-			cm:             cm,
-			token:          nil,
-			includeURL:     true,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoToken,
+			description: "No Token Error",
+			cm:          cm,
+			token:       nil,
+			includeURL:  true,
+			expectedErr: ErrNoToken,
 		},
 		{
-			description:    "No Request URL Error",
-			cm:             cm,
-			token:          goodToken,
-			includeURL:     false,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoURL,
+			description: "No Request URL Error",
+			cm:          cm,
+			token:       goodToken,
+			includeURL:  false,
+			expectedErr: ErrNoURL,
 		},
 		{
-			description:    "Empty Endpoint Error",
-			cm:             cm,
-			token:          goodToken,
-			includeURL:     true,
-			endpoint:       "",
-			expectedReason: EmptyParsedURL,
-			expectedErr:    ErrEmptyEndpoint,
+			description: "Empty Endpoint Error",
+			cm:          cm,
+			token:       goodToken,
+			includeURL:  true,
+			endpoint:    "",
+			expectedErr: ErrEmptyEndpoint,
 		},
 		{
-			description:    "Get Capabilities Error",
-			cm:             cm,
-			token:          badToken,
-			includeURL:     true,
-			endpoint:       "b",
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    ErrNilAttributes,
+			description: "Get Capabilities Error",
+			cm:          cm,
+			token:       badToken,
+			includeURL:  true,
+			endpoint:    "b",
+			expectedErr: ErrNilAttributes,
 		},
 	}
 	for _, tc := range tests {
@@ -163,13 +157,18 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 					Method: "GET",
 				}
 			}
-			reason, err := tc.cm.CheckAuthentication(auth, ParsedValues{Endpoint: tc.endpoint})
-			assert.Equal(tc.expectedReason, reason)
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
+			err := tc.cm.CheckAuthentication(auth, ParsedValues{Endpoint: tc.endpoint})
+			if tc.expectedErr == nil {
+				assert.NoError(err)
 				return
 			}
-			assert.Contains(err.Error(), tc.expectedErr.Error())
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }

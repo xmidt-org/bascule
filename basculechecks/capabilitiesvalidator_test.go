@@ -20,6 +20,7 @@ package basculechecks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -118,7 +119,6 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 		includeAttributes bool
 		includeURL        bool
 		checker           EndpointChecker
-		expectedReason    string
 		expectedErr       error
 	}{
 		{
@@ -130,28 +130,24 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			expectedErr:       nil,
 		},
 		{
-			description:    "No Token Error",
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoToken,
+			description: "No Token Error",
+			expectedErr: ErrNoToken,
 		},
 		{
-			description:    "No Method Error",
-			includeToken:   true,
-			expectedReason: MissingValues,
-			expectedErr:    ErrNoMethod,
+			description:  "No Method Error",
+			includeToken: true,
+			expectedErr:  ErrNoMethod,
 		},
 		{
-			description:    "Get Capabilities Error",
-			includeToken:   true,
-			includeMethod:  true,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    ErrNilAttributes,
+			description:   "Get Capabilities Error",
+			includeToken:  true,
+			includeMethod: true,
+			expectedErr:   ErrNilAttributes,
 		},
 		{
 			description:       "No URL Error",
 			includeAttributes: true,
 			includeMethod:     true,
-			expectedReason:    MissingValues,
 			expectedErr:       ErrNoURL,
 		},
 		{
@@ -160,7 +156,6 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			includeMethod:     true,
 			includeURL:        true,
 			checker:           AlwaysEndpointCheck(false),
-			expectedReason:    NoCapabilitiesMatch,
 			expectedErr:       ErrNoValidCapabilityFound,
 		},
 	}
@@ -189,13 +184,18 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			if tc.includeMethod {
 				a.Request.Method = "GET"
 			}
-			reason, err := c.CheckAuthentication(a, pv)
-			assert.Equal(tc.expectedReason, reason)
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
+			err := c.CheckAuthentication(a, pv)
+			if tc.expectedErr == nil {
+				assert.NoError(err)
 				return
 			}
-			assert.Contains(err.Error(), tc.expectedErr.Error())
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }
@@ -229,11 +229,17 @@ func TestCheckCapabilities(t *testing.T) {
 				Checker: ConstEndpointCheck(tc.goodCapability),
 			}
 			err := c.checkCapabilities(capabilities, "", "")
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
+			if tc.expectedErr == nil {
+				assert.NoError(err)
 				return
 			}
-			assert.Contains(err.Error(), tc.expectedErr.Error())
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }
@@ -241,65 +247,55 @@ func TestCheckCapabilities(t *testing.T) {
 func TestGetCapabilities(t *testing.T) {
 	goodKeyVal := []string{"cap1", "cap2"}
 	emptyVal := []string{}
-	getCapabilitiesErr := errors.New("couldn't get capabilities using key")
-	badCapabilitiesErr := errors.New("not the expected string slice")
 	tests := []struct {
 		description      string
 		nilAttributes    bool
 		missingAttribute bool
 		keyValue         interface{}
 		expectedVals     []string
-		expectedReason   string
 		expectedErr      error
 	}{
 		{
-			description:    "Success",
-			keyValue:       goodKeyVal,
-			expectedVals:   goodKeyVal,
-			expectedReason: "",
-			expectedErr:    nil,
+			description:  "Success",
+			keyValue:     goodKeyVal,
+			expectedVals: goodKeyVal,
+			expectedErr:  nil,
 		},
 		{
-			description:    "Nil Attributes Error",
-			nilAttributes:  true,
-			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    ErrNilAttributes,
+			description:   "Nil Attributes Error",
+			nilAttributes: true,
+			expectedVals:  emptyVal,
+			expectedErr:   ErrNilAttributes,
 		},
 		{
 			description:      "No Attribute Error",
 			missingAttribute: true,
 			expectedVals:     emptyVal,
-			expectedReason:   UndeterminedCapabilities,
-			expectedErr:      getCapabilitiesErr,
+			expectedErr:      ErrGettingCapabilities,
 		},
 		{
-			description:    "Nil Capabilities Error",
-			keyValue:       nil,
-			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    badCapabilitiesErr,
+			description:  "Nil Capabilities Error",
+			keyValue:     nil,
+			expectedVals: emptyVal,
+			expectedErr:  ErrCapabilityNotStringSlice,
 		},
 		{
-			description:    "Non List Capabilities Error",
-			keyValue:       struct{ string }{"abcd"},
-			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    badCapabilitiesErr,
+			description:  "Non List Capabilities Error",
+			keyValue:     struct{ string }{"abcd"},
+			expectedVals: emptyVal,
+			expectedErr:  ErrCapabilityNotStringSlice,
 		},
 		{
-			description:    "Non String List Capabilities Error",
-			keyValue:       []int{0, 1, 2},
-			expectedVals:   emptyVal,
-			expectedReason: UndeterminedCapabilities,
-			expectedErr:    badCapabilitiesErr,
+			description:  "Non String List Capabilities Error",
+			keyValue:     []int{0, 1, 2},
+			expectedVals: emptyVal,
+			expectedErr:  ErrCapabilityNotStringSlice,
 		},
 		{
-			description:    "Empty Capabilities Error",
-			keyValue:       emptyVal,
-			expectedVals:   emptyVal,
-			expectedReason: EmptyCapabilitiesList,
-			expectedErr:    ErrNoVals,
+			description:  "Empty Capabilities Error",
+			keyValue:     emptyVal,
+			expectedVals: emptyVal,
+			expectedErr:  ErrNoVals,
 		},
 	}
 
@@ -314,14 +310,19 @@ func TestGetCapabilities(t *testing.T) {
 			if tc.nilAttributes {
 				attributes = nil
 			}
-			vals, reason, err := getCapabilities(attributes)
+			vals, err := getCapabilities(attributes)
 			assert.Equal(tc.expectedVals, vals)
-			assert.Equal(tc.expectedReason, reason)
-			if err == nil || tc.expectedErr == nil {
-				assert.Equal(tc.expectedErr, err)
-			} else {
-				assert.Contains(err.Error(), tc.expectedErr.Error())
+			if tc.expectedErr == nil {
+				assert.NoError(err)
+				return
 			}
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+					err, tc.expectedErr),
+			)
+			// every error should be a reasoner.
+			var r Reasoner
+			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
 }
