@@ -251,12 +251,20 @@ func TestGetCapabilities(t *testing.T) {
 		description      string
 		nilAttributes    bool
 		missingAttribute bool
+		key              []string
 		keyValue         interface{}
 		expectedVals     []string
 		expectedErr      error
 	}{
 		{
 			description:  "Success",
+			key:          []string{"test", "a", "b"},
+			keyValue:     goodKeyVal,
+			expectedVals: goodKeyVal,
+			expectedErr:  nil,
+		},
+		{
+			description:  "Success with default key",
 			keyValue:     goodKeyVal,
 			expectedVals: goodKeyVal,
 			expectedErr:  nil,
@@ -302,7 +310,7 @@ func TestGetCapabilities(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
-			m := map[string]interface{}{CapabilityKey: tc.keyValue}
+			m := buildDummyAttributes(tc.key, tc.keyValue)
 			if tc.missingAttribute {
 				m = map[string]interface{}{}
 			}
@@ -310,7 +318,7 @@ func TestGetCapabilities(t *testing.T) {
 			if tc.nilAttributes {
 				attributes = nil
 			}
-			vals, err := getCapabilities(attributes)
+			vals, err := getCapabilities(attributes, tc.key)
 			assert.Equal(tc.expectedVals, vals)
 			if tc.expectedErr == nil {
 				assert.NoError(err)
@@ -325,4 +333,17 @@ func TestGetCapabilities(t *testing.T) {
 			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
 		})
 	}
+}
+
+func buildDummyAttributes(keyPath []string, val interface{}) map[string]interface{} {
+	keyLen := len(keyPath)
+	if keyLen == 0 {
+		return map[string]interface{}{CapabilityKey: val}
+	}
+	m := map[string]interface{}{keyPath[keyLen-1]: val}
+	// we want to move out from the inner most map.
+	for i := keyLen - 2; i >= 0; i-- {
+		m = map[string]interface{}{keyPath[i]: m}
+	}
+	return m
 }
