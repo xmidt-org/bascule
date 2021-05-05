@@ -17,6 +17,12 @@
 
 package basculechecks
 
+// Reasoner is an error that provides a failure reason to use as a value for a
+// metric label.
+type Reasoner interface {
+	Reason() string
+}
+
 type errWithReason struct {
 	err    error
 	reason string

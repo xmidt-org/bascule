@@ -47,12 +47,6 @@ type CapabilitiesChecker interface {
 	CheckAuthentication(auth bascule.Authentication, vals ParsedValues) error
 }
 
-// Reasoner is an error that provides a failure reason to use as a value for a
-// metric label.
-type Reasoner interface {
-	Reason() string
-}
-
 // ParsedValues are values determined from the bascule Authentication.
 type ParsedValues struct {
 	// Endpoint is the string representation of a regular expression that
@@ -60,13 +54,13 @@ type ParsedValues struct {
 	// most likely won't include strings that change from one request to the
 	// next (ie, device ID).
 	Endpoint string
-	// Partner is a string representation of the list of partners found in the
-	// JWT, where:
-	//   - any list including "*" as a partner is determined to be "wildcard".
-	//   - when the list is <1 item, the partner is determined to be "none".
-	//   - when the list is >1 item, the partner is determined to be "many".
-	//   - when the list is only one item, that is the partner value.
-	Partner string
+}
+
+type metricValues struct {
+	method    string
+	endpoint  string
+	partnerID string
+	client    string
 }
 
 // MetricValidator determines if a request is authorized and then updates a
@@ -110,13 +104,13 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		return nil
 	}
 
-	client, partnerID, endpoint, err := m.prepMetrics(auth)
+	l, err := m.prepMetrics(auth)
 	labels := prometheus.Labels{
 		ServerLabel:    m.Server,
-		ClientIDLabel:  client,
-		PartnerIDLabel: partnerID,
-		EndpointLabel:  endpoint,
-		MethodLabel:    auth.Request.Method,
+		ClientIDLabel:  l.client,
+		PartnerIDLabel: l.partnerID,
+		EndpointLabel:  l.endpoint,
+		MethodLabel:    l.method,
 		OutcomeLabel:   AcceptedOutcome,
 		ReasonLabel:    "",
 	}
@@ -135,8 +129,7 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 	}
 
 	v := ParsedValues{
-		Endpoint: endpoint,
-		Partner:  partnerID,
+		Endpoint: l.endpoint,
 	}
 
 	err = m.C.CheckAuthentication(auth, v)
@@ -162,72 +155,39 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 // prepMetrics gathers the information needed for metric label information.  It
 // gathers the client ID, partnerID, and endpoint (bucketed) for more information
 // on the metric when a request is unauthorized.
-func (m MetricValidator) prepMetrics(auth bascule.Authentication) (string, string, string, error) {
+func (m MetricValidator) prepMetrics(auth bascule.Authentication) (metricValues, error) {
+	v := metricValues{}
 	if auth.Token == nil {
-		return "", "", "", ErrNoToken
+		return v, ErrNoToken
 	}
+	v.client = auth.Token.Principal()
 	if len(auth.Request.Method) == 0 {
-		return "", "", "", ErrNoMethod
+		return v, ErrNoMethod
 	}
-	client := auth.Token.Principal()
+	v.method = auth.Request.Method
 	if auth.Token.Attributes() == nil {
-		return client, "", "", ErrNilAttributes
+		return v, ErrNilAttributes
 	}
 
 	partnerVal, ok := bascule.GetNestedAttribute(auth.Token.Attributes(), PartnerKeys()...)
 	if !ok {
 		err := fmt.Errorf("%w using keys %v", ErrGettingPartnerIDs, PartnerKeys())
-		return client, "", "", err
+		return v, err
 	}
 	partnerIDs, err := cast.ToStringSliceE(partnerVal)
 	if err != nil {
 		err = fmt.Errorf("%w for partner IDs \"%v\": %v",
 			ErrPartnerIDsNotStringSlice, partnerVal, err)
-		return client, "", "", err
+		return v, err
 	}
-	partnerID := DeterminePartnerMetric(partnerIDs)
+	v.partnerID = DeterminePartnerMetric(partnerIDs)
 
 	if auth.Request.URL == nil {
-		return client, partnerID, "", ErrNoURL
+		return v, ErrNoURL
 	}
 	escapedURL := auth.Request.URL.EscapedPath()
-	endpoint := determineEndpointMetric(m.Endpoints, escapedURL)
-	return client, partnerID, endpoint, nil
-}
-
-// DeterminePartnerMetric takes a list of partners and decides what the partner
-// metric label should be.
-func DeterminePartnerMetric(partners []string) string {
-	if len(partners) < 1 {
-		return "none"
-	}
-	if len(partners) == 1 {
-		if partners[0] == "*" {
-			return "wildcard"
-		}
-		return partners[0]
-	}
-	for _, partner := range partners {
-		if partner == "*" {
-			return "wildcard"
-		}
-	}
-	return "many"
-}
-
-// determineEndpointMetric takes a list of regular expressions and applies them
-// to the url of the request to decide what the endpoint metric label should be.
-func determineEndpointMetric(endpoints []*regexp.Regexp, urlHit string) string {
-	for _, r := range endpoints {
-		idxs := r.FindStringIndex(urlHit)
-		if idxs == nil {
-			continue
-		}
-		if idxs[0] == 0 {
-			return r.String()
-		}
-	}
-	return "not_recognized"
+	v.endpoint = determineEndpointMetric(m.Endpoints, escapedURL)
+	return v, nil
 }
 
 func ProvideMetricValidator(server string) fx.Option {
