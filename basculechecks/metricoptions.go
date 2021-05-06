@@ -42,3 +42,24 @@ func WithEndpoints(e []*regexp.Regexp) MetricOption {
 		}
 	}
 }
+
+func NewMetricValidator(checker CapabilitiesChecker, measures *AuthCapabilityCheckMeasures, options ...MetricOption) (*MetricValidator, error) {
+	if checker == nil {
+		return nil, ErrNilChecker
+	}
+
+	if measures == nil {
+		return nil, ErrNilMeasures
+	}
+
+	m := MetricValidator{
+		c:        checker,
+		measures: measures,
+		errorOut: true,
+	}
+
+	for _, o := range options {
+		o(&m)
+	}
+	return &m, nil
+}

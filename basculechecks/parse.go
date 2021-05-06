@@ -17,7 +17,10 @@
 
 package basculechecks
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 // DeterminePartnerMetric takes a list of partners and decides what the partner
 // metric label should be.
@@ -42,13 +45,16 @@ func DeterminePartnerMetric(partners []string) string {
 // determineEndpointMetric takes a list of regular expressions and applies them
 // to the url of the request to decide what the endpoint metric label should be.
 func determineEndpointMetric(endpoints []*regexp.Regexp, urlHit string) string {
+	if len(endpoints) == 0 {
+		return "no_endpoints"
+	}
 	for _, r := range endpoints {
 		idxs := r.FindStringIndex(urlHit)
 		if len(idxs) == 0 {
 			continue
 		}
 		if idxs[0] == 0 {
-			return r.String()
+			return strings.ReplaceAll(r.String(), " ", "_")
 		}
 	}
 	return "not_recognized"

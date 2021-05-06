@@ -26,10 +26,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cast"
 	"github.com/xmidt-org/bascule"
-	"go.uber.org/fx"
 )
 
 var (
+	ErrNilChecker        = errors.New("capabilities checker cannot be nil")
+	ErrNilMeasures       = errors.New("measures cannot be nil")
 	ErrGettingPartnerIDs = errWithReason{
 		err:    errors.New("couldn't get partner IDs from attributes"),
 		reason: UndeterminedPartnerID,
@@ -188,26 +189,4 @@ func (m MetricValidator) prepMetrics(auth bascule.Authentication) (metricValues,
 	escapedURL := auth.Request.URL.EscapedPath()
 	v.endpoint = determineEndpointMetric(m.endpoints, escapedURL)
 	return v, nil
-}
-
-func NewMetricValidator(checker CapabilitiesChecker, measures *AuthCapabilityCheckMeasures, options ...MetricOption) (*MetricValidator, error) {
-	m := MetricValidator{
-		c:        checker,
-		measures: measures,
-		errorOut: true,
-	}
-
-	for _, o := range options {
-		o(&m)
-	}
-	return &m, nil
-}
-
-func ProvideMetricValidator(server string) fx.Option {
-	return fx.Provide(
-		fx.Annotated{
-			Name:   fmt.Sprintf("%s_bascule_capability_measures", server),
-			Target: NewMetricValidator,
-		},
-	)
 }

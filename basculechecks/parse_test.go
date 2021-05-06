@@ -63,3 +63,6 @@ func TestDeterminePartnerMetric(t *testing.T) {
 		})
 	}
 }
+
+func TestDetermineEndpointMetric(t *testing.T) {
+}
