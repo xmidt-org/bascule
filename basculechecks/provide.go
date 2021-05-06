@@ -17,25 +17,27 @@
 
 package basculechecks
 
-// Reasoner is an error that provides a failure reason to use as a value for a
-// metric label.
-type Reasoner interface {
-	Reason() string
+import (
+	"fmt"
+
+	"go.uber.org/fx"
+)
+
+type MetricValidatorIn struct {
+	fx.In
+	Checker  CapabilitiesChecker
+	Measures *AuthCapabilityCheckMeasures
+	Options  []MetricOption `group:"bascule_capability_options" optional:"true"`
 }
 
-type errWithReason struct {
-	err    error
-	reason string
-}
-
-func (e errWithReason) Error() string {
-	return e.err.Error()
-}
-
-func (e errWithReason) Reason() string {
-	return e.reason
-}
-
-func (e errWithReason) Unwrap() error {
-	return e.err
+func ProvideMetricValidator(server string) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name: fmt.Sprintf("%s_bascule_capability_measures", server),
+			Target: func(in MetricValidatorIn) (*MetricValidator, error) {
+				options := append(in.Options, WithServer(server))
+				return NewMetricValidator(in.Checker, in.Measures, options...)
+			},
+		},
+	)
 }

@@ -193,7 +193,7 @@ func TestMetricValidatorCheck(t *testing.T) {
 			}
 			mockCapabilitiesChecker := new(mockCapabilitiesChecker)
 			if tc.checkCallExpected {
-				tc.expectedLabels[EndpointLabel] = "not_recognized"
+				tc.expectedLabels[EndpointLabel] = NoneEndpoint
 				tc.expectedLabels[MethodLabel] = auth.Request.Method
 				tc.expectedLabels[ClientIDLabel] = auth.Token.Principal()
 				mockCapabilitiesChecker.On("CheckAuthentication", mock.Anything, mock.Anything).
@@ -214,10 +214,10 @@ func TestMetricValidatorCheck(t *testing.T) {
 			expectedCounter.With(tc.expectedLabels).Inc()
 
 			m := MetricValidator{
-				C:        mockCapabilitiesChecker,
-				Measures: &mockMeasures,
-				ErrorOut: tc.errorOut,
-				Server:   "testserver",
+				c:        mockCapabilitiesChecker,
+				measures: &mockMeasures,
+				errorOut: tc.errorOut,
+				server:   "testserver",
 			}
 			err := m.Check(ctx, nil)
 			mockCapabilitiesChecker.AssertExpectations(t)
@@ -244,17 +244,16 @@ func TestPrepMetrics(t *testing.T) {
 	)
 
 	tests := []struct {
-		description       string
-		noPartnerID       bool
-		partnerIDs        interface{}
-		url               string
-		includeToken      bool
-		includeMethod     bool
-		includeAttributes bool
-		includeURL        bool
-		expectedPartner   string
-		expectedEndpoint  string
-		expectedErr       error
+		description          string
+		noPartnerID          bool
+		partnerIDs           interface{}
+		url                  string
+		includeToken         bool
+		includeMethod        bool
+		includeAttributes    bool
+		includeURL           bool
+		expectedMetricValues metricValues
+		expectedErr          error
 	}{
 		{
 			description:       "Success",
@@ -264,9 +263,13 @@ func TestPrepMetrics(t *testing.T) {
 			includeMethod:     true,
 			includeAttributes: true,
 			includeURL:        true,
-			expectedPartner:   "partner",
-			expectedEndpoint:  "not_recognized",
-			expectedErr:       nil,
+			expectedMetricValues: metricValues{
+				method:    "get",
+				endpoint:  NotRecognizedEndpoint,
+				partnerID: "partner",
+				client:    client,
+			},
+			expectedErr: nil,
 		},
 		{
 			description:       "Success Abridged URL",
@@ -276,9 +279,13 @@ func TestPrepMetrics(t *testing.T) {
 			includeMethod:     true,
 			includeAttributes: true,
 			includeURL:        true,
-			expectedPartner:   "partner",
-			expectedEndpoint:  goodEndpoint,
-			expectedErr:       nil,
+			expectedMetricValues: metricValues{
+				method:    "get",
+				endpoint:  goodEndpoint,
+				partnerID: "partner",
+				client:    client,
+			},
+			expectedErr: nil,
 		},
 		{
 			description: "Nil Token Error",
@@ -287,14 +294,21 @@ func TestPrepMetrics(t *testing.T) {
 		{
 			description:  "No Method Error",
 			includeToken: true,
-			expectedErr:  ErrNoMethod,
+			expectedMetricValues: metricValues{
+				client: client,
+			},
+			expectedErr: ErrNoMethod,
 		},
 		{
 			description:   "Nil Token Attributes Error",
 			url:           goodURL,
 			includeToken:  true,
 			includeMethod: true,
-			expectedErr:   ErrNilAttributes,
+			expectedMetricValues: metricValues{
+				method: "get",
+				client: client,
+			},
+			expectedErr: ErrNilAttributes,
 		},
 		{
 			description:       "No Partner ID Error",
@@ -303,9 +317,11 @@ func TestPrepMetrics(t *testing.T) {
 			includeToken:      true,
 			includeMethod:     true,
 			includeAttributes: true,
-			expectedPartner:   "",
-			expectedEndpoint:  "",
-			expectedErr:       ErrGettingPartnerIDs,
+			expectedMetricValues: metricValues{
+				method: "get",
+				client: client,
+			},
+			expectedErr: ErrGettingPartnerIDs,
 		},
 		{
 			description:       "Non String Slice Partner ID Error",
@@ -314,9 +330,11 @@ func TestPrepMetrics(t *testing.T) {
 			includeToken:      true,
 			includeMethod:     true,
 			includeAttributes: true,
-			expectedPartner:   "",
-			expectedEndpoint:  "",
-			expectedErr:       ErrPartnerIDsNotStringSlice,
+			expectedMetricValues: metricValues{
+				method: "get",
+				client: client,
+			},
+			expectedErr: ErrPartnerIDsNotStringSlice,
 		},
 		{
 			description:       "Non Slice Partner ID Error",
@@ -325,9 +343,11 @@ func TestPrepMetrics(t *testing.T) {
 			includeToken:      true,
 			includeMethod:     true,
 			includeAttributes: true,
-			expectedPartner:   "",
-			expectedEndpoint:  "",
-			expectedErr:       ErrPartnerIDsNotStringSlice,
+			expectedMetricValues: metricValues{
+				method: "get",
+				client: client,
+			},
+			expectedErr: ErrPartnerIDsNotStringSlice,
 		},
 		{
 			description:       "Nil URL Error",
@@ -336,13 +356,17 @@ func TestPrepMetrics(t *testing.T) {
 			includeToken:      true,
 			includeMethod:     true,
 			includeAttributes: true,
-			expectedPartner:   "partner",
-			expectedErr:       ErrNoURL,
+			expectedMetricValues: metricValues{
+				method:    "get",
+				partnerID: "partner",
+				client:    client,
+			},
+			expectedErr: ErrNoURL,
 		},
 	}
 
 	m := MetricValidator{
-		Endpoints: []*regexp.Regexp{unusedRegex, goodRegex},
+		endpoints: []*regexp.Regexp{unusedRegex, goodRegex},
 	}
 
 	for _, tc := range tests {
@@ -381,12 +405,8 @@ func TestPrepMetrics(t *testing.T) {
 				auth.Request.Method = "get"
 			}
 
-			c, partner, endpoint, err := m.prepMetrics(auth)
-			if tc.includeToken && tc.includeMethod {
-				assert.Equal(client, c)
-			}
-			assert.Equal(tc.expectedPartner, partner)
-			assert.Equal(tc.expectedEndpoint, endpoint)
+			v, err := m.prepMetrics(auth)
+			assert.Equal(tc.expectedMetricValues, v)
 			if tc.expectedErr == nil {
 				assert.NoError(err)
 				return
@@ -398,47 +418,6 @@ func TestPrepMetrics(t *testing.T) {
 			// every error should be a reasoner.
 			var r Reasoner
 			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
-		})
-	}
-}
-
-func TestDeterminePartnerMetric(t *testing.T) {
-	tests := []struct {
-		description    string
-		partnersInput  []string
-		expectedResult string
-	}{
-		{
-			description:    "No Partners",
-			expectedResult: "none",
-		},
-		{
-			description:    "one wildcard",
-			partnersInput:  []string{"*"},
-			expectedResult: "wildcard",
-		},
-		{
-			description:    "one partner",
-			partnersInput:  []string{"TestPartner"},
-			expectedResult: "TestPartner",
-		},
-		{
-			description:    "many partners",
-			partnersInput:  []string{"partner1", "partner2", "partner3"},
-			expectedResult: "many",
-		},
-		{
-			description:    "many partners with wildcard",
-			partnersInput:  []string{"partner1", "partner2", "partner3", "*"},
-			expectedResult: "wildcard",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.description, func(t *testing.T) {
-			assert := assert.New(t)
-			partner := DeterminePartnerMetric(tc.partnersInput)
-			assert.Equal(tc.expectedResult, partner)
 		})
 	}
 }

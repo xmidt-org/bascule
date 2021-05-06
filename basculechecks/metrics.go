@@ -39,8 +39,9 @@ const (
 	ServerLabel    = "server"
 )
 
-// outcomes
+// label values
 const (
+	// outcomes
 	RejectedOutcome = "rejected"
 	AcceptedOutcome = "accepted"
 	// reasons
@@ -53,6 +54,13 @@ const (
 	NoEndpointChecker        = "no_capability_checker"
 	NoCapabilitiesMatch      = "no_capabilities_match"
 	EmptyParsedURL           = "empty_parsed_URL"
+	// partners
+	NonePartner     = "none"
+	WildcardPartner = "wildcard"
+	ManyPartner     = "many"
+	// endpoints
+	NoneEndpoint          = "no_endpoints"
+	NotRecognizedEndpoint = "not_recognized"
 )
 
 // help messages
