@@ -18,6 +18,7 @@
 package basculechecks
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,4 +66,45 @@ func TestDeterminePartnerMetric(t *testing.T) {
 }
 
 func TestDetermineEndpointMetric(t *testing.T) {
+	var (
+		goodURL          = "/asnkfn/aefkijeoij/aiogj"
+		matchingURL      = "/fnvvds jkfji/mac:12345544322345334/geigosj"
+		matchingEndpoint = `/fnvvds jkfji/.*/geigosj\b`
+		matchingRegex    = regexp.MustCompile(matchingEndpoint)
+		matchingParsed   = `/fnvvds_jkfji/.*/geigosj\b`
+		unusedEndpoint   = `/a/b\b`
+		unusedRegex      = regexp.MustCompile(unusedEndpoint)
+	)
+
+	tests := []struct {
+		description      string
+		endpoints        []*regexp.Regexp
+		u                string
+		expectedEndpoint string
+	}{
+		{
+			description:      "No Endpoints",
+			u:                goodURL,
+			expectedEndpoint: NoneEndpoint,
+		},
+		{
+			description:      "Endpoint Not Recognized",
+			endpoints:        []*regexp.Regexp{unusedRegex, matchingRegex},
+			u:                goodURL,
+			expectedEndpoint: NotRecognizedEndpoint,
+		},
+		{
+			description:      "Endpoint Matched",
+			endpoints:        []*regexp.Regexp{unusedRegex, matchingRegex},
+			u:                matchingURL,
+			expectedEndpoint: matchingParsed,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			assert := assert.New(t)
+			endpoint := determineEndpointMetric(tc.endpoints, tc.u)
+			assert.Equal(tc.expectedEndpoint, endpoint)
+		})
+	}
 }

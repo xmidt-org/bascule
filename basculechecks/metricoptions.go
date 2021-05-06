@@ -37,7 +37,7 @@ func WithServer(s string) MetricOption {
 
 func WithEndpoints(e []*regexp.Regexp) MetricOption {
 	return func(m *MetricValidator) {
-		if e != nil {
+		if len(e) != 0 {
 			m.endpoints = e
 		}
 	}

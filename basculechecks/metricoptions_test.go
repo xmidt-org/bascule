@@ -17,6 +17,75 @@
 
 package basculechecks
 
-import "testing"
+import (
+	"errors"
+	"fmt"
+	"regexp"
+	"testing"
 
-func TestNewMetricValidator(t *testing.T) {}
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewMetricValidator(t *testing.T) {
+	c := &CapabilitiesValidator{}
+	m := &AuthCapabilityCheckMeasures{}
+	e := []*regexp.Regexp{regexp.MustCompile(".*")}
+	s := "testserverrr"
+	tests := []struct {
+		description       string
+		checker           CapabilitiesChecker
+		measures          *AuthCapabilityCheckMeasures
+		options           []MetricOption
+		expectedValidator *MetricValidator
+		expectedErr       error
+	}{
+		{
+			description: "Success",
+			checker:     c,
+			measures:    m,
+			options: []MetricOption{
+				MonitorOnly(),
+				WithServer(s),
+				WithServer(""),
+				WithEndpoints(e),
+				WithEndpoints(nil),
+			},
+			expectedValidator: &MetricValidator{
+				c:         c,
+				measures:  m,
+				server:    s,
+				endpoints: e,
+				errorOut:  false,
+			},
+		},
+		{
+			description: "Success with defaults",
+			checker:     c,
+			measures:    m,
+			expectedValidator: &MetricValidator{
+				c:        c,
+				measures: m,
+				errorOut: true,
+			},
+		},
+		{
+			description: "Nil Checker Error",
+			measures:    m,
+			expectedErr: ErrNilChecker,
+		},
+		{
+			description: "Nil Measures Error",
+			checker:     c,
+			expectedErr: ErrNilMeasures,
+		},
+	}
+	for _, tc := range tests {
+		assert := assert.New(t)
+		m, err := NewMetricValidator(tc.checker, tc.measures, tc.options...)
+		assert.Equal(tc.expectedValidator, m)
+		assert.True(errors.Is(err, tc.expectedErr),
+			fmt.Errorf("error [%v] doesn't match expected error [%v]",
+				err, tc.expectedErr),
+		)
+	}
+}
