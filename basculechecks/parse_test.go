@@ -31,12 +31,12 @@ func TestDeterminePartnerMetric(t *testing.T) {
 	}{
 		{
 			description:    "No Partners",
-			expectedResult: "none",
+			expectedResult: NonePartner,
 		},
 		{
 			description:    "one wildcard",
-			partnersInput:  []string{"*"},
-			expectedResult: "wildcard",
+			partnersInput:  []string{Wildcard},
+			expectedResult: WildcardPartner,
 		},
 		{
 			description:    "one partner",
@@ -46,12 +46,12 @@ func TestDeterminePartnerMetric(t *testing.T) {
 		{
 			description:    "many partners",
 			partnersInput:  []string{"partner1", "partner2", "partner3"},
-			expectedResult: "many",
+			expectedResult: ManyPartner,
 		},
 		{
 			description:    "many partners with wildcard",
-			partnersInput:  []string{"partner1", "partner2", "partner3", "*"},
-			expectedResult: "wildcard",
+			partnersInput:  []string{"partner1", "partner2", "partner3", Wildcard},
+			expectedResult: WildcardPartner,
 		},
 	}
 

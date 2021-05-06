@@ -193,7 +193,7 @@ func TestMetricValidatorCheck(t *testing.T) {
 			}
 			mockCapabilitiesChecker := new(mockCapabilitiesChecker)
 			if tc.checkCallExpected {
-				tc.expectedLabels[EndpointLabel] = "not_recognized"
+				tc.expectedLabels[EndpointLabel] = NoneEndpoint
 				tc.expectedLabels[MethodLabel] = auth.Request.Method
 				tc.expectedLabels[ClientIDLabel] = auth.Token.Principal()
 				mockCapabilitiesChecker.On("CheckAuthentication", mock.Anything, mock.Anything).
@@ -265,7 +265,7 @@ func TestPrepMetrics(t *testing.T) {
 			includeURL:        true,
 			expectedMetricValues: metricValues{
 				method:    "get",
-				endpoint:  "not_recognized",
+				endpoint:  NotRecognizedEndpoint,
 				partnerID: "partner",
 				client:    client,
 			},
