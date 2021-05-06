@@ -51,8 +51,8 @@ type CapabilitiesChecker interface {
 type ParsedValues struct {
 	// Endpoint is the string representation of a regular expression that
 	// matches the URL for the request.  The main benefit of this string is it
-	// most likely won't include strings that change from one request to the
-	// next (ie, device ID).
+	// most likely won't include values that change from one request to the next
+	// (ie, device ID).
 	Endpoint string
 }
 
@@ -66,11 +66,11 @@ type metricValues struct {
 // MetricValidator determines if a request is authorized and then updates a
 // metric to show those results.
 type MetricValidator struct {
-	C         CapabilitiesChecker
-	Measures  *AuthCapabilityCheckMeasures
-	Endpoints []*regexp.Regexp
-	ErrorOut  bool
-	Server    string
+	c         CapabilitiesChecker
+	measures  *AuthCapabilityCheckMeasures
+	endpoints []*regexp.Regexp
+	errorOut  bool
+	server    string
 }
 
 // Check is a function for authorization middleware.  The function parses the
@@ -82,15 +82,15 @@ type MetricValidator struct {
 func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 	// if we're not supposed to error out, the outcome should be accepted on failure
 	failureOutcome := AcceptedOutcome
-	if m.ErrorOut {
+	if m.errorOut {
 		// if we actually error out, the outcome is the request being rejected
 		failureOutcome = RejectedOutcome
 	}
 
 	auth, ok := bascule.FromContext(ctx)
 	if !ok {
-		m.Measures.CapabilityCheckOutcome.With(prometheus.Labels{
-			ServerLabel:    m.Server,
+		m.measures.CapabilityCheckOutcome.With(prometheus.Labels{
+			ServerLabel:    m.server,
 			OutcomeLabel:   failureOutcome,
 			ReasonLabel:    TokenMissing,
 			ClientIDLabel:  "",
@@ -98,7 +98,7 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 			EndpointLabel:  "",
 			MethodLabel:    "",
 		}).Add(1)
-		if m.ErrorOut {
+		if m.errorOut {
 			return ErrNoAuth
 		}
 		return nil
@@ -106,7 +106,7 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 
 	l, err := m.prepMetrics(auth)
 	labels := prometheus.Labels{
-		ServerLabel:    m.Server,
+		ServerLabel:    m.server,
 		ClientIDLabel:  l.client,
 		PartnerIDLabel: l.partnerID,
 		EndpointLabel:  l.endpoint,
@@ -121,8 +121,8 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		if errors.As(err, &r) {
 			labels[ReasonLabel] = r.Reason()
 		}
-		m.Measures.CapabilityCheckOutcome.With(labels).Add(1)
-		if m.ErrorOut {
+		m.measures.CapabilityCheckOutcome.With(labels).Add(1)
+		if m.errorOut {
 			return err
 		}
 		return nil
@@ -132,7 +132,7 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		Endpoint: l.endpoint,
 	}
 
-	err = m.C.CheckAuthentication(auth, v)
+	err = m.c.CheckAuthentication(auth, v)
 	if err != nil {
 		labels[OutcomeLabel] = failureOutcome
 		labels[ReasonLabel] = UnknownReason
@@ -140,15 +140,15 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		if errors.As(err, &r) {
 			labels[ReasonLabel] = r.Reason()
 		}
-		m.Measures.CapabilityCheckOutcome.With(labels).Add(1)
-		if m.ErrorOut {
+		m.measures.CapabilityCheckOutcome.With(labels).Add(1)
+		if m.errorOut {
 			return fmt.Errorf("endpoint auth for %v on %v failed: %v",
 				auth.Request.Method, auth.Request.URL.EscapedPath(), err)
 		}
 		return nil
 	}
 
-	m.Measures.CapabilityCheckOutcome.With(labels).Add(1)
+	m.measures.CapabilityCheckOutcome.With(labels).Add(1)
 	return nil
 }
 
@@ -186,26 +186,28 @@ func (m MetricValidator) prepMetrics(auth bascule.Authentication) (metricValues,
 		return v, ErrNoURL
 	}
 	escapedURL := auth.Request.URL.EscapedPath()
-	v.endpoint = determineEndpointMetric(m.Endpoints, escapedURL)
+	v.endpoint = determineEndpointMetric(m.endpoints, escapedURL)
 	return v, nil
+}
+
+func NewMetricValidator(checker CapabilitiesChecker, measures *AuthCapabilityCheckMeasures, options ...MetricOption) (*MetricValidator, error) {
+	m := MetricValidator{
+		c:        checker,
+		measures: measures,
+		errorOut: true,
+	}
+
+	for _, o := range options {
+		o(&m)
+	}
+	return &m, nil
 }
 
 func ProvideMetricValidator(server string) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
-			Name: fmt.Sprintf("%s_bascule_capability_measures", server),
-			// TODO: this will be fixed when Metric Validator gets its own New()
-			// function and Options.
-			Target: func(checker CapabilitiesChecker, measures *AuthCapabilityCheckMeasures,
-				endpoints []*regexp.Regexp, errorOut bool) MetricValidator {
-				return MetricValidator{
-					C:         checker,
-					Measures:  measures,
-					Endpoints: endpoints,
-					ErrorOut:  errorOut,
-					Server:    server,
-				}
-			},
+			Name:   fmt.Sprintf("%s_bascule_capability_measures", server),
+			Target: NewMetricValidator,
 		},
 	)
 }
