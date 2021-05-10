@@ -28,7 +28,7 @@ type MetricValidatorIn struct {
 	fx.In
 	Checker  CapabilitiesChecker
 	Measures AuthCapabilityCheckMeasures
-	Options  []MetricOption `group:"bascule_capability_options" optional:"true"`
+	Options  []MetricOption `group:"bascule_capability_options"`
 }
 
 func ProvideMetricValidator(server string) fx.Option {
