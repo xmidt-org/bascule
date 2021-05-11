@@ -51,7 +51,10 @@ func (m *MetricListener) OnAuthenticated(auth bascule.Authentication) {
 	}
 
 	m.measures.ValidationOutcome.
-		With(prometheus.Labels{OutcomeLabel: "Accepted"}).
+		With(prometheus.Labels{
+			ServerLabel:  m.server,
+			OutcomeLabel: "Accepted",
+		}).
 		Add(1)
 
 	c, ok := auth.Token.Attributes().Get("claims")
@@ -132,7 +135,7 @@ func NewMetricListener(m *AuthValidationMeasures, options ...Option) (*MetricLis
 func ProvideMetricListener(server string) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
-			Name: fmt.Sprintf("%s_bascule_validation_measures", server),
+			Name: fmt.Sprintf("%s_bascule_metric_listener", server),
 			Target: func(m AuthValidationMeasures, options ...Option) (*MetricListener, error) {
 				o := append(options, WithServer(server))
 				return NewMetricListener(&m, o...)
