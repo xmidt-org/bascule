@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added method label to metric validator. [#96](https://github.com/xmidt-org/bascule/pull/96)
 - Update errors to include reason used by metric validator. [#97](https://github.com/xmidt-org/bascule/pull/97)
 - Made Capability Key configurable for CapabilitiesValidator and CapabilitiesMap. [#98](https://github.com/xmidt-org/bascule/pull/98)
+- Updated MetricValidator with a New function and options. [#99](https://github.com/xmidt-org/bascule/pull/99)
+- Removed Partner from ParsedValues. [#99](https://github.com/xmidt-org/bascule/pull/99)
+- Fixed ProvideMetricValidator() so it works. [#100](https://github.com/xmidt-org/bascule/pull/100)
 
 ## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
