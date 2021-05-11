@@ -20,23 +20,24 @@ package basculechecks
 import (
 	"fmt"
 
+	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
 )
 
 type MetricValidatorIn struct {
 	fx.In
 	Checker  CapabilitiesChecker
-	Measures *AuthCapabilityCheckMeasures
-	Options  []MetricOption `group:"bascule_capability_options" optional:"true"`
+	Measures AuthCapabilityCheckMeasures
+	Options  []MetricOption `group:"bascule_capability_options"`
 }
 
 func ProvideMetricValidator(server string) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
-			Name: fmt.Sprintf("%s_bascule_capability_measures", server),
-			Target: func(in MetricValidatorIn) (*MetricValidator, error) {
+			Name: fmt.Sprintf("%s_bascule_validator_capabilities", server),
+			Target: func(in MetricValidatorIn) (bascule.Validator, error) {
 				options := append(in.Options, WithServer(server))
-				return NewMetricValidator(in.Checker, in.Measures, options...)
+				return NewMetricValidator(in.Checker, &in.Measures, options...)
 			},
 		},
 	)
