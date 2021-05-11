@@ -7,6 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestErrorResponeReasonStr(t *testing.T) {
+
+}
+
 func TestDefaultOnErrorHTTPResponse(t *testing.T) {
 	tcs := []struct {
 		Description          string
