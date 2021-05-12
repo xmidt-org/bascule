@@ -19,14 +19,13 @@ package basculehttp
 
 import "net/http"
 
-//go:generate stringer -type=ErrorResponseReason
-
 // ErrorResponseReason is an enum that specifies the reason parsing/validating
 // a token failed.  Its primary use is for metrics and logging.
 type ErrorResponseReason int
 
 const (
-	MissingHeader ErrorResponseReason = iota
+	Unknown ErrorResponseReason = iota
+	MissingHeader
 	InvalidHeader
 	KeyNotSupported
 	ParseFailed
@@ -35,6 +34,29 @@ const (
 	ChecksNotFound
 	ChecksFailed
 )
+
+const (
+	UnknownReason = "unknown"
+)
+
+var responseReasonMarshal = map[ErrorResponseReason]string{
+	MissingHeader:         "missing_header",
+	InvalidHeader:         "invalid_header",
+	KeyNotSupported:       "key_not_supported",
+	ParseFailed:           "parse_failed",
+	GetURLFailed:          "get_url_failed",
+	MissingAuthentication: "missing_authentication",
+	ChecksNotFound:        "checks_not_found",
+	ChecksFailed:          "checks_failed",
+}
+
+func (e ErrorResponseReason) String() string {
+	reason, ok := responseReasonMarshal[e]
+	if !ok {
+		return UnknownReason
+	}
+	return reason
+}
 
 // AuthTypeHeaderKey is the header key that's used when requests are denied
 // with a 401 status code. It specifies the suggested token type that should
