@@ -35,6 +35,10 @@ const (
 	ChecksFailed
 )
 
+const (
+	UnknownReason = "unknown"
+)
+
 var responseReasonMarshal = map[ErrorResponseReason]string{
 	MissingHeader:         "missing_header",
 	InvalidHeader:         "invalid_header",
@@ -49,7 +53,7 @@ var responseReasonMarshal = map[ErrorResponseReason]string{
 func (e ErrorResponseReason) String() string {
 	reason, ok := responseReasonMarshal[e]
 	if !ok {
-		return "unknown"
+		return UnknownReason
 	}
 	return reason
 }
