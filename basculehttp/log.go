@@ -64,7 +64,7 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 			}
 			r = r.WithContext(sallust.With(r.Context(),
 				logger.With(
-					zap.Reflect("requestHeaders", logHeader),
+					zap.Reflect("requestHeaders", logHeader), //lgtm [go/clear-text-logging]
 					zap.String("requestURL", r.URL.EscapedPath()),
 					zap.String("method", r.Method))))
 			delegate.ServeHTTP(w, r)
