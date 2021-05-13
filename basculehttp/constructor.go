@@ -222,6 +222,7 @@ func WithCErrorHTTPResponseFunc(f OnErrorHTTPResponse) COption {
 func ProvideConstructor() fx.Option {
 	return fx.Options(
 		ProvideOnErrorHTTPResponse(),
+		ProvideParseURL(),
 		fx.Provide(
 			fx.Annotated{
 				Name: "alice_constructor",

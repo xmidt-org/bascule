@@ -21,10 +21,17 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+
+	"go.uber.org/fx"
 )
 
 // ParseURL is a function that modifies the url given then returns it.
 type ParseURL func(*url.URL) (*url.URL, error)
+
+type ParseURLIn struct {
+	fx.In
+	P ParseURL `optional:"true"`
+}
 
 // DefaultParseURLFunc does nothing.  It returns the same url it received.
 func DefaultParseURLFunc(u *url.URL) (*url.URL, error) {
@@ -42,4 +49,18 @@ func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
 		u.RawPath = escapedPath[len(prefix):]
 		return next(u)
 	}
+}
+
+func ProvideParseURL() fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Group: "bascule_constructor_options",
+			Target: func(in ParseURLIn) COption {
+				if in.P == nil {
+					return nil
+				}
+				return WithParseURLFunc(in.P)
+			},
+		},
+	)
 }
