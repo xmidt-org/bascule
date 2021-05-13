@@ -116,6 +116,9 @@ func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
 	}
 
 	for _, o := range options {
+		if o == nil {
+			continue
+		}
 		o(e)
 	}
 

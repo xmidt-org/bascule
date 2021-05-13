@@ -47,6 +47,9 @@ func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
 		}
 		u.Path = escapedPath[len(prefix):]
 		u.RawPath = escapedPath[len(prefix):]
+		if next == nil {
+			return u, nil
+		}
 		return next(u)
 	}
 }
