@@ -220,12 +220,15 @@ func WithCErrorHTTPResponseFunc(f OnErrorHTTPResponse) COption {
 }
 
 func ProvideConstructor() fx.Option {
-	return fx.Provide(
-		fx.Annotated{
-			Name: "alice_constructor",
-			Target: func(in COptionsIn) alice.Constructor {
-				return NewConstructor(in.Options...)
+	return fx.Options(
+		ProvideOnErrorHTTPResponse(),
+		fx.Provide(
+			fx.Annotated{
+				Name: "alice_constructor",
+				Target: func(in COptionsIn) alice.Constructor {
+					return NewConstructor(in.Options...)
+				},
 			},
-		},
+		),
 	)
 }

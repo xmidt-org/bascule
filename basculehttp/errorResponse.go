@@ -20,7 +20,6 @@ package basculehttp
 import (
 	"net/http"
 
-	"github.com/xmidt-org/arrange"
 	"go.uber.org/fx"
 )
 
@@ -41,13 +40,9 @@ func DefaultOnErrorResponse(_ ErrorResponseReason, _ error) {}
 // for a given reason.
 type OnErrorHTTPResponse func(http.ResponseWriter, ErrorResponseReason)
 
-type OnErrorHTTPResponseConfig struct {
-	ErrorResponse string
-}
-
-type OnErrorHTTPResponseConfigIn struct {
+type OnErrorHTTPResponseIn struct {
 	fx.In
-	C OnErrorHTTPResponseConfig
+	R OnErrorHTTPResponse `optional:"true"`
 }
 
 // DefaultOnErrorHTTPResponse will write a 401 status code along the
@@ -75,19 +70,15 @@ func LegacyOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReason
 	}
 }
 
-func ProvideOnErrorHTTPResponse(key string) fx.Option {
+func ProvideOnErrorHTTPResponse() fx.Option {
 	return fx.Provide(
 		fx.Annotated{
-			Name:   "bascule_on_error_http_response",
-			Target: arrange.UnmarshalKey(key, OnErrorHTTPResponseConfig{}),
-		},
-		fx.Annotated{
 			Group: "bascule_constructor_options",
-			Target: func(in OnErrorHTTPResponseConfigIn) COption {
-				if in.C.ErrorResponse == "legacy" {
-					return WithCErrorHTTPResponseFunc(LegacyOnErrorHTTPResponse)
+			Target: func(in OnErrorHTTPResponseIn) COption {
+				if in.R == nil {
+					return nil
 				}
-				return WithCErrorHTTPResponseFunc(DefaultOnErrorHTTPResponse)
+				return WithCErrorHTTPResponseFunc(in.R)
 			},
 		},
 	)
