@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/webpa-common/resource"
+	"go.uber.org/fx"
 )
 
 const (
@@ -59,6 +61,11 @@ type ResolverFactory struct {
 
 	// Parser is a custom key parser.  If omitted, DefaultParser is used.
 	Parser Parser `json:"-"`
+}
+
+type ResolverFactoryIn struct {
+	fx.In
+	R ResolverFactory `name:"key_resolver_factory"`
 }
 
 func (factory *ResolverFactory) parser() Parser {
@@ -112,4 +119,16 @@ func (factory *ResolverFactory) NewResolver() (Resolver, error) {
 	}
 
 	return nil, ErrorInvalidTemplate
+}
+
+func ProvideResolver(key string) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name:   "key_resolver_factory",
+			Target: arrange.UnmarshalKey(key, ResolverFactory{}),
+		},
+		func(in ResolverFactoryIn) (Resolver, error) {
+			return in.R.NewResolver()
+		},
+	)
 }
