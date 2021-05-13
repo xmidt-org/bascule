@@ -1,0 +1,107 @@
+/**
+ * Copyright 2021 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package basculehttp
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/bascule/key"
+)
+
+const (
+	jwtPrincipalKey = "sub"
+)
+
+var (
+	ErrorInvalidPrincipal = errors.New("invalid principal")
+	ErrorInvalidToken     = errors.New("token isn't valid")
+	ErrorUnexpectedClaims = errors.New("claims wasn't MapClaims as expected")
+)
+
+// BearerTokenFactory parses and does basic validation for a JWT token.
+type BearerTokenFactory struct {
+	DefaultKeyId string
+	Resolver     key.Resolver
+	Parser       bascule.JWTParser
+	Leeway       bascule.Leeway
+}
+
+// ParseAndValidate expects the given value to be a JWT with a kid header.  The
+// kid should be resolvable by the Resolver and the JWT should be Parseable and
+// pass any basic validation checks done by the Parser.  If everything goes
+// well, a Token of type "jwt" is returned.
+func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
+	if len(value) == 0 {
+		return nil, errors.New("empty value")
+	}
+
+	keyfunc := func(token *jwt.Token) (interface{}, error) {
+		keyID, ok := token.Header["kid"].(string)
+		if !ok {
+			keyID = btf.DefaultKeyId
+		}
+
+		pair, err := btf.Resolver.ResolveKey(ctx, keyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve key: %v", err)
+		}
+		return pair.Public(), nil
+	}
+
+	leewayclaims := bascule.ClaimsWithLeeway{
+		MapClaims: make(jwt.MapClaims),
+		Leeway:    btf.Leeway,
+	}
+
+	jwsToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JWS: %v", err)
+	}
+	if !jwsToken.Valid {
+		return nil, ErrorInvalidToken
+	}
+
+	claims, ok := jwsToken.Claims.(*bascule.ClaimsWithLeeway)
+
+	if !ok {
+		return nil, fmt.Errorf("failed to parse JWS: %w", ErrorUnexpectedClaims)
+	}
+
+	claimsMap, err := claims.GetMap()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get map of claims with object [%v]: %v", claims, err)
+	}
+
+	jwtClaims := bascule.NewAttributes(claimsMap)
+
+	principalVal, ok := jwtClaims.Get(jwtPrincipalKey)
+	if !ok {
+		return nil, fmt.Errorf("%w: principal value not found at key %v", ErrorInvalidPrincipal, jwtPrincipalKey)
+	}
+	principal, ok := principalVal.(string)
+	if !ok {
+		return nil, fmt.Errorf("%w: principal value [%v] not a string", ErrorInvalidPrincipal, principalVal)
+	}
+
+	return bascule.NewToken("jwt", principal, jwtClaims), nil
+}

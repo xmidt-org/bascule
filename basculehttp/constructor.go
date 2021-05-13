@@ -55,6 +55,12 @@ var (
 	errKeyNotSupported = errors.New("key not supported")
 )
 
+// TokenFactory is a strategy interface responsible for creating and validating
+// a secure Token.
+type TokenFactory interface {
+	ParseAndValidate(context.Context, *http.Request, bascule.Authorization, string) (bascule.Token, error)
+}
+
 // COption is any function that modifies the constructor - used to configure
 // the constructor.
 type COption func(*constructor)
