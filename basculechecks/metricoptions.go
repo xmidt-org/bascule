@@ -19,6 +19,10 @@ package basculechecks
 
 import "regexp"
 
+const (
+	defaultServer = "primary"
+)
+
 type MetricOption func(*MetricValidator)
 
 func MonitorOnly() MetricOption {
@@ -56,6 +60,7 @@ func NewMetricValidator(checker CapabilitiesChecker, measures *AuthCapabilityChe
 		c:        checker,
 		measures: measures,
 		errorOut: true,
+		server:   defaultServer,
 	}
 
 	for _, o := range options {

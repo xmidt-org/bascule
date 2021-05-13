@@ -24,7 +24,9 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
+	"go.uber.org/fx"
 )
 
 //go:generate stringer -type=NotFoundBehavior
@@ -37,6 +39,17 @@ const (
 	Forbid NotFoundBehavior = iota
 	Allow
 )
+
+// EOption is any function that modifies the enforcer - used to configure
+// the enforcer.
+type EOption func(*enforcer)
+
+// EOptionsIn is the uber.fx wired struct needed to group together the options
+// for the bascule enforcer middleware, which runs checks against the token.
+type EOptionsIn struct {
+	fx.In
+	Options []EOption `group:"bascule_enforcer_options"`
+}
 
 type enforcer struct {
 	notFoundBehavior NotFoundBehavior
@@ -92,9 +105,22 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 	})
 }
 
-// EOption is any function that modifies the enforcer - used to configure
-// the enforcer.
-type EOption func(*enforcer)
+// NewListenerDecorator creates an Alice-style decorator function that acts as
+// middleware, allowing for Listeners to be called after a token has been
+// authenticated.
+func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
+	e := &enforcer{
+		rules:           make(map[bascule.Authorization]bascule.Validator),
+		getLogger:       defaultGetLoggerFunc,
+		onErrorResponse: DefaultOnErrorResponse,
+	}
+
+	for _, o := range options {
+		o(e)
+	}
+
+	return e.decorate
+}
 
 // WithNotFoundBehavior sets the behavior upon not finding the Authorization
 // value in the rules map.
@@ -126,19 +152,13 @@ func WithEErrorResponseFunc(f OnErrorResponse) EOption {
 	}
 }
 
-// NewListenerDecorator creates an Alice-style decorator function that acts as
-// middleware, allowing for Listeners to be called after a token has been
-// authenticated.
-func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
-	e := &enforcer{
-		rules:           make(map[bascule.Authorization]bascule.Validator),
-		getLogger:       defaultGetLoggerFunc,
-		onErrorResponse: DefaultOnErrorResponse,
-	}
-
-	for _, o := range options {
-		o(e)
-	}
-
-	return e.decorate
+func ProvideEnforcer() fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name: "alice_enforcer",
+			Target: func(in EOptionsIn) alice.Constructor {
+				return NewEnforcer(in.Options...)
+			},
+		},
+	)
 }

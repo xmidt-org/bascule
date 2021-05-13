@@ -19,10 +19,10 @@ package basculehttp
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/SermoDigital/jose/jwt"
+	"github.com/justinas/alice"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
@@ -132,13 +132,30 @@ func NewMetricListener(m *AuthValidationMeasures, options ...Option) (*MetricLis
 	return &listener, nil
 }
 
-func ProvideMetricListener(server string) fx.Option {
+func ProvideMetricListener() fx.Option {
 	return fx.Provide(
 		fx.Annotated{
-			Name: fmt.Sprintf("%s_bascule_metric_listener", server),
+			Name: "bascule_metric_listener",
 			Target: func(m AuthValidationMeasures, options ...Option) (*MetricListener, error) {
-				o := append(options, WithServer(server))
-				return NewMetricListener(&m, o...)
+				return NewMetricListener(&m, options...)
+			},
+		},
+		fx.Annotated{
+			Name: "alice_listener",
+			Target: func(in MetricListenerIn) alice.Constructor {
+				return NewListenerDecorator(in.M)
+			},
+		},
+		fx.Annotated{
+			Group: "bascule_constructor_options",
+			Target: func(in MetricListenerIn) COption {
+				return WithCErrorResponseFunc(in.M.OnErrorResponse)
+			},
+		},
+		fx.Annotated{
+			Group: "bascule_enforcer_options",
+			Target: func(in MetricListenerIn) EOption {
+				return WithEErrorResponseFunc(in.M.OnErrorResponse)
 			},
 		},
 	)

@@ -15,27 +15,4 @@
  *
  */
 
-package basculechecks
-
-import (
-	"github.com/xmidt-org/bascule"
-	"go.uber.org/fx"
-)
-
-type MetricValidatorIn struct {
-	fx.In
-	Checker  CapabilitiesChecker
-	Measures AuthCapabilityCheckMeasures
-	Options  []MetricOption `group:"bascule_capability_options"`
-}
-
-func ProvideMetricValidator() fx.Option {
-	return fx.Provide(
-		fx.Annotated{
-			Name: "bascule_validator_capabilities",
-			Target: func(in MetricValidatorIn) (bascule.Validator, error) {
-				return NewMetricValidator(in.Checker, &in.Measures, in.Options...)
-			},
-		},
-	)
-}
+package basculehttp
