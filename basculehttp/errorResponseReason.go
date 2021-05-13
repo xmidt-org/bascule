@@ -17,8 +17,6 @@
 
 package basculehttp
 
-import "net/http"
-
 // ErrorResponseReason is an enum that specifies the reason parsing/validating
 // a token failed.  Its primary use is for metrics and logging.
 type ErrorResponseReason int
@@ -56,47 +54,4 @@ func (e ErrorResponseReason) String() string {
 		return UnknownReason
 	}
 	return reason
-}
-
-// AuthTypeHeaderKey is the header key that's used when requests are denied
-// with a 401 status code. It specifies the suggested token type that should
-// be used for a successful request.
-const AuthTypeHeaderKey = "WWW-Authenticate"
-
-// OnErrorResponse is a function that takes the error response reason and the
-// error and can do something with it.  This is useful for adding additional
-// metrics or logs.
-type OnErrorResponse func(ErrorResponseReason, error)
-
-// default function does nothing
-func DefaultOnErrorResponse(_ ErrorResponseReason, _ error) {
-}
-
-// OnErrorHTTPResponse allows users to decide what the response should be
-// for a given reason.
-type OnErrorHTTPResponse func(http.ResponseWriter, ErrorResponseReason)
-
-// DefaultOnErrorHTTPResponse will write a 401 status code along the
-// 'WWW-Authenticate: Bearer' header for all error cases related to building
-// the security token. For error checks that happen once a valid token has been
-// created will result in a 403.
-func DefaultOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReason) {
-	switch reason {
-	case ChecksNotFound, ChecksFailed:
-		w.WriteHeader(http.StatusForbidden)
-	default:
-		w.Header().Set(AuthTypeHeaderKey, string(BearerAuthorization))
-		w.WriteHeader(http.StatusUnauthorized)
-	}
-}
-
-// LegacyOnErrorHTTPResponse will write a 403 status code back for any error
-// reason except for InvalidHeader for which a 400 is written.
-func LegacyOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReason) {
-	switch reason {
-	case InvalidHeader:
-		w.WriteHeader(http.StatusBadRequest)
-	default:
-		w.WriteHeader(http.StatusForbidden)
-	}
 }
