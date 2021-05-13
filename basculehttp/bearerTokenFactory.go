@@ -24,8 +24,10 @@ import (
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/key"
+	"go.uber.org/fx"
 )
 
 const (
@@ -36,14 +38,18 @@ var (
 	ErrorInvalidPrincipal = errors.New("invalid principal")
 	ErrorInvalidToken     = errors.New("token isn't valid")
 	ErrorUnexpectedClaims = errors.New("claims wasn't MapClaims as expected")
+
+	ErrNilResolver = errors.New("resolver cannot be nil")
 )
 
-// BearerTokenFactory parses and does basic validation for a JWT token.
+// BearerTokenFactory parses and does basic validation for a JWT token,
+// converting it into a bascule Token.
 type BearerTokenFactory struct {
-	DefaultKeyId string
-	Resolver     key.Resolver
-	Parser       bascule.JWTParser
-	Leeway       bascule.Leeway
+	fx.In
+	DefaultKeyID string            `name:"default_key_id"`
+	Resolver     key.Resolver      `name:"key_resolver_factory"`
+	Parser       bascule.JWTParser `optional:"true"`
+	Leeway       bascule.Leeway    `optional:"true"`
 }
 
 // ParseAndValidate expects the given value to be a JWT with a kid header.  The
@@ -58,7 +64,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	keyfunc := func(token *jwt.Token) (interface{}, error) {
 		keyID, ok := token.Header["kid"].(string)
 		if !ok {
-			keyID = btf.DefaultKeyId
+			keyID = btf.DefaultKeyID
 		}
 
 		pair, err := btf.Resolver.ResolveKey(ctx, keyID)
@@ -104,4 +110,28 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	}
 
 	return bascule.NewToken("jwt", principal, jwtClaims), nil
+}
+
+func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
+	return fx.Options(
+		key.ProvideResolver(fmt.Sprintf("%s.key", configKey), optional),
+		fx.Provide(
+			arrange.UnmarshalKey(fmt.Sprintf("%s.leeway", configKey), bascule.Leeway{}),
+			fx.Annotated{
+				Group: "bascule_constructor_options",
+				Target: func(f BearerTokenFactory) (COption, error) {
+					if f.Parser == nil {
+						f.Parser = bascule.DefaultJWTParser
+					}
+					if f.Resolver == nil {
+						if optional {
+							return nil, nil
+						}
+						return nil, ErrNilResolver
+					}
+					return WithTokenFactory("Bearer", f), nil
+				},
+			},
+		),
+	)
 }

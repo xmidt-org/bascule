@@ -39,6 +39,17 @@ type MetricListener struct {
 	measures  *AuthValidationMeasures
 }
 
+type MetricListenerOptionsIn struct {
+	fx.In
+	Measures AuthValidationMeasures
+	Options  []Option `group:"bascule_metric_listener_options,flatten" optional:"true"`
+}
+
+type LeewayIn struct {
+	fx.In
+	L bascule.Leeway `optional:"true"`
+}
+
 func (m *MetricListener) OnAuthenticated(auth bascule.Authentication) {
 	now := time.Now()
 
@@ -134,10 +145,20 @@ func NewMetricListener(m *AuthValidationMeasures, options ...Option) (*MetricLis
 
 func ProvideMetricListener() fx.Option {
 	return fx.Provide(
+		func(in LeewayIn) []Option {
+			os := []Option{}
+			if in.L.EXP > 0 {
+				os = append(os, WithExpLeeway(time.Duration(in.L.EXP)))
+			}
+			if in.L.NBF > 0 {
+				os = append(os, WithNbfLeeway(time.Duration(in.L.NBF)))
+			}
+			return os
+		},
 		fx.Annotated{
 			Name: "bascule_metric_listener",
-			Target: func(m AuthValidationMeasures, options ...Option) (*MetricListener, error) {
-				return NewMetricListener(&m, options...)
+			Target: func(in MetricListenerOptionsIn) (*MetricListener, error) {
+				return NewMetricListener(&in.Measures, in.Options...)
 			},
 		},
 		fx.Annotated{

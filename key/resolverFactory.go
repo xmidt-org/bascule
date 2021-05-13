@@ -18,6 +18,7 @@
 package key
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -39,6 +40,8 @@ var (
 		"Key resource template must support either no parameters are the %s parameter",
 		KeyIdParameterName,
 	)
+
+	ErrNoResolverFactory = errors.New("no resolver factory configuration found")
 )
 
 // ResolverFactory provides a JSON representation of a collection of keys together
@@ -65,7 +68,7 @@ type ResolverFactory struct {
 
 type ResolverFactoryIn struct {
 	fx.In
-	R ResolverFactory `name:"key_resolver_factory"`
+	R *ResolverFactory `name:"key_resolver_factory"`
 }
 
 func (factory *ResolverFactory) parser() Parser {
@@ -121,13 +124,19 @@ func (factory *ResolverFactory) NewResolver() (Resolver, error) {
 	return nil, ErrorInvalidTemplate
 }
 
-func ProvideResolver(key string) fx.Option {
+func ProvideResolver(key string, optional bool) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
 			Name:   "key_resolver_factory",
-			Target: arrange.UnmarshalKey(key, ResolverFactory{}),
+			Target: arrange.UnmarshalKey(key, &ResolverFactory{}),
 		},
 		func(in ResolverFactoryIn) (Resolver, error) {
+			if in.R == nil {
+				if optional {
+					return nil, nil
+				}
+				return nil, ErrNoResolverFactory
+			}
 			return in.R.NewResolver()
 		},
 	)
