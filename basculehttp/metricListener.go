@@ -42,7 +42,7 @@ type MetricListener struct {
 type MetricListenerOptionsIn struct {
 	fx.In
 	Measures AuthValidationMeasures
-	Options  []Option `group:"bascule_metric_listener_options" optional:"true"`
+	Options  []Option `group:"bascule_metric_listener_options"`
 }
 
 type LeewayIn struct {
