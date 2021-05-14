@@ -47,9 +47,9 @@ var (
 type BearerTokenFactory struct {
 	fx.In
 	DefaultKeyID string            `name:"default_key_id"`
-	Resolver     key.Resolver      `name:"key_resolver_factory"`
+	Resolver     key.Resolver      `name:"key_resolver"`
 	Parser       bascule.JWTParser `optional:"true"`
-	Leeway       bascule.Leeway    `optional:"true"`
+	Leeway       bascule.Leeway    `name:"jwt_leeway" optional:"true"`
 }
 
 // ParseAndValidate expects the given value to be a JWT with a kid header.  The
@@ -116,7 +116,11 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 	return fx.Options(
 		key.ProvideResolver(fmt.Sprintf("%s.key", configKey), optional),
 		fx.Provide(
-			arrange.UnmarshalKey(fmt.Sprintf("%s.leeway", configKey), bascule.Leeway{}),
+			fx.Annotated{
+				Name: "jwt_leeway",
+				Target: arrange.UnmarshalKey(fmt.Sprintf("%s.leeway", configKey),
+					bascule.Leeway{}),
+			},
 			fx.Annotated{
 				Group: "bascule_constructor_options",
 				Target: func(f BearerTokenFactory) (COption, error) {

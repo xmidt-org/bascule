@@ -47,7 +47,7 @@ type MetricListenerOptionsIn struct {
 
 type LeewayIn struct {
 	fx.In
-	L bascule.Leeway `optional:"true"`
+	L bascule.Leeway `name:"jwt_leeway" optional:"true"`
 }
 
 func (m *MetricListener) OnAuthenticated(auth bascule.Authentication) {

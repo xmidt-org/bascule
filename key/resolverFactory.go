@@ -130,14 +130,17 @@ func ProvideResolver(key string, optional bool) fx.Option {
 			Name:   "key_resolver_factory",
 			Target: arrange.UnmarshalKey(key, &ResolverFactory{}),
 		},
-		func(in ResolverFactoryIn) (Resolver, error) {
-			if in.R == nil {
-				if optional {
-					return nil, nil
+		fx.Annotated{
+			Name: "key_resolver",
+			Target: func(in ResolverFactoryIn) (Resolver, error) {
+				if in.R == nil {
+					if optional {
+						return nil, nil
+					}
+					return nil, fmt.Errorf("%w at key %s", ErrNoResolverFactory, key)
 				}
-				return nil, ErrNoResolverFactory
-			}
-			return in.R.NewResolver()
+				return in.R.NewResolver()
+			},
 		},
 	)
 }
