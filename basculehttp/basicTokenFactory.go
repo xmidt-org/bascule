@@ -25,7 +25,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
+	"go.uber.org/fx"
 )
 
 var (
@@ -33,6 +35,11 @@ var (
 	ErrorPrincipalNotFound = errors.New("principal not found")
 	ErrorInvalidPassword   = errors.New("invalid password")
 )
+
+type EncodedBasicKeysIn struct {
+	fx.In
+	Basic []string
+}
 
 // TokenFactoryFunc makes it so any function that has the same signature as
 // TokenFactory's ParseAndValidate function implements TokenFactory.
@@ -103,4 +110,26 @@ func NewBasicTokenFactoryFromList(encodedBasicAuthKeys []string) (BasicTokenFact
 
 	// explicitly return nil so we don't have any empty error lists being returned.
 	return btf, nil
+}
+
+func ProvideBasicTokenFactory(key string) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name:   "encoded_basic_auths",
+			Target: arrange.UnmarshalKey(key, EncodedBasicKeysIn{}),
+		},
+		fx.Annotated{
+			Group: "bascule_constructor_options",
+			Target: func(in EncodedBasicKeysIn) (COption, error) {
+				if len(in.Basic) == 0 {
+					return nil, nil
+				}
+				tf, err := NewBasicTokenFactoryFromList(in.Basic)
+				if err != nil {
+					return nil, err
+				}
+				return WithTokenFactory("Basic", tf), nil
+			},
+		},
+	)
 }

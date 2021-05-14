@@ -16,3 +16,22 @@
  */
 
 package basculehttp
+
+import (
+	"github.com/xmidt-org/bascule/basculechecks"
+	"go.uber.org/fx"
+)
+
+func ProvideBasicAuth(key string) fx.Option {
+	return fx.Options(
+		ProvideBasicTokenFactory(key),
+		fx.Provide(
+			fx.Annotated{
+				Group: "primary_bascule_enforcer_options",
+				Target: func() EOption {
+					return WithRules("Basic", basculechecks.AllowAll())
+				},
+			},
+		),
+	)
+}
