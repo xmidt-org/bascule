@@ -18,9 +18,15 @@
 package basculehttp
 
 import (
+	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/basculechecks"
 	"go.uber.org/fx"
 )
+
+type BearerValidatorsIn struct {
+	fx.In
+	V []bascule.Validator `group:"bascule_bearer_validators"`
+}
 
 func ProvideBasicAuth(key string) fx.Option {
 	return fx.Options(
@@ -33,5 +39,34 @@ func ProvideBasicAuth(key string) fx.Option {
 				},
 			},
 		),
+	)
+}
+
+func ProvideBearerValidator() fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Group:  "bascule_bearer_validators",
+			Target: bascule.Validator(basculechecks.NonEmptyPrincipal()),
+		},
+		fx.Annotated{
+			Group:  "bascule_bearer_validators",
+			Target: bascule.Validator(basculechecks.ValidType([]string{"jwt"})),
+		},
+		fx.Annotated{
+			Group: "bascule_enforcer_options",
+			Target: func(in BearerValidatorsIn) EOption {
+				if len(in.V) == 0 {
+					return nil
+				}
+				// don't add any nil validators.
+				rules := []bascule.Validator{}
+				for _, v := range in.V {
+					if v != nil {
+						rules = append(rules, v)
+					}
+				}
+				return WithRules("Bearer", bascule.Validators(rules))
+			},
+		},
 	)
 }
