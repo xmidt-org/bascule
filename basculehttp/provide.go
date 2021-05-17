@@ -25,7 +25,8 @@ import (
 
 type BearerValidatorsIn struct {
 	fx.In
-	V []bascule.Validator `group:"bascule_bearer_validators"`
+	Vs           []bascule.Validator `group:"bascule_bearer_validators"`
+	Capabilities bascule.Validator   `name:"bascule_validator_capabilities" optional:"true"`
 }
 
 func ProvideBasicAuth(key string) fx.Option {
@@ -55,15 +56,18 @@ func ProvideBearerValidator() fx.Option {
 		fx.Annotated{
 			Group: "bascule_enforcer_options",
 			Target: func(in BearerValidatorsIn) EOption {
-				if len(in.V) == 0 {
+				if len(in.Vs) == 0 {
 					return nil
 				}
 				// don't add any nil validators.
 				rules := []bascule.Validator{}
-				for _, v := range in.V {
+				for _, v := range in.Vs {
 					if v != nil {
 						rules = append(rules, v)
 					}
+				}
+				if in.Capabilities != nil {
+					rules = append(rules, in.Capabilities)
 				}
 				return WithRules("Bearer", bascule.Validators(rules))
 			},
