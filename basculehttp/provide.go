@@ -46,12 +46,16 @@ func ProvideBasicAuth(key string) fx.Option {
 func ProvideBearerValidator() fx.Option {
 	return fx.Provide(
 		fx.Annotated{
-			Group:  "bascule_bearer_validators",
-			Target: bascule.Validator(basculechecks.NonEmptyPrincipal()),
+			Group: "bascule_bearer_validators",
+			Target: func() bascule.Validator {
+				return basculechecks.NonEmptyPrincipal()
+			},
 		},
 		fx.Annotated{
-			Group:  "bascule_bearer_validators",
-			Target: bascule.Validator(basculechecks.ValidType([]string{"jwt"})),
+			Group: "bascule_bearer_validators",
+			Target: func() bascule.Validator {
+				return basculechecks.ValidType([]string{"jwt"})
+			},
 		},
 		fx.Annotated{
 			Group: "bascule_enforcer_options",
