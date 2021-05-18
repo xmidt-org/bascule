@@ -64,7 +64,9 @@ func NewMetricValidator(checker CapabilitiesChecker, measures *AuthCapabilityChe
 	}
 
 	for _, o := range options {
-		o(&m)
+		if o != nil {
+			o(&m)
+		}
 	}
 	return &m, nil
 }
