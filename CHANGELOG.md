@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Removed Partner from ParsedValues. [#99](https://github.com/xmidt-org/bascule/pull/99)
 - Fixed ProvideMetricValidator() so it works. [#100](https://github.com/xmidt-org/bascule/pull/100)
 - Updated error response reason's string representation to be snake case. [#102](https://github.com/xmidt-org/bascule/pull/102)
+- Updated objects created with options to ignore nils. [#104](https://github.com/xmidt-org/bascule/pull/104)
+- Added Provide() functions in basculehttp and basculechecks for easier setup. [#104](https://github.com/xmidt-org/bascule/pull/104)
 
 ## [v0.9.0]
 - added helper function for building basic auth map [#59](https://github.com/xmidt-org/bascule/pull/59)
