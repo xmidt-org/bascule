@@ -34,7 +34,7 @@ var (
 	errRegexCompileFail = errors.New("failed to compile regexp")
 )
 
-// CapabilityConfig includes the values needed to set up a basic capability
+// CapabilitiesMapConfig includes the values needed to set up a basic capability
 // checker to be used against the JWT provided.  The checker will verify that
 // one of the capabilities in the JWT match the string exactly.
 type CapabilitiesMapConfig struct {
@@ -52,7 +52,7 @@ type CapabilitiesMap struct {
 	KeyPath        []string
 }
 
-// Check uses the parsed endpoint value to determine which EndpointChecker to
+// CheckAuthentication uses the parsed endpoint value to determine which EndpointChecker to
 // run against the capabilities in the auth provided.  If there is no
 // EndpointChecker for the endpoint, the default is used.  As long as one
 // capability is found to be authorized by the EndpointChecker, no error is

@@ -172,3 +172,71 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 		})
 	}
 }
+
+func TestNewCapabilitiesMap(t *testing.T) {
+	a := ".*"
+	b := "aaaaa+"
+	c1 := "yup"
+	c2 := "nope"
+	es := map[string]string{a: c1, b: c2}
+	m := map[string]EndpointChecker{
+		a: ConstEndpointCheck(c1),
+		b: ConstEndpointCheck(c2),
+	}
+
+	tests := []struct {
+		description     string
+		config          CapabilitiesMapConfig
+		expectedChecker CapabilitiesChecker
+		expectedErr     error
+	}{
+		{
+			description: "Success",
+			config: CapabilitiesMapConfig{
+				Endpoints: es,
+			},
+			expectedChecker: CapabilitiesMap{
+				Checkers: m,
+			},
+		},
+		{
+			description: "Success with default",
+			config: CapabilitiesMapConfig{
+				Endpoints: es,
+				Default:   "pls",
+			},
+			expectedChecker: CapabilitiesMap{
+				Checkers:       m,
+				DefaultChecker: ConstEndpointCheck("pls"),
+			},
+		},
+		{
+			description: "Regex fail",
+			config: CapabilitiesMapConfig{
+				Endpoints: map[string]string{
+					`\m\n\b\v`: "test",
+				},
+			},
+			expectedErr: errRegexCompileFail,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			assert := assert.New(t)
+			c, err := NewCapabilitiesMap(tc.config)
+			if tc.expectedErr != nil {
+				assert.Empty(c)
+				require.Error(t, err)
+				assert.True(errors.Is(err, tc.expectedErr),
+					fmt.Errorf("error [%v] doesn't contain error [%v] in its err chain",
+						err, tc.expectedErr),
+				)
+				return
+			}
+			assert.NoError(err)
+			assert.NotEmpty(c)
+			assert.Equal(tc.expectedChecker, c.Checker)
+			assert.NotNil(c.Options)
+		})
+	}
+}
