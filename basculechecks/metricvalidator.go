@@ -49,6 +49,9 @@ type CapabilitiesChecker interface {
 	CheckAuthentication(auth bascule.Authentication, vals ParsedValues) error
 }
 
+// CapabilitiesCheckerOut is a struct returned by New() functions that help to
+// create a CapabilitiesChecker and as a byproduct also create some
+// MetricOptions.
 type CapabilitiesCheckerOut struct {
 	fx.Out
 	Checker CapabilitiesChecker
@@ -69,6 +72,15 @@ type metricValues struct {
 	endpoint  string
 	partnerID string
 	client    string
+}
+
+// MetricValidatorIn contains the objects needed to create a MetricValidator,
+// wired with uber fx.
+type MetricValidatorIn struct {
+	fx.In
+	Checker  CapabilitiesChecker
+	Measures AuthCapabilityCheckMeasures
+	Options  []MetricOption `group:"bascule_capability_options"`
 }
 
 // MetricValidator determines if a request is authorized and then updates a

@@ -28,14 +28,18 @@ type errWithReason struct {
 	reason string
 }
 
+// Error returns the error string.
 func (e errWithReason) Error() string {
 	return e.err.Error()
 }
 
+// Reason returns the reason string for the error.  This is intended to be used
+// in a metric label.
 func (e errWithReason) Reason() string {
 	return e.reason
 }
 
+// Unwrap returns the error stored.
 func (e errWithReason) Unwrap() error {
 	return e.err
 }

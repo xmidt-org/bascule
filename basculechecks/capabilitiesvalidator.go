@@ -70,7 +70,10 @@ type EndpointChecker interface {
 	Name() string
 }
 
-// CapabilitiesValidatorConfig
+// CapabilitiesValidatorConfig is input that can be used to build a
+// CapabilitiesValidator and some metric options for a MetricValidator. A
+// CapabilitiesValidator set up with this will use the default KeyPath and an
+// EndpointRegexCheck.
 type CapabilitiesValidatorConfig struct {
 	Type            string
 	Prefix          string
@@ -179,13 +182,17 @@ func getCapabilities(attributes bascule.Attributes, keyPath []string) ([]string,
 
 }
 
+// NewCapabilitiesValidator uses the provided config to create an
+// RegexEndpointCheck and wrap it in a CapabilitiesValidator.  Metric Options
+// are also created for a Metric Validator by parsing the type to determine if
+// the metric validator should only monitor and compiling endpoints into Regexps.
 func NewCapabilitiesValidator(config CapabilitiesValidatorConfig) (CapabilitiesCheckerOut, error) {
 	var out CapabilitiesCheckerOut
 	if config.Type != "enforce" && config.Type != "monitor" {
 		// unsupported capability check type. CapabilityCheck disabled.
 		return out, nil
 	}
-	c, err := NewEndpointRegexCheck(config.Prefix, config.AcceptAllMethod)
+	c, err := NewRegexEndpointCheck(config.Prefix, config.AcceptAllMethod)
 	if err != nil {
 		return out, fmt.Errorf("error initializing endpointRegexCheck: %w", err)
 	}

@@ -36,7 +36,8 @@ var (
 
 // CapabilitiesMapConfig includes the values needed to set up a map capability
 // checker.  The checker will verify that one of the capabilities in a provided
-// JWT match the string meant for that endpoint exactly.
+// JWT match the string meant for that endpoint exactly.  A CapabilitiesMap set
+// up with this will use the default KeyPath.
 type CapabilitiesMapConfig struct {
 	Endpoints map[string]string
 	Default   string

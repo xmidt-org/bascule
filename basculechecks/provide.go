@@ -23,13 +23,8 @@ import (
 	"go.uber.org/fx"
 )
 
-type MetricValidatorIn struct {
-	fx.In
-	Checker  CapabilitiesChecker
-	Measures AuthCapabilityCheckMeasures
-	Options  []MetricOption `group:"bascule_capability_options"`
-}
-
+// ProvideMetricValidator is an uber fx Provide() function that builds a
+// MetricValidator given the dependencies needed.
 func ProvideMetricValidator() fx.Option {
 	return fx.Provide(
 		fx.Annotated{
@@ -41,6 +36,9 @@ func ProvideMetricValidator() fx.Option {
 	)
 }
 
+// ProvideCapabilitiesMapValidator is an uber fx Provide() function that builds
+// a MetricValidator that uses a CapabilitiesMap and ConstChecks, using the
+// configuration found at the key provided.
 func ProvideCapabilitiesMapValidator(key string) fx.Option {
 	return fx.Options(
 		fx.Provide(
@@ -51,6 +49,9 @@ func ProvideCapabilitiesMapValidator(key string) fx.Option {
 	)
 }
 
+// ProvideRegexCapabilitiesValidator is an uber fx Provide() function that
+// builds a MetricValidator that uses a CapabilitiesValidator and
+// RegexEndpointCheck, using the configuration found at the key provided.
 func ProvideRegexCapabilitiesValidator(key string) fx.Option {
 	return fx.Options(
 		fx.Provide(

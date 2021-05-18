@@ -64,22 +64,22 @@ func TestConstCheck(t *testing.T) {
 	}
 }
 
-func TestEndpointRegexEndpointChecker(t *testing.T) {
+func TestRegexEndpointCheckEndpointChecker(t *testing.T) {
 	assert := assert.New(t)
 	var v interface{}
-	v, err := NewEndpointRegexCheck("test", "")
+	v, err := NewRegexEndpointCheck("test", "")
 	assert.Nil(err)
 	_, ok := v.(EndpointChecker)
 	assert.True(ok)
 }
-func TestNewEndpointRegexError(t *testing.T) {
-	e, err := NewEndpointRegexCheck(`\M`, "")
+func TestNewRegexEndpointCheck(t *testing.T) {
+	e, err := NewRegexEndpointCheck(`\M`, "")
 	assert := assert.New(t)
 	assert.Empty(e)
 	assert.NotNil(err)
 }
 
-func TestEndpointRegexCheck(t *testing.T) {
+func TestRegexEndpointCheck(t *testing.T) {
 	tests := []struct {
 		description     string
 		prefix          string
@@ -139,11 +139,11 @@ func TestEndpointRegexCheck(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
 			require := require.New(t)
-			e, err := NewEndpointRegexCheck(tc.prefix, tc.acceptAllMethod)
+			r, err := NewRegexEndpointCheck(tc.prefix, tc.acceptAllMethod)
 			require.Nil(err)
-			require.NotEmpty(e)
-			assert.Equal("regex", e.Name())
-			ok := e.Authorized(tc.capability, tc.url, tc.method)
+			require.NotEmpty(r)
+			assert.Equal("regex", r.Name())
+			ok := r.Authorized(tc.capability, tc.url, tc.method)
 			assert.Equal(tc.okExpected, ok)
 		})
 	}
