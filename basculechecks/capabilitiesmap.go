@@ -34,9 +34,9 @@ var (
 	errRegexCompileFail = errors.New("failed to compile regexp")
 )
 
-// CapabilitiesMapConfig includes the values needed to set up a basic capability
-// checker to be used against the JWT provided.  The checker will verify that
-// one of the capabilities in the JWT match the string exactly.
+// CapabilitiesMapConfig includes the values needed to set up a map capability
+// checker.  The checker will verify that one of the capabilities in a provided
+// JWT match the string meant for that endpoint exactly.
 type CapabilitiesMapConfig struct {
 	Endpoints map[string]string
 	Default   string
@@ -103,6 +103,10 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 		ErrNoValidCapabilityFound, capabilities, checker.Name())
 }
 
+// NewCapabilitiesMap parses the CapabilitiesMapConfig provided into a
+// CapabilitiesMap.  The same regular expression provided for the map are also
+// needed for labels for a MetricValidator, so an option to be used for that is
+// also created.
 func NewCapabilitiesMap(config CapabilitiesMapConfig) (CapabilitiesCheckerOut, error) {
 	// if we don't get a capability value, a nil default checker means always
 	// returning false.

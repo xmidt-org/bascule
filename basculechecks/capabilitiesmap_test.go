@@ -48,7 +48,8 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 		"...",
 	}
 	goodToken := bascule.NewToken("test", "princ",
-		bascule.NewAttributes(map[string]interface{}{CapabilityKey: goodCapabilities}))
+		bascule.NewAttributes(
+			buildDummyAttributes(CapabilityKeys(), goodCapabilities)))
 	defaultCapabilities := []string{
 		"test",
 		"",
@@ -56,7 +57,8 @@ func TestCapabilitiesMapCheck(t *testing.T) {
 		"...",
 	}
 	defaultToken := bascule.NewToken("test", "princ",
-		bascule.NewAttributes(map[string]interface{}{CapabilityKey: defaultCapabilities}))
+		bascule.NewAttributes(
+			buildDummyAttributes(CapabilityKeys(), defaultCapabilities)))
 	badToken := bascule.NewToken("", "", nil)
 	tests := []struct {
 		description string

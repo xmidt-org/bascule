@@ -25,7 +25,6 @@ import (
 
 	"github.com/spf13/cast"
 	"github.com/xmidt-org/bascule"
-	"go.uber.org/fx"
 )
 
 var (
@@ -64,18 +63,6 @@ var (
 	}
 )
 
-const (
-	CapabilityKey = "capabilities"
-)
-
-var (
-	partnerKeys = []string{"allowedResources", "allowedPartners"}
-)
-
-func PartnerKeys() []string {
-	return partnerKeys
-}
-
 // EndpointChecker is an object that can determine if a value provides
 // authorization to the endpoint.
 type EndpointChecker interface {
@@ -83,16 +70,12 @@ type EndpointChecker interface {
 	Name() string
 }
 
+// CapabilitiesValidatorConfig
 type CapabilitiesValidatorConfig struct {
 	Type            string
 	Prefix          string
 	AcceptAllMethod string
 	EndpointBuckets []string
-}
-
-type CapabilitiesValidatorConfigIn struct {
-	fx.In
-	C *CapabilitiesValidatorConfig
 }
 
 // CapabilitiesValidator checks the capabilities provided in a
@@ -173,7 +156,7 @@ func getCapabilities(attributes bascule.Attributes, keyPath []string) ([]string,
 	}
 
 	if len(keyPath) == 0 {
-		keyPath = []string{CapabilityKey}
+		keyPath = CapabilityKeys()
 	}
 
 	val, ok := bascule.GetNestedAttribute(attributes, keyPath...)
