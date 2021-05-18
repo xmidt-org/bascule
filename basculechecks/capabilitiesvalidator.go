@@ -21,9 +21,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/spf13/cast"
 	"github.com/xmidt-org/bascule"
+	"go.uber.org/fx"
 )
 
 var (
@@ -79,6 +81,18 @@ func PartnerKeys() []string {
 type EndpointChecker interface {
 	Authorized(value string, reqURL string, method string) bool
 	Name() string
+}
+
+type CapabilitiesValidatorConfig struct {
+	Type            string
+	Prefix          string
+	AcceptAllMethod string
+	EndpointBuckets []string
+}
+
+type CapabilitiesValidatorConfigIn struct {
+	fx.In
+	C *CapabilitiesValidatorConfig
 }
 
 // CapabilitiesValidator checks the capabilities provided in a
@@ -180,4 +194,36 @@ func getCapabilities(attributes bascule.Attributes, keyPath []string) ([]string,
 
 	return vals, nil
 
+}
+
+func NewCapabilitiesValidator(config CapabilitiesValidatorConfig) (CapabilitiesCheckerOut, error) {
+	var out CapabilitiesCheckerOut
+	if config.Type != "enforce" && config.Type != "monitor" {
+		// unsupported capability check type. CapabilityCheck disabled.
+		return out, nil
+	}
+	c, err := NewEndpointRegexCheck(config.Prefix, config.AcceptAllMethod)
+	if err != nil {
+		return out, fmt.Errorf("error initializing endpointRegexCheck: %w", err)
+	}
+
+	endpoints := make([]*regexp.Regexp, 0, len(config.EndpointBuckets))
+	for _, e := range config.EndpointBuckets {
+		r, err := regexp.Compile(e)
+		if err != nil {
+			continue
+		}
+		endpoints = append(endpoints, r)
+	}
+
+	os := []MetricOption{WithEndpoints(endpoints)}
+	if config.Type == "monitor" {
+		os = append(os, MonitorOnly())
+	}
+
+	out = CapabilitiesCheckerOut{
+		Checker: CapabilitiesValidator{Checker: c},
+		Options: os,
+	}
+	return out, nil
 }

@@ -20,6 +20,7 @@ package basculechecks
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/xmidt-org/bascule"
 )
@@ -30,7 +31,16 @@ var (
 		err:    errors.New("endpoint provided is empty"),
 		reason: EmptyParsedURL,
 	}
+	errRegexCompileFail = errors.New("failed to compile regexp")
 )
+
+// CapabilityConfig includes the values needed to set up a basic capability
+// checker to be used against the JWT provided.  The checker will verify that
+// one of the capabilities in the JWT match the string exactly.
+type CapabilitiesMapConfig struct {
+	Endpoints map[string]string
+	Default   string
+}
 
 // CapabilitiesMap runs a capability check based on the value of the parsedURL,
 // which is the key to the CapabilitiesMap's map.  The parsedURL is expected to
@@ -91,4 +101,37 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 
 	return fmt.Errorf("%w in [%v] with %v endpoint checker",
 		ErrNoValidCapabilityFound, capabilities, checker.Name())
+}
+
+func NewCapabilitiesMap(config CapabilitiesMapConfig) (CapabilitiesCheckerOut, error) {
+	// if we don't get a capability value, a nil default checker means always
+	// returning false.
+	var defaultChecker EndpointChecker
+	if config.Default != "" {
+		defaultChecker = ConstEndpointCheck(config.Default)
+	}
+
+	i := 0
+	rs := make([]*regexp.Regexp, len(config.Endpoints))
+	endpointMap := map[string]EndpointChecker{}
+	for r, checkVal := range config.Endpoints {
+		regex, err := regexp.Compile(r)
+		if err != nil {
+			return CapabilitiesCheckerOut{}, fmt.Errorf("%w [%v]: %v", errRegexCompileFail, r, err)
+		}
+		// because rs is the length of config.Endpoints, i never overflows.
+		rs[i] = regex
+		i++
+		endpointMap[r] = ConstEndpointCheck(checkVal)
+	}
+
+	cc := CapabilitiesMap{
+		Checkers:       endpointMap,
+		DefaultChecker: defaultChecker,
+	}
+
+	return CapabilitiesCheckerOut{
+		Checker: cc,
+		Options: []MetricOption{WithEndpoints(rs)},
+	}, nil
 }

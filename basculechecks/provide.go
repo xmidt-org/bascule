@@ -18,6 +18,7 @@
 package basculechecks
 
 import (
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
 )
@@ -37,5 +38,25 @@ func ProvideMetricValidator() fx.Option {
 				return NewMetricValidator(in.Checker, &in.Measures, in.Options...)
 			},
 		},
+	)
+}
+
+func ProvideCapabilitiesMapValidator(key string) fx.Option {
+	return fx.Options(
+		fx.Provide(
+			arrange.UnmarshalKey(key, CapabilitiesMapConfig{}),
+			NewCapabilitiesMap,
+		),
+		ProvideMetricValidator(),
+	)
+}
+
+func ProvideRegexCapabilitiesValidator(key string) fx.Option {
+	return fx.Options(
+		fx.Provide(
+			arrange.UnmarshalKey(key, CapabilitiesValidatorConfig{}),
+			NewCapabilitiesValidator,
+		),
+		ProvideMetricValidator(),
 	)
 }

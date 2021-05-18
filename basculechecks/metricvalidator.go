@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cast"
 	"github.com/xmidt-org/bascule"
+	"go.uber.org/fx"
 )
 
 var (
@@ -46,6 +47,12 @@ var (
 //  error is given for logging and metrics.
 type CapabilitiesChecker interface {
 	CheckAuthentication(auth bascule.Authentication, vals ParsedValues) error
+}
+
+type CapabilitiesCheckerOut struct {
+	fx.Out
+	Checker CapabilitiesChecker
+	Options []MetricOption `group:"bascule_capability_options,flatten"`
 }
 
 // ParsedValues are values determined from the bascule Authentication.
