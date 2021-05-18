@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ var responseReasonMarshal = map[ErrorResponseReason]string{
 	ChecksFailed:          "checks_failed",
 }
 
+// String provides a metric label safe string of the response reason.
 func (e ErrorResponseReason) String() string {
 	reason, ok := responseReasonMarshal[e]
 	if !ok {

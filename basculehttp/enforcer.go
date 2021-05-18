@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,6 +155,8 @@ func WithEErrorResponseFunc(f OnErrorResponse) EOption {
 	}
 }
 
+// ProvideEnforcer is a helper function for wiring up an enforcer with uber fx.
+// Any options added with uber fx will be used to create the enforcer.
 func ProvideEnforcer() fx.Option {
 	return fx.Provide(
 		fx.Annotated{

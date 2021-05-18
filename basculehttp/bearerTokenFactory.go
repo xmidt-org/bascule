@@ -112,6 +112,9 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 	return bascule.NewToken("jwt", principal, jwtClaims), nil
 }
 
+// ProvideBearerTokenFactory uses the key given to unmarshal configuration
+// needed to build a bearer token factory.  It provides a constructor option
+// with the bearer token factory.
 func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 	return fx.Options(
 		key.ProvideResolver(fmt.Sprintf("%s.key", configKey), optional),

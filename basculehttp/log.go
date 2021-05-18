@@ -72,6 +72,10 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 	}
 }
 
+// ProvideLogger provides functions that use zap loggers, getting from and
+// setting to a context.  The zap logger is translated into a go-kit logger for
+// compatibility with the alice middleware.  Options are also provided for the
+// middleware so they can use the context logger.
 func ProvideLogger() fx.Option {
 	return fx.Options(
 		fx.Supply(sallust.Get),

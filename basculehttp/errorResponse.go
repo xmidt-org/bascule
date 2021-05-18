@@ -40,6 +40,8 @@ func DefaultOnErrorResponse(_ ErrorResponseReason, _ error) {}
 // for a given reason.
 type OnErrorHTTPResponse func(http.ResponseWriter, ErrorResponseReason)
 
+// OnErrorHTTPResponseIn is uber fx wiring allowing for OnErrorHTTPResponse to
+// be optional.
 type OnErrorHTTPResponseIn struct {
 	fx.In
 	R OnErrorHTTPResponse `optional:"true"`
@@ -70,6 +72,8 @@ func LegacyOnErrorHTTPResponse(w http.ResponseWriter, reason ErrorResponseReason
 	}
 }
 
+// ProvideOnErrorHTTPResponse creates the constructor option to include an
+// OnErrorHTTPResponse function if it is provided.
 func ProvideOnErrorHTTPResponse() fx.Option {
 	return fx.Provide(
 		fx.Annotated{

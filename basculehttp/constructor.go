@@ -222,6 +222,9 @@ func WithCErrorHTTPResponseFunc(f OnErrorHTTPResponse) COption {
 	}
 }
 
+// ProvideConstructor is a helper function for wiring up a basculehttp
+// constructor with uber fx.  Any options or optional values added with uber fx
+// will be used to create the constructor.
 func ProvideConstructor() fx.Option {
 	return fx.Options(
 		ProvideOnErrorHTTPResponse(),

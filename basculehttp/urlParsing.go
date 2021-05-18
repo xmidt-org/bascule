@@ -28,6 +28,7 @@ import (
 // ParseURL is a function that modifies the url given then returns it.
 type ParseURL func(*url.URL) (*url.URL, error)
 
+// ParseURLIn is uber fx wiring allowing for ParseURL to be optional.
 type ParseURLIn struct {
 	fx.In
 	P ParseURL `optional:"true"`
@@ -54,6 +55,8 @@ func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
 	}
 }
 
+// ProvideParseURL creates the constructor option to include a ParseURL function
+// if it is provided.
 func ProvideParseURL() fx.Option {
 	return fx.Provide(
 		fx.Annotated{

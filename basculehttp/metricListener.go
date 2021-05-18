@@ -32,12 +32,15 @@ const (
 	defaultServer = "primary"
 )
 
+// MetricListener
 type MetricListener struct {
 	server    string
 	expLeeway time.Duration
 	nbfLeeway time.Duration
 	measures  *AuthValidationMeasures
 }
+
+type Option func(m *MetricListener)
 
 type MetricListenerOptionsIn struct {
 	fx.In
@@ -104,8 +107,6 @@ func (m *MetricListener) OnErrorResponse(e ErrorResponseReason, _ error) {
 		With(prometheus.Labels{ServerLabel: m.server, OutcomeLabel: e.String()}).
 		Add(1)
 }
-
-type Option func(m *MetricListener)
 
 func WithExpLeeway(e time.Duration) Option {
 	return func(m *MetricListener) {

@@ -16,9 +16,9 @@
  */
 
 /*
-Package basculehttp provides alice compatible middleware that parses an
-authorization from an http header into a bascule token and then runs validation
-against it. It also contains listener middleware that tracks if requests were
-authorized or not.
+Package basculehttp provides Alice-style http middleware that parses a Token
+from an http header, validates the Token, and allows for the consumer to add
+additional logs or metrics upon an error or a valid Token. The package contains
+listener middleware that tracks if requests were authorized or not.
 */
 package basculehttp

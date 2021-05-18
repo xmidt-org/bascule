@@ -36,6 +36,7 @@ var (
 	ErrorInvalidPassword   = errors.New("invalid password")
 )
 
+// EncodedBasicKeysIn contains string representations of the basic auth allowed.
 type EncodedBasicKeysIn struct {
 	fx.In
 	Basic []string
@@ -112,6 +113,9 @@ func NewBasicTokenFactoryFromList(encodedBasicAuthKeys []string) (BasicTokenFact
 	return btf, nil
 }
 
+// ProvideBasicTokenFactory uses configuration at the key given to build a basic
+// token factory.  It provides a constructor option with the basic token
+// factory.
 func ProvideBasicTokenFactory(key string) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
