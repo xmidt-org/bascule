@@ -42,12 +42,11 @@ func TestMetricValidatorCheck(t *testing.T) {
 		"joweiafuoiuoiwauf",
 		"it's a match",
 	}
-	goodAttributes := bascule.NewAttributes(map[string]interface{}{
-		CapabilityKey: capabilities,
-		"allowedResources": map[string]interface{}{
-			"allowedPartners": []string{"meh"},
-		},
-	})
+	goodMap := buildDummyAttributes(CapabilityKeys(), capabilities)
+	goodMap["allowedResources"] = map[string]interface{}{
+		"allowedPartners": []string{"meh"},
+	}
+	goodAttributes := bascule.NewAttributes(goodMap)
 	cErr := errWithReason{
 		err:    errors.New("check test error"),
 		reason: NoCapabilitiesMatch,

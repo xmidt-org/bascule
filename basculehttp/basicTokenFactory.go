@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,31 +25,21 @@ import (
 	"fmt"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
-	"github.com/xmidt-org/bascule/key"
-)
-
-const (
-	jwtPrincipalKey = "sub"
+	"go.uber.org/fx"
 )
 
 var (
 	ErrorMalformedValue    = errors.New("expected <user>:<password> in decoded value")
 	ErrorPrincipalNotFound = errors.New("principal not found")
 	ErrorInvalidPassword   = errors.New("invalid password")
-	ErrorNoProtectedHeader = errors.New("missing protected header")
-	ErrorNoSigningMethod   = errors.New("signing method (alg) is missing or unrecognized")
-	ErrorUnexpectedPayload = errors.New("payload isn't a map of strings to interfaces")
-	ErrorInvalidPrincipal  = errors.New("invalid principal")
-	ErrorInvalidToken      = errors.New("token isn't valid")
-	ErrorUnexpectedClaims  = errors.New("claims wasn't MapClaims as expected")
 )
 
-// TokenFactory is a strategy interface responsible for creating and validating
-// a secure Token.
-type TokenFactory interface {
-	ParseAndValidate(context.Context, *http.Request, bascule.Authorization, string) (bascule.Token, error)
+// EncodedBasicKeysIn contains string representations of the basic auth allowed.
+type EncodedBasicKeysIn struct {
+	fx.In
+	Basic []string
 }
 
 // TokenFactoryFunc makes it so any function that has the same signature as
@@ -123,70 +113,27 @@ func NewBasicTokenFactoryFromList(encodedBasicAuthKeys []string) (BasicTokenFact
 	return btf, nil
 }
 
-// BearerTokenFactory parses and does basic validation for a JWT token.
-type BearerTokenFactory struct {
-	DefaultKeyId string
-	Resolver     key.Resolver
-	Parser       bascule.JWTParser
-	Leeway       bascule.Leeway
-}
-
-// ParseAndValidate expects the given value to be a JWT with a kid header.  The
-// kid should be resolvable by the Resolver and the JWT should be Parseable and
-// pass any basic validation checks done by the Parser.  If everything goes
-// well, a Token of type "jwt" is returned.
-func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
-	if len(value) == 0 {
-		return nil, errors.New("empty value")
-	}
-
-	keyfunc := func(token *jwt.Token) (interface{}, error) {
-		keyID, ok := token.Header["kid"].(string)
-		if !ok {
-			keyID = btf.DefaultKeyId
-		}
-
-		pair, err := btf.Resolver.ResolveKey(ctx, keyID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve key: %v", err)
-		}
-		return pair.Public(), nil
-	}
-
-	leewayclaims := bascule.ClaimsWithLeeway{
-		MapClaims: make(jwt.MapClaims),
-		Leeway:    btf.Leeway,
-	}
-
-	jwsToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse JWS: %v", err)
-	}
-	if !jwsToken.Valid {
-		return nil, ErrorInvalidToken
-	}
-
-	claims, ok := jwsToken.Claims.(*bascule.ClaimsWithLeeway)
-
-	if !ok {
-		return nil, fmt.Errorf("failed to parse JWS: %w", ErrorUnexpectedClaims)
-	}
-
-	claimsMap, err := claims.GetMap()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get map of claims with object [%v]: %v", claims, err)
-	}
-
-	jwtClaims := bascule.NewAttributes(claimsMap)
-
-	principalVal, ok := jwtClaims.Get(jwtPrincipalKey)
-	if !ok {
-		return nil, fmt.Errorf("%w: principal value not found at key %v", ErrorInvalidPrincipal, jwtPrincipalKey)
-	}
-	principal, ok := principalVal.(string)
-	if !ok {
-		return nil, fmt.Errorf("%w: principal value [%v] not a string", ErrorInvalidPrincipal, principalVal)
-	}
-
-	return bascule.NewToken("jwt", principal, jwtClaims), nil
+// ProvideBasicTokenFactory uses configuration at the key given to build a basic
+// token factory.  It provides a constructor option with the basic token
+// factory.
+func ProvideBasicTokenFactory(key string) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name:   "encoded_basic_auths",
+			Target: arrange.UnmarshalKey(key, EncodedBasicKeysIn{}),
+		},
+		fx.Annotated{
+			Group: "bascule_constructor_options",
+			Target: func(in EncodedBasicKeysIn) (COption, error) {
+				if len(in.Basic) == 0 {
+					return nil, nil
+				}
+				tf, err := NewBasicTokenFactoryFromList(in.Basic)
+				if err != nil {
+					return nil, err
+				}
+				return WithTokenFactory("Basic", tf), nil
+			},
+		},
+	)
 }

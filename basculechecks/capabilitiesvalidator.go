@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/spf13/cast"
 	"github.com/xmidt-org/bascule"
@@ -62,23 +63,22 @@ var (
 	}
 )
 
-const (
-	CapabilityKey = "capabilities"
-)
-
-var (
-	partnerKeys = []string{"allowedResources", "allowedPartners"}
-)
-
-func PartnerKeys() []string {
-	return partnerKeys
-}
-
 // EndpointChecker is an object that can determine if a value provides
 // authorization to the endpoint.
 type EndpointChecker interface {
 	Authorized(value string, reqURL string, method string) bool
 	Name() string
+}
+
+// CapabilitiesValidatorConfig is input that can be used to build a
+// CapabilitiesValidator and some metric options for a MetricValidator. A
+// CapabilitiesValidator set up with this will use the default KeyPath and an
+// EndpointRegexCheck.
+type CapabilitiesValidatorConfig struct {
+	Type            string
+	Prefix          string
+	AcceptAllMethod string
+	EndpointBuckets []string
 }
 
 // CapabilitiesValidator checks the capabilities provided in a
@@ -159,7 +159,7 @@ func getCapabilities(attributes bascule.Attributes, keyPath []string) ([]string,
 	}
 
 	if len(keyPath) == 0 {
-		keyPath = []string{CapabilityKey}
+		keyPath = CapabilityKeys()
 	}
 
 	val, ok := bascule.GetNestedAttribute(attributes, keyPath...)
@@ -180,4 +180,40 @@ func getCapabilities(attributes bascule.Attributes, keyPath []string) ([]string,
 
 	return vals, nil
 
+}
+
+// NewCapabilitiesValidator uses the provided config to create an
+// RegexEndpointCheck and wrap it in a CapabilitiesValidator.  Metric Options
+// are also created for a Metric Validator by parsing the type to determine if
+// the metric validator should only monitor and compiling endpoints into Regexps.
+func NewCapabilitiesValidator(config CapabilitiesValidatorConfig) (CapabilitiesCheckerOut, error) {
+	var out CapabilitiesCheckerOut
+	if config.Type != "enforce" && config.Type != "monitor" {
+		// unsupported capability check type. CapabilityCheck disabled.
+		return out, nil
+	}
+	c, err := NewRegexEndpointCheck(config.Prefix, config.AcceptAllMethod)
+	if err != nil {
+		return out, fmt.Errorf("error initializing endpointRegexCheck: %w", err)
+	}
+
+	endpoints := make([]*regexp.Regexp, 0, len(config.EndpointBuckets))
+	for _, e := range config.EndpointBuckets {
+		r, err := regexp.Compile(e)
+		if err != nil {
+			continue
+		}
+		endpoints = append(endpoints, r)
+	}
+
+	os := []MetricOption{WithEndpoints(endpoints)}
+	if config.Type == "monitor" {
+		os = append(os, MonitorOnly())
+	}
+
+	out = CapabilitiesCheckerOut{
+		Checker: CapabilitiesValidator{Checker: c},
+		Options: os,
+	}
+	return out, nil
 }

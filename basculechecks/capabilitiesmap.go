@@ -20,6 +20,7 @@ package basculechecks
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/xmidt-org/bascule"
 )
@@ -30,7 +31,17 @@ var (
 		err:    errors.New("endpoint provided is empty"),
 		reason: EmptyParsedURL,
 	}
+	errRegexCompileFail = errors.New("failed to compile regexp")
 )
+
+// CapabilitiesMapConfig includes the values needed to set up a map capability
+// checker.  The checker will verify that one of the capabilities in a provided
+// JWT match the string meant for that endpoint exactly.  A CapabilitiesMap set
+// up with this will use the default KeyPath.
+type CapabilitiesMapConfig struct {
+	Endpoints map[string]string
+	Default   string
+}
 
 // CapabilitiesMap runs a capability check based on the value of the parsedURL,
 // which is the key to the CapabilitiesMap's map.  The parsedURL is expected to
@@ -42,7 +53,7 @@ type CapabilitiesMap struct {
 	KeyPath        []string
 }
 
-// Check uses the parsed endpoint value to determine which EndpointChecker to
+// CheckAuthentication uses the parsed endpoint value to determine which EndpointChecker to
 // run against the capabilities in the auth provided.  If there is no
 // EndpointChecker for the endpoint, the default is used.  As long as one
 // capability is found to be authorized by the EndpointChecker, no error is
@@ -91,4 +102,41 @@ func (c CapabilitiesMap) CheckAuthentication(auth bascule.Authentication, vs Par
 
 	return fmt.Errorf("%w in [%v] with %v endpoint checker",
 		ErrNoValidCapabilityFound, capabilities, checker.Name())
+}
+
+// NewCapabilitiesMap parses the CapabilitiesMapConfig provided into a
+// CapabilitiesMap.  The same regular expression provided for the map are also
+// needed for labels for a MetricValidator, so an option to be used for that is
+// also created.
+func NewCapabilitiesMap(config CapabilitiesMapConfig) (CapabilitiesCheckerOut, error) {
+	// if we don't get a capability value, a nil default checker means always
+	// returning false.
+	var defaultChecker EndpointChecker
+	if config.Default != "" {
+		defaultChecker = ConstEndpointCheck(config.Default)
+	}
+
+	i := 0
+	rs := make([]*regexp.Regexp, len(config.Endpoints))
+	endpointMap := map[string]EndpointChecker{}
+	for r, checkVal := range config.Endpoints {
+		regex, err := regexp.Compile(r)
+		if err != nil {
+			return CapabilitiesCheckerOut{}, fmt.Errorf("%w [%v]: %v", errRegexCompileFail, r, err)
+		}
+		// because rs is the length of config.Endpoints, i never overflows.
+		rs[i] = regex
+		i++
+		endpointMap[r] = ConstEndpointCheck(checkVal)
+	}
+
+	cc := CapabilitiesMap{
+		Checkers:       endpointMap,
+		DefaultChecker: defaultChecker,
+	}
+
+	return CapabilitiesCheckerOut{
+		Checker: cc,
+		Options: []MetricOption{WithEndpoints(rs)},
+	}, nil
 }

@@ -66,6 +66,7 @@ func TestNewMetricValidator(t *testing.T) {
 				c:        c,
 				measures: m,
 				errorOut: true,
+				server:   defaultServer,
 			},
 		},
 		{
@@ -80,12 +81,14 @@ func TestNewMetricValidator(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		assert := assert.New(t)
-		m, err := NewMetricValidator(tc.checker, tc.measures, tc.options...)
-		assert.Equal(tc.expectedValidator, m)
-		assert.True(errors.Is(err, tc.expectedErr),
-			fmt.Errorf("error [%v] doesn't match expected error [%v]",
-				err, tc.expectedErr),
-		)
+		t.Run(tc.description, func(t *testing.T) {
+			assert := assert.New(t)
+			m, err := NewMetricValidator(tc.checker, tc.measures, tc.options...)
+			assert.Equal(tc.expectedValidator, m)
+			assert.True(errors.Is(err, tc.expectedErr),
+				fmt.Errorf("error [%v] doesn't match expected error [%v]",
+					err, tc.expectedErr),
+			)
+		})
 	}
 }

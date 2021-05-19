@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  *
  */
 
-// package basculehttp contains some basic http middleware (in the form of
-// Alice-style decorators) that can be used to extract and parse a Token from
-// an http header, validate the Token, and  allow for the consumer to add
-// additional logs or metrics upon an error or a valid Token.
 package basculehttp
 
 import "net/http"
@@ -42,14 +38,18 @@ type ErrorHeaderer struct {
 	headers http.Header
 }
 
+// Error returns the error string.
 func (e ErrorHeaderer) Error() string {
 	return e.err.Error()
 }
 
+// Headers returns the stored http headers attached to the error.
 func (e ErrorHeaderer) Headers() http.Header {
 	return e.headers
 }
 
+// NewErrorHeaderer creates an ErrorHeaderer with the error and headers
+// provided.
 func NewErrorHeaderer(err error, headers map[string][]string) error {
 	return ErrorHeaderer{err: err, headers: headers}
 }

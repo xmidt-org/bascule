@@ -18,27 +18,46 @@
 package basculechecks
 
 import (
-	"fmt"
-
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
 )
 
-type MetricValidatorIn struct {
-	fx.In
-	Checker  CapabilitiesChecker
-	Measures AuthCapabilityCheckMeasures
-	Options  []MetricOption `group:"bascule_capability_options"`
-}
-
-func ProvideMetricValidator(server string) fx.Option {
+// ProvideMetricValidator is an uber fx Provide() function that builds a
+// MetricValidator given the dependencies needed.
+func ProvideMetricValidator() fx.Option {
 	return fx.Provide(
 		fx.Annotated{
-			Name: fmt.Sprintf("%s_bascule_validator_capabilities", server),
+			Name: "bascule_validator_capabilities",
 			Target: func(in MetricValidatorIn) (bascule.Validator, error) {
-				options := append(in.Options, WithServer(server))
-				return NewMetricValidator(in.Checker, &in.Measures, options...)
+				return NewMetricValidator(in.Checker, &in.Measures, in.Options...)
 			},
 		},
+	)
+}
+
+// ProvideCapabilitiesMapValidator is an uber fx Provide() function that builds
+// a MetricValidator that uses a CapabilitiesMap and ConstChecks, using the
+// configuration found at the key provided.
+func ProvideCapabilitiesMapValidator(key string) fx.Option {
+	return fx.Options(
+		fx.Provide(
+			arrange.UnmarshalKey(key, CapabilitiesMapConfig{}),
+			NewCapabilitiesMap,
+		),
+		ProvideMetricValidator(),
+	)
+}
+
+// ProvideRegexCapabilitiesValidator is an uber fx Provide() function that
+// builds a MetricValidator that uses a CapabilitiesValidator and
+// RegexEndpointCheck, using the configuration found at the key provided.
+func ProvideRegexCapabilitiesValidator(key string) fx.Option {
+	return fx.Options(
+		fx.Provide(
+			arrange.UnmarshalKey(key, CapabilitiesValidatorConfig{}),
+			NewCapabilitiesValidator,
+		),
+		ProvideMetricValidator(),
 	)
 }

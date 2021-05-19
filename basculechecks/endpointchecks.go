@@ -32,6 +32,7 @@ func (a AlwaysEndpointCheck) Authorized(_, _, _ string) bool {
 	return bool(a)
 }
 
+// Name returns the endpoint check's name.
 func (a AlwaysEndpointCheck) Name() string {
 	if a {
 		return "always true"
@@ -48,50 +49,51 @@ func (c ConstEndpointCheck) Authorized(capability, _, _ string) bool {
 	return string(c) == capability
 }
 
+// Name returns the endpoint check's name.
 func (c ConstEndpointCheck) Name() string {
 	return "const"
 }
 
-// EndpointRegexCheck uses a regular expression to validate an endpoint and
+// RegexEndpointCheck uses a regular expression to validate an endpoint and
 // method provided in a capability against the endpoint hit and method used for
 // the request.
-type EndpointRegexCheck struct {
+type RegexEndpointCheck struct {
 	prefixToMatch   *regexp.Regexp
 	acceptAllMethod string
 }
 
-// NewEndpointRegexCheck creates an object that implements the
-// EndpointChecker interface.  It takes a prefix that is expected at the
-// beginning of a capability and a string that, if provided in the capability,
-// authorizes all methods for that endpoint.  After the prefix, the
-// EndpointRegexCheck expects there to be an endpoint regular expression and an
-//http method - separated by a colon. The expected format of a capability is:
-// <prefix><endpoint regex>:<method>
-func NewEndpointRegexCheck(prefix string, acceptAllMethod string) (EndpointRegexCheck, error) {
+// NewRegexEndpointCheck creates an object that implements the EndpointChecker
+// interface.  It takes a prefix that is expected at the beginning of a
+// capability and a string that, if provided in the capability, authorizes all
+// methods for that endpoint.  After the prefix, the RegexEndpointCheck expects
+// there to be an endpoint regular expression and an http method - separated by
+// a colon. The expected format of a capability is: <prefix><endpoint
+// regex>:<method>
+func NewRegexEndpointCheck(prefix string, acceptAllMethod string) (RegexEndpointCheck, error) {
 	matchPrefix, err := regexp.Compile("^" + prefix + "(.+):(.+?)$")
 	if err != nil {
-		return EndpointRegexCheck{}, fmt.Errorf("failed to compile prefix [%v]: %w", prefix, err)
+		return RegexEndpointCheck{}, fmt.Errorf("failed to compile prefix [%v]: %w", prefix, err)
 	}
 
-	e := EndpointRegexCheck{
+	r := RegexEndpointCheck{
 		prefixToMatch:   matchPrefix,
 		acceptAllMethod: acceptAllMethod,
 	}
-	return e, nil
+	return r, nil
 }
 
-// Authorized checks the capability against the endpoint hit and method used.
-// If the capability has the correct prefix and is meant to be used with the
-// method provided to access the endpoint provided, it is authorized.
-func (e EndpointRegexCheck) Authorized(capability string, urlToMatch string, methodToMatch string) bool {
-	matches := e.prefixToMatch.FindStringSubmatch(capability)
+// Authorized checks the capability against the endpoint hit and method used. If
+// the capability has the correct prefix and is meant to be used with the method
+// provided to access the endpoint provided, it is authorized.
+func (r RegexEndpointCheck) Authorized(capability string, urlToMatch string, methodToMatch string) bool {
+	matches := r.prefixToMatch.FindStringSubmatch(capability)
 
 	if matches == nil || len(matches) < 2 {
 		return false
 	}
 
 	method := matches[2]
-	if method != e.acceptAllMethod && method != strings.ToLower(methodToMatch) {
+	if method != r.acceptAllMethod && method != strings.ToLower(methodToMatch) {
 		return false
 	}
 
@@ -108,6 +110,7 @@ func (e EndpointRegexCheck) Authorized(capability string, urlToMatch string, met
 	return true
 }
 
-func (e EndpointRegexCheck) Name() string {
+// Name returns the endpoint check's name.
+func (e RegexEndpointCheck) Name() string {
 	return "regex"
 }

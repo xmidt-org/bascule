@@ -17,29 +17,19 @@
 
 package basculechecks
 
-// Reasoner is an error that provides a failure reason to use as a value for a
-// metric label.
-type Reasoner interface {
-	Reason() string
+var (
+	capabilityKeys = []string{"capabilities"}
+	partnerKeys    = []string{"allowedResources", "allowedPartners"}
+)
+
+// CapabilityKeys is the default location of capabilities in a bascule Token's
+// Attributes.
+func CapabilityKeys() []string {
+	return capabilityKeys
 }
 
-type errWithReason struct {
-	err    error
-	reason string
-}
-
-// Error returns the error string.
-func (e errWithReason) Error() string {
-	return e.err.Error()
-}
-
-// Reason returns the reason string for the error.  This is intended to be used
-// in a metric label.
-func (e errWithReason) Reason() string {
-	return e.reason
-}
-
-// Unwrap returns the error stored.
-func (e errWithReason) Unwrap() error {
-	return e.err
+// PartnerKeys is the location of the list of allowed partners in a bascule
+// Token's Attributes.
+func PartnerKeys() []string {
+	return partnerKeys
 }

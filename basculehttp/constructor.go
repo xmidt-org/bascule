@@ -22,12 +22,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
+	"go.uber.org/fx"
 )
 
 const (
@@ -54,25 +55,22 @@ var (
 	errKeyNotSupported = errors.New("key not supported")
 )
 
-// ParseURL is a function that modifies the url given then returns it.
-type ParseURL func(*url.URL) (*url.URL, error)
-
-// DefaultParseURLFunc does nothing.  It returns the same url it received.
-func DefaultParseURLFunc(u *url.URL) (*url.URL, error) {
-	return u, nil
+// TokenFactory is a strategy interface responsible for creating and validating
+// a secure Token.
+type TokenFactory interface {
+	ParseAndValidate(context.Context, *http.Request, bascule.Authorization, string) (bascule.Token, error)
 }
 
-// CreateRemovePrefixURLFunc parses the URL by removing the prefix specified.
-func CreateRemovePrefixURLFunc(prefix string, next ParseURL) ParseURL {
-	return func(u *url.URL) (*url.URL, error) {
-		escapedPath := u.EscapedPath()
-		if !strings.HasPrefix(escapedPath, prefix) {
-			return nil, errors.New("unexpected URL, did not start with expected prefix")
-		}
-		u.Path = escapedPath[len(prefix):]
-		u.RawPath = escapedPath[len(prefix):]
-		return next(u)
-	}
+// COption is any function that modifies the constructor - used to configure
+// the constructor.
+type COption func(*constructor)
+
+// COptionsIn is the uber.fx wired struct needed to group together the
+// options for the bascule constructor middleware, which does initial parsing
+// of the auth provided.
+type COptionsIn struct {
+	fx.In
+	Options []COption `group:"bascule_constructor_options"`
 }
 
 type constructor struct {
@@ -141,9 +139,29 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 	})
 }
 
-// COption is any function that modifies the constructor - used to configure
-// the constructor.
-type COption func(*constructor)
+// NewConstructor creates an Alice-style decorator function that acts as
+// middleware: parsing the http request to get a Token, which is added to the
+// context.
+func NewConstructor(options ...COption) func(http.Handler) http.Handler {
+	c := &constructor{
+		headerName:          DefaultHeaderName,
+		headerDelimiter:     DefaultHeaderDelimiter,
+		authorizations:      make(map[bascule.Authorization]TokenFactory),
+		getLogger:           defaultGetLoggerFunc,
+		parseURL:            DefaultParseURLFunc,
+		onErrorResponse:     DefaultOnErrorResponse,
+		onErrorHTTPResponse: DefaultOnErrorHTTPResponse,
+	}
+
+	for _, o := range options {
+		if o == nil {
+			continue
+		}
+		o(c)
+	}
+
+	return c.decorate
+}
 
 // WithHeaderName sets the headername and verifies it's valid.  The headername
 // is the name of the header to get the authorization information from.
@@ -204,23 +222,20 @@ func WithCErrorHTTPResponseFunc(f OnErrorHTTPResponse) COption {
 	}
 }
 
-// NewConstructor creates an Alice-style decorator function that acts as
-// middleware: parsing the http request to get a Token, which is added to the
-// context.
-func NewConstructor(options ...COption) func(http.Handler) http.Handler {
-	c := &constructor{
-		headerName:          DefaultHeaderName,
-		headerDelimiter:     DefaultHeaderDelimiter,
-		authorizations:      make(map[bascule.Authorization]TokenFactory),
-		getLogger:           defaultGetLoggerFunc,
-		parseURL:            DefaultParseURLFunc,
-		onErrorResponse:     DefaultOnErrorResponse,
-		onErrorHTTPResponse: DefaultOnErrorHTTPResponse,
-	}
-
-	for _, o := range options {
-		o(c)
-	}
-
-	return c.decorate
+// ProvideConstructor is a helper function for wiring up a basculehttp
+// constructor with uber fx.  Any options or optional values added with uber fx
+// will be used to create the constructor.
+func ProvideConstructor() fx.Option {
+	return fx.Options(
+		ProvideOnErrorHTTPResponse(),
+		ProvideParseURL(),
+		fx.Provide(
+			fx.Annotated{
+				Name: "alice_constructor",
+				Target: func(in COptionsIn) alice.Constructor {
+					return NewConstructor(in.Options...)
+				},
+			},
+		),
+	)
 }

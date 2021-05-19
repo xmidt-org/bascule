@@ -68,8 +68,8 @@ const (
 	capabilityCheckHelpMsg = "Counter for the capability checker, providing outcome information by client, partner, and endpoint"
 )
 
-// ProvideMetrics provides the metrics relevant to this package as uber/fx options.
-// This is now deprecated in favor of ProvideMetricsVec.
+// ProvideMetrics provides the metrics relevant to this package as uber/fx
+// options.
 func ProvideMetrics() fx.Option {
 	return fx.Options(
 		touchstone.CounterVec(prometheus.CounterOpts{
@@ -81,7 +81,8 @@ func ProvideMetrics() fx.Option {
 	)
 }
 
-// AuthCapabilityCheckMeasures describes the defined metrics that will be used by clients
+// AuthCapabilityCheckMeasures describes the defined metrics that will be used
+// by clients.
 type AuthCapabilityCheckMeasures struct {
 	fx.In
 

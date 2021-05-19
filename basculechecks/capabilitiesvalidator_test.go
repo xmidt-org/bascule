@@ -85,7 +85,8 @@ func TestCapabilitiesValidatorCheck(t *testing.T) {
 			}
 			if tc.includeToken {
 				auth.Token = bascule.NewToken("test", "princ",
-					bascule.NewAttributes(map[string]interface{}{CapabilityKey: capabilities}))
+					bascule.NewAttributes(
+						buildDummyAttributes(CapabilityKeys(), capabilities)))
 			}
 			if tc.includeAuth {
 				ctx = bascule.WithAuthentication(ctx, auth)
@@ -172,7 +173,8 @@ func TestCapabilitiesValidatorCheckAuthentication(t *testing.T) {
 			}
 			if tc.includeAttributes {
 				a.Token = bascule.NewToken("test", "princ",
-					bascule.NewAttributes(map[string]interface{}{CapabilityKey: capabilities}))
+					bascule.NewAttributes(
+						buildDummyAttributes(CapabilityKeys(), capabilities)))
 			}
 			if tc.includeURL {
 				goodURL, err := url.Parse("/test")
@@ -310,6 +312,9 @@ func TestGetCapabilities(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
+			if tc.key == nil {
+				tc.key = CapabilityKeys()
+			}
 			m := buildDummyAttributes(tc.key, tc.keyValue)
 			if tc.missingAttribute {
 				m = map[string]interface{}{}
@@ -338,7 +343,7 @@ func TestGetCapabilities(t *testing.T) {
 func buildDummyAttributes(keyPath []string, val interface{}) map[string]interface{} {
 	keyLen := len(keyPath)
 	if keyLen == 0 {
-		return map[string]interface{}{CapabilityKey: val}
+		return nil
 	}
 	m := map[string]interface{}{keyPath[keyLen-1]: val}
 	// we want to move out from the inner most map.

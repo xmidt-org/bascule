@@ -18,10 +18,13 @@
 package key
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/webpa-common/resource"
+	"go.uber.org/fx"
 )
 
 const (
@@ -37,6 +40,8 @@ var (
 		"Key resource template must support either no parameters are the %s parameter",
 		KeyIdParameterName,
 	)
+
+	ErrNoResolverFactory = errors.New("no resolver factory configuration found")
 )
 
 // ResolverFactory provides a JSON representation of a collection of keys together
@@ -59,6 +64,11 @@ type ResolverFactory struct {
 
 	// Parser is a custom key parser.  If omitted, DefaultParser is used.
 	Parser Parser `json:"-"`
+}
+
+type ResolverFactoryIn struct {
+	fx.In
+	R *ResolverFactory `name:"key_resolver_factory"`
 }
 
 func (factory *ResolverFactory) parser() Parser {
@@ -112,4 +122,25 @@ func (factory *ResolverFactory) NewResolver() (Resolver, error) {
 	}
 
 	return nil, ErrorInvalidTemplate
+}
+
+func ProvideResolver(key string, optional bool) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name:   "key_resolver_factory",
+			Target: arrange.UnmarshalKey(key, &ResolverFactory{}),
+		},
+		fx.Annotated{
+			Name: "key_resolver",
+			Target: func(in ResolverFactoryIn) (Resolver, error) {
+				if in.R == nil {
+					if optional {
+						return nil, nil
+					}
+					return nil, fmt.Errorf("%w at key %s", ErrNoResolverFactory, key)
+				}
+				return in.R.NewResolver()
+			},
+		},
+	)
 }
