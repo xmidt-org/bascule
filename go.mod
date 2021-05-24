@@ -10,6 +10,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
 	github.com/spf13/cast v1.3.1
+	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0
 	github.com/xmidt-org/arrange v0.1.9
 	github.com/xmidt-org/sallust v0.1.5

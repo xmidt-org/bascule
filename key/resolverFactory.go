@@ -133,7 +133,7 @@ func ProvideResolver(key string, optional bool) fx.Option {
 		fx.Annotated{
 			Name: "key_resolver",
 			Target: func(in ResolverFactoryIn) (Resolver, error) {
-				if in.R == nil {
+				if in.R == nil || in.R.URI == "" {
 					if optional {
 						return nil, nil
 					}
