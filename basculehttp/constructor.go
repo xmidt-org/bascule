@@ -185,7 +185,9 @@ func WithHeaderDelimiter(delimiter string) COption {
 // WithTokenFactory sets the TokenFactory for the constructor to use.
 func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 	return func(c *constructor) {
-		c.authorizations[key] = tf
+		if tf != nil {
+			c.authorizations[key] = tf
+		}
 	}
 }
 
@@ -193,7 +195,9 @@ func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 // If no logger is set, nothing is logged.
 func WithCLogger(getLogger func(context.Context) log.Logger) COption {
 	return func(c *constructor) {
-		c.getLogger = getLogger
+		if getLogger != nil {
+			c.getLogger = getLogger
+		}
 	}
 }
 
@@ -210,7 +214,9 @@ func WithParseURLFunc(parseURL ParseURL) COption {
 // WithCErrorResponseFunc sets the function that is called when an error occurs.
 func WithCErrorResponseFunc(f OnErrorResponse) COption {
 	return func(c *constructor) {
-		c.onErrorResponse = f
+		if f != nil {
+			c.onErrorResponse = f
+		}
 	}
 }
 
@@ -218,7 +224,9 @@ func WithCErrorResponseFunc(f OnErrorResponse) COption {
 // bascule errors into the appropriate HTTP response.
 func WithCErrorHTTPResponseFunc(f OnErrorHTTPResponse) COption {
 	return func(c *constructor) {
-		c.onErrorHTTPResponse = f
+		if f != nil {
+			c.onErrorHTTPResponse = f
+		}
 	}
 }
 

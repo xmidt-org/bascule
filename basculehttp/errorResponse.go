@@ -79,9 +79,6 @@ func ProvideOnErrorHTTPResponse() fx.Option {
 		fx.Annotated{
 			Group: "bascule_constructor_options",
 			Target: func(in OnErrorHTTPResponseIn) COption {
-				if in.R == nil {
-					return nil
-				}
 				return WithCErrorHTTPResponseFunc(in.R)
 			},
 		},
