@@ -21,11 +21,17 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
+	"go.uber.org/fx"
 )
 
 func TestBasicTokenFactory(t *testing.T) {
@@ -131,5 +137,77 @@ func TestNewBasicTokenFactoryFromList(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestProvideBasicTokenFactory(t *testing.T) {
+	type In struct {
+		fx.In
+		Options []COption `group:"bascule_constructor_options"`
+	}
+
+	const yaml = `
+good:
+  basic: ["dXNlcjpwYXNz", "dXNlcjpwYXNz", "dXNlcjpwYXNz"]
+bad:
+  basic: ["AAAAAAAA"]
+`
+	v := viper.New()
+	v.SetConfigType("yaml")
+	require.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
+
+	tests := []struct {
+		description    string
+		key            string
+		optionExpected bool
+		expectedErr    error
+	}{
+		{
+			description:    "Success",
+			key:            "good",
+			optionExpected: true,
+		},
+		{
+			description: "Disabled success",
+			key:         "nonexistent",
+		},
+		{
+			description: "Failure",
+			key:         "bad",
+			expectedErr: errors.New("malformed"),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			result := In{}
+			assert := assert.New(t)
+			require := require.New(t)
+			app := fx.New(
+				arrange.TestLogger(t),
+				arrange.ForViper(v),
+				ProvideBasicTokenFactory(tc.key),
+				fx.Invoke(
+					func(in In) {
+						result = in
+					},
+				),
+			)
+			err := app.Err()
+			if tc.expectedErr == nil {
+				assert.NoError(err)
+				assert.True(len(result.Options) == 1)
+				if tc.optionExpected {
+					require.NotNil(result.Options[0])
+					return
+				}
+				require.Nil(result.Options[0])
+				return
+			}
+			assert.Nil(result.Options)
+			require.Error(err)
+			assert.True(strings.Contains(err.Error(), tc.expectedErr.Error()),
+				fmt.Errorf("error [%v] doesn't contain error [%v]",
+					err, tc.expectedErr),
+			)
+		})
+	}
 }
