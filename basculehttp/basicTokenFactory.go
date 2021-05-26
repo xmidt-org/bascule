@@ -136,7 +136,7 @@ func ProvideBasicTokenFactory(key string) fx.Option {
 				if err != nil {
 					return nil, err
 				}
-				return WithTokenFactory("Basic", tf), nil
+				return WithTokenFactory(BasicAuthorization, tf), nil
 			},
 		},
 	)

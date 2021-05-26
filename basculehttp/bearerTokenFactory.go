@@ -136,7 +136,7 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 						}
 						return nil, ErrNilResolver
 					}
-					return WithTokenFactory("Bearer", f), nil
+					return WithTokenFactory(BearerAuthorization, f), nil
 				},
 			},
 		),
