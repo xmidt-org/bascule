@@ -35,6 +35,7 @@ func TestConstructor(t *testing.T) {
 	c := NewConstructor(
 		WithHeaderName(testHeader),
 		WithHeaderDelimiter(testDelimiter),
+		nil,
 		WithTokenFactory("Basic", BasicTokenFactory{"codex": "codex"}),
 		WithCLogger(func(_ context.Context) log.Logger {
 			return log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
@@ -47,6 +48,7 @@ func TestConstructor(t *testing.T) {
 		WithHeaderName(""),
 		WithHeaderDelimiter(""),
 		WithCLogger(func(_ context.Context) log.Logger { return nil }),
+		WithParseURLFunc(CreateRemovePrefixURLFunc("", nil)),
 	)
 	tests := []struct {
 		description        string

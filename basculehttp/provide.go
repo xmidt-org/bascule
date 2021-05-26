@@ -79,6 +79,9 @@ func ProvideBearerValidator() fx.Option {
 						rules = append(rules, v)
 					}
 				}
+				if len(rules) == 0 {
+					return nil
+				}
 				if in.Capabilities != nil {
 					rules = append(rules, in.Capabilities)
 				}

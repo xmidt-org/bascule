@@ -62,9 +62,6 @@ func ProvideParseURL() fx.Option {
 		fx.Annotated{
 			Group: "bascule_constructor_options",
 			Target: func(in ParseURLIn) COption {
-				if in.P == nil {
-					return nil
-				}
 				return WithParseURLFunc(in.P)
 			},
 		},
