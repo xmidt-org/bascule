@@ -55,18 +55,15 @@ type MetricListenerOptionsIn struct {
 // enforcer successfully.  It updates various metrics related to the accepted
 // request.
 func (m *MetricListener) OnAuthenticated(auth bascule.Authentication) {
-	if m.measures == nil {
-		return // measure tools are not defined, skip
-	}
-
+	outcome := AcceptedOutcome
+	// this is weird and we should take note of it.
 	if auth.Token == nil {
-		return
+		outcome = EmptyOutcome
 	}
-
 	m.measures.ValidationOutcome.
 		With(prometheus.Labels{
 			ServerLabel:  m.server,
-			OutcomeLabel: "Accepted",
+			OutcomeLabel: outcome,
 		}).
 		Add(1)
 }
@@ -75,9 +72,6 @@ func (m *MetricListener) OnAuthenticated(auth bascule.Authentication) {
 // authenticating/authorizing the request.  The ErrorResponseReason is used as
 // the outcome label value in a metric.
 func (m *MetricListener) OnErrorResponse(e ErrorResponseReason, _ error) {
-	if m.measures == nil {
-		return
-	}
 	m.measures.ValidationOutcome.
 		With(prometheus.Labels{ServerLabel: m.server, OutcomeLabel: e.String()}).
 		Add(1)

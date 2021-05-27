@@ -34,6 +34,12 @@ const (
 	ServerLabel  = "server"
 )
 
+// outcome values other than error response reasons
+const (
+	AcceptedOutcome = "accepted"
+	EmptyOutcome    = "accepted_but_empty"
+)
+
 // help messages
 const (
 	authValidationOutcomeHelpMsg = "Counter for success and failure reason results through bascule"
