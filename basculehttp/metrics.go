@@ -26,8 +26,6 @@ import (
 // Names for our metrics
 const (
 	AuthValidationOutcome = "auth_validation"
-	NBFHistogram          = "auth_from_nbf_seconds"
-	EXPHistogram          = "auth_from_exp_seconds"
 )
 
 // labels
@@ -39,8 +37,6 @@ const (
 // help messages
 const (
 	authValidationOutcomeHelpMsg = "Counter for success and failure reason results through bascule"
-	nbfHelpMsg                   = "Difference (in seconds) between time of JWT validation and nbf (including leeway)"
-	expHelpMsg                   = "Difference (in seconds) between time of JWT validation and exp (including leeway)"
 )
 
 // ProvideMetrics provides the metrics relevant to this package as uber/fx
@@ -54,18 +50,6 @@ func ProvideMetrics() fx.Option {
 				Help:        authValidationOutcomeHelpMsg,
 				ConstLabels: nil,
 			}, ServerLabel, OutcomeLabel),
-		touchstone.HistogramVec(
-			prometheus.HistogramOpts{
-				Name:    NBFHistogram,
-				Help:    nbfHelpMsg,
-				Buckets: []float64{-61, -11, -2, -1, 0, 9, 60}, // defines the upper inclusive (<=) bounds
-			}, ServerLabel),
-		touchstone.HistogramVec(
-			prometheus.HistogramOpts{
-				Name:    EXPHistogram,
-				Help:    expHelpMsg,
-				Buckets: []float64{-61, -11, -2, -1, 0, 9, 60},
-			}, ServerLabel),
 	)
 }
 
@@ -73,7 +57,5 @@ func ProvideMetrics() fx.Option {
 type AuthValidationMeasures struct {
 	fx.In
 
-	NBFHistogram      prometheus.ObserverVec `name:"auth_from_nbf_seconds"`
-	EXPHistogram      prometheus.ObserverVec `name:"auth_from_exp_seconds"`
 	ValidationOutcome *prometheus.CounterVec `name:"auth_validation"`
 }
