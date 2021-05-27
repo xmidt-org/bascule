@@ -3,7 +3,6 @@ module github.com/xmidt-org/bascule
 go 1.12
 
 require (
-	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-kit/kit v0.10.0
 	github.com/justinas/alice v1.2.0
