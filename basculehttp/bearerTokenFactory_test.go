@@ -20,14 +20,20 @@ package basculehttp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/key"
+	"go.uber.org/fx"
 )
 
 func TestBearerTokenFactory(t *testing.T) {
@@ -144,6 +150,93 @@ func TestBearerTokenFactory(t *testing.T) {
 			} else {
 				assert.Contains(err.Error(), tc.expectedErr.Error())
 			}
+		})
+	}
+}
+
+func TestProvideBearerTokenFactory(t *testing.T) {
+	type In struct {
+		fx.In
+		Options []COption `group:"bascule_constructor_options"`
+	}
+
+	const yaml = `
+good:
+  key:
+    factory:
+      uri: "http://test:1111/keys/{keyId}"
+    purpose: 0
+    updateInterval: 604800000000000
+`
+	v := viper.New()
+	v.SetConfigType("yaml")
+	require.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
+
+	tests := []struct {
+		description    string
+		key            string
+		optional       bool
+		optionExpected bool
+		expectedErr    error
+	}{
+		{
+			description:    "Success",
+			key:            "good",
+			optional:       false,
+			optionExpected: true,
+		},
+		// {
+		// 	description: "Failure",
+		// 	key:         "bad",
+		// 	optional:    false,
+		// 	expectedErr: ErrNilResolver,
+		// },
+		{
+			description: "Silent failure",
+			key:         "bad",
+			optional:    true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			result := In{}
+			assert := assert.New(t)
+			require := require.New(t)
+			app := fx.New(
+				fx.Provide(
+					fx.Annotated{
+						Name: "default_key_id",
+						Target: func() string {
+							return "default"
+						},
+					},
+				),
+				arrange.TestLogger(t),
+				arrange.ForViper(v),
+				ProvideBearerTokenFactory(tc.key, tc.optional),
+				fx.Invoke(
+					func(in In) {
+						result = in
+					},
+				),
+			)
+			err := app.Err()
+			if tc.expectedErr == nil {
+				assert.NoError(err)
+				assert.True(len(result.Options) == 1)
+				if tc.optionExpected {
+					require.NotNil(result.Options[0])
+					return
+				}
+				require.Nil(result.Options[0])
+				return
+			}
+			assert.Nil(result.Options)
+			require.Error(err)
+			assert.True(strings.Contains(err.Error(), tc.expectedErr.Error()),
+				fmt.Errorf("error [%v] doesn't contain error [%v]",
+					err, tc.expectedErr),
+			)
 		})
 	}
 }
