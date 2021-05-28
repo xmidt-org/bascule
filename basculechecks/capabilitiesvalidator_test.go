@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -336,6 +338,82 @@ func TestGetCapabilities(t *testing.T) {
 			// every error should be a reasoner.
 			var r Reasoner
 			assert.True(errors.As(err, &r), "expected error to be a Reasoner")
+		})
+	}
+}
+
+func TestNewCapabilitiesValidator(t *testing.T) {
+	require := require.New(t)
+	goodCheck, err := NewRegexEndpointCheck("", "")
+	require.Nil(err)
+	es := []string{"abc", "def", `\M`, "adbecf"}
+	goodEndpoints := []*regexp.Regexp{
+		regexp.MustCompile(es[0]),
+		regexp.MustCompile(es[1]),
+		regexp.MustCompile(es[3]),
+	}
+	_, err = regexp.Compile(es[2])
+	require.Error(err)
+
+	tests := []struct {
+		description string
+		config      CapabilitiesValidatorConfig
+		expectedOut CapabilitiesCheckerOut
+		expectedErr error
+	}{
+		{
+			description: "Success",
+			config: CapabilitiesValidatorConfig{
+				Type:            "enforce",
+				EndpointBuckets: es,
+			},
+			expectedOut: CapabilitiesCheckerOut{
+				Checker: CapabilitiesValidator{Checker: goodCheck},
+				Options: []MetricOption{
+					WithEndpoints(goodEndpoints),
+				},
+			},
+		},
+		{
+			description: "Monitor success",
+			config: CapabilitiesValidatorConfig{
+				Type:            "monitor",
+				EndpointBuckets: es,
+			},
+			expectedOut: CapabilitiesCheckerOut{
+				Checker: CapabilitiesValidator{Checker: goodCheck},
+				Options: []MetricOption{
+					WithEndpoints(goodEndpoints),
+					MonitorOnly(),
+				},
+			},
+		},
+		{
+			description: "Disabled success",
+		},
+		{
+			description: "New check error",
+			config: CapabilitiesValidatorConfig{
+				Type:   "enforce",
+				Prefix: `\M`,
+			},
+			expectedErr: errors.New("failed to compile prefix"),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			assert := assert.New(t)
+			out, err := NewCapabilitiesValidator(tc.config)
+			assert.Equal(tc.expectedOut.Checker, out.Checker)
+			assert.Equal(len(tc.expectedOut.Options), len(out.Options))
+			if tc.expectedErr == nil {
+				assert.NoError(err)
+				return
+			}
+			assert.True(strings.Contains(err.Error(), tc.expectedErr.Error()),
+				fmt.Errorf("error [%v] doesn't contain error [%v]",
+					err, tc.expectedErr),
+			)
 		})
 	}
 }

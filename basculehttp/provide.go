@@ -41,7 +41,7 @@ func ProvideBasicAuth(key string) fx.Option {
 			fx.Annotated{
 				Group: "primary_bascule_enforcer_options",
 				Target: func() EOption {
-					return WithRules("Basic", basculechecks.AllowAll())
+					return WithRules(BasicAuthorization, basculechecks.AllowAll())
 				},
 			},
 		),
@@ -79,10 +79,13 @@ func ProvideBearerValidator() fx.Option {
 						rules = append(rules, v)
 					}
 				}
+				if len(rules) == 0 {
+					return nil
+				}
 				if in.Capabilities != nil {
 					rules = append(rules, in.Capabilities)
 				}
-				return WithRules("Bearer", bascule.Validators(rules))
+				return WithRules(BearerAuthorization, bascule.Validators(rules))
 			},
 		},
 	)

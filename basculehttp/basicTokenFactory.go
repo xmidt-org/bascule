@@ -36,10 +36,14 @@ var (
 	ErrorInvalidPassword   = errors.New("invalid password")
 )
 
+type EncodedBasicKeys struct {
+	Basic []string
+}
+
 // EncodedBasicKeysIn contains string representations of the basic auth allowed.
 type EncodedBasicKeysIn struct {
 	fx.In
-	Basic []string
+	Keys EncodedBasicKeys `name:"encoded_basic_auths"`
 }
 
 // TokenFactoryFunc makes it so any function that has the same signature as
@@ -120,19 +124,19 @@ func ProvideBasicTokenFactory(key string) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
 			Name:   "encoded_basic_auths",
-			Target: arrange.UnmarshalKey(key, EncodedBasicKeysIn{}),
+			Target: arrange.UnmarshalKey(key, EncodedBasicKeys{}),
 		},
 		fx.Annotated{
 			Group: "bascule_constructor_options",
 			Target: func(in EncodedBasicKeysIn) (COption, error) {
-				if len(in.Basic) == 0 {
+				if len(in.Keys.Basic) == 0 {
 					return nil, nil
 				}
-				tf, err := NewBasicTokenFactoryFromList(in.Basic)
+				tf, err := NewBasicTokenFactoryFromList(in.Keys.Basic)
 				if err != nil {
 					return nil, err
 				}
-				return WithTokenFactory("Basic", tf), nil
+				return WithTokenFactory(BasicAuthorization, tf), nil
 			},
 		},
 	)

@@ -35,9 +35,10 @@ const (
 )
 
 var (
-	ErrorInvalidPrincipal = errors.New("invalid principal")
-	ErrorInvalidToken     = errors.New("token isn't valid")
-	ErrorUnexpectedClaims = errors.New("claims wasn't MapClaims as expected")
+	ErrEmptyValue       = errors.New("empty value")
+	ErrInvalidPrincipal = errors.New("invalid principal")
+	ErrInvalidToken     = errors.New("token isn't valid")
+	ErrUnexpectedClaims = errors.New("claims wasn't MapClaims as expected")
 
 	ErrNilResolver = errors.New("resolver cannot be nil")
 )
@@ -58,7 +59,7 @@ type BearerTokenFactory struct {
 // well, a Token of type "jwt" is returned.
 func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Request, _ bascule.Authorization, value string) (bascule.Token, error) {
 	if len(value) == 0 {
-		return nil, errors.New("empty value")
+		return nil, ErrEmptyValue
 	}
 
 	keyfunc := func(token *jwt.Token) (interface{}, error) {
@@ -79,34 +80,30 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 		Leeway:    btf.Leeway,
 	}
 
-	jwsToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
+	jwtToken, err := btf.Parser.ParseJWT(value, &leewayclaims, keyfunc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JWS: %v", err)
 	}
-	if !jwsToken.Valid {
-		return nil, ErrorInvalidToken
+	if !jwtToken.Valid {
+		return nil, ErrInvalidToken
 	}
 
-	claims, ok := jwsToken.Claims.(*bascule.ClaimsWithLeeway)
-
+	claims, ok := jwtToken.Claims.(*bascule.ClaimsWithLeeway)
 	if !ok {
-		return nil, fmt.Errorf("failed to parse JWS: %w", ErrorUnexpectedClaims)
+		return nil, fmt.Errorf("failed to parse JWS: %w", ErrUnexpectedClaims)
 	}
-
 	claimsMap, err := claims.GetMap()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get map of claims with object [%v]: %v", claims, err)
 	}
-
 	jwtClaims := bascule.NewAttributes(claimsMap)
-
 	principalVal, ok := jwtClaims.Get(jwtPrincipalKey)
 	if !ok {
-		return nil, fmt.Errorf("%w: principal value not found at key %v", ErrorInvalidPrincipal, jwtPrincipalKey)
+		return nil, fmt.Errorf("%w: principal value not found at key %v", ErrInvalidPrincipal, jwtPrincipalKey)
 	}
 	principal, ok := principalVal.(string)
 	if !ok {
-		return nil, fmt.Errorf("%w: principal value [%v] not a string", ErrorInvalidPrincipal, principalVal)
+		return nil, fmt.Errorf("%w: principal value [%v] not a string", ErrInvalidPrincipal, principalVal)
 	}
 
 	return bascule.NewToken("jwt", principal, jwtClaims), nil
@@ -136,7 +133,7 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 						}
 						return nil, ErrNilResolver
 					}
-					return WithTokenFactory("Bearer", f), nil
+					return WithTokenFactory(BearerAuthorization, f), nil
 				},
 			},
 		),

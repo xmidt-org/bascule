@@ -129,14 +129,18 @@ func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
 // value in the rules map.
 func WithNotFoundBehavior(behavior NotFoundBehavior) EOption {
 	return func(e *enforcer) {
-		e.notFoundBehavior = behavior
+		if behavior > 0 {
+			e.notFoundBehavior = behavior
+		}
 	}
 }
 
 // WithRules sets the validator to be used for a given Authorization value.
 func WithRules(key bascule.Authorization, v bascule.Validator) EOption {
 	return func(e *enforcer) {
-		e.rules[key] = v
+		if v != nil {
+			e.rules[key] = v
+		}
 	}
 }
 
@@ -144,14 +148,18 @@ func WithRules(key bascule.Authorization, v bascule.Validator) EOption {
 // If no logger is set, nothing is logged.
 func WithELogger(getLogger func(context.Context) log.Logger) EOption {
 	return func(e *enforcer) {
-		e.getLogger = getLogger
+		if getLogger != nil {
+			e.getLogger = getLogger
+		}
 	}
 }
 
 // WithEErrorResponseFunc sets the function that is called when an error occurs.
 func WithEErrorResponseFunc(f OnErrorResponse) EOption {
 	return func(e *enforcer) {
-		e.onErrorResponse = f
+		if f != nil {
+			e.onErrorResponse = f
+		}
 	}
 }
 
