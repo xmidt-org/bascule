@@ -185,12 +185,6 @@ good:
 			optional:       false,
 			optionExpected: true,
 		},
-		// {
-		// 	description: "Failure",
-		// 	key:         "bad",
-		// 	optional:    false,
-		// 	expectedErr: ErrNilResolver,
-		// },
 		{
 			description: "Silent failure",
 			key:         "bad",
