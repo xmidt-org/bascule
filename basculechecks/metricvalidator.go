@@ -100,28 +100,18 @@ type MetricValidator struct {
 // request, depending on configuration.  This allows for monitoring before being
 // more strict with authorization.
 func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
-	// if we're not supposed to error out, the outcome should be accepted on failure
-	failureOutcome := AcceptedOutcome
-	if m.errorOut {
-		// if we actually error out, the outcome is the request being rejected
-		failureOutcome = RejectedOutcome
-	}
-
 	auth, ok := bascule.FromContext(ctx)
 	if !ok {
 		m.measures.CapabilityCheckOutcome.With(prometheus.Labels{
 			ServerLabel:    m.server,
-			OutcomeLabel:   failureOutcome,
+			OutcomeLabel:   m.failureOutcome(),
 			ReasonLabel:    TokenMissing,
 			ClientIDLabel:  "",
 			PartnerIDLabel: "",
 			EndpointLabel:  "",
 			MethodLabel:    "",
 		}).Add(1)
-		if m.errorOut {
-			return ErrNoAuth
-		}
-		return nil
+		return m.errReturn(ErrNoAuth)
 	}
 
 	l, err := m.prepMetrics(auth)
@@ -135,17 +125,14 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 		ReasonLabel:    "",
 	}
 	if err != nil {
-		labels[OutcomeLabel] = failureOutcome
+		labels[OutcomeLabel] = m.failureOutcome()
 		labels[ReasonLabel] = UnknownReason
 		var r Reasoner
 		if errors.As(err, &r) {
 			labels[ReasonLabel] = r.Reason()
 		}
 		m.measures.CapabilityCheckOutcome.With(labels).Add(1)
-		if m.errorOut {
-			return err
-		}
-		return nil
+		return m.errReturn(err)
 	}
 
 	v := ParsedValues{
@@ -154,18 +141,15 @@ func (m MetricValidator) Check(ctx context.Context, _ bascule.Token) error {
 
 	err = m.c.CheckAuthentication(auth, v)
 	if err != nil {
-		labels[OutcomeLabel] = failureOutcome
+		labels[OutcomeLabel] = m.failureOutcome()
 		labels[ReasonLabel] = UnknownReason
 		var r Reasoner
 		if errors.As(err, &r) {
 			labels[ReasonLabel] = r.Reason()
 		}
 		m.measures.CapabilityCheckOutcome.With(labels).Add(1)
-		if m.errorOut {
-			return fmt.Errorf("endpoint auth for %v on %v failed: %v",
-				auth.Request.Method, auth.Request.URL.EscapedPath(), err)
-		}
-		return nil
+		return m.errReturn(fmt.Errorf("endpoint auth for %v on %v failed: %v",
+			auth.Request.Method, auth.Request.URL.EscapedPath(), err))
 	}
 
 	m.measures.CapabilityCheckOutcome.With(labels).Add(1)
@@ -208,4 +192,22 @@ func (m MetricValidator) prepMetrics(auth bascule.Authentication) (metricValues,
 	escapedURL := auth.Request.URL.EscapedPath()
 	v.endpoint = determineEndpointMetric(m.endpoints, escapedURL)
 	return v, nil
+}
+
+func (m MetricValidator) failureOutcome() string {
+	// if we actually error out, the outcome is the request being rejected
+	if m.errorOut {
+		return RejectedOutcome
+	}
+	// if we're not supposed to error out, the outcome should be accepted on failure
+	return AcceptedOutcome
+}
+
+func (m MetricValidator) errReturn(err error) error {
+	// if we actually error out, the error should be returned.
+	if m.errorOut {
+		return err
+	}
+	// if we're not supposed to error out, the error is suppressed.
+	return nil
 }
