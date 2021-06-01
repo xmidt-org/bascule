@@ -25,11 +25,14 @@ import (
 
 // ProvideMetricValidator is an uber fx Provide() function that builds a
 // MetricValidator given the dependencies needed.
-func ProvideMetricValidator() fx.Option {
+func ProvideMetricValidator(optional bool) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
 			Name: "bascule_validator_capabilities",
 			Target: func(in MetricValidatorIn) (bascule.Validator, error) {
+				if optional && in.Checker == nil {
+					return nil, nil
+				}
 				return NewMetricValidator(in.Checker, &in.Measures, in.Options...)
 			},
 		},
@@ -45,7 +48,7 @@ func ProvideCapabilitiesMapValidator(key string) fx.Option {
 			arrange.UnmarshalKey(key, CapabilitiesMapConfig{}),
 			NewCapabilitiesMap,
 		),
-		ProvideMetricValidator(),
+		ProvideMetricValidator(false),
 	)
 }
 
@@ -58,6 +61,6 @@ func ProvideRegexCapabilitiesValidator(key string) fx.Option {
 			arrange.UnmarshalKey(key, CapabilitiesValidatorConfig{}),
 			NewCapabilitiesValidator,
 		),
-		ProvideMetricValidator(),
+		ProvideMetricValidator(true),
 	)
 }
