@@ -30,6 +30,10 @@ const (
 	defaultServer = "primary"
 )
 
+var (
+	ErrNilMeasures = errors.New("measures cannot be nil")
+)
+
 // MetricListener keeps track of request authentication and authorization using
 // metrics. A counter is updated on success and failure to reflect the outcome
 // and reason for failure, if applicable. MetricListener implements the Listener
@@ -92,7 +96,7 @@ func WithServer(s string) Option {
 // nil.
 func NewMetricListener(m *AuthValidationMeasures, options ...Option) (*MetricListener, error) {
 	if m == nil {
-		return nil, errors.New("measures cannot be nil")
+		return nil, ErrNilMeasures
 	}
 
 	listener := MetricListener{

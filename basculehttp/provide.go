@@ -39,7 +39,7 @@ func ProvideBasicAuth(key string) fx.Option {
 		ProvideBasicTokenFactory(key),
 		fx.Provide(
 			fx.Annotated{
-				Group: "primary_bascule_enforcer_options",
+				Group: "bascule_enforcer_options",
 				Target: func() EOption {
 					return WithRules(BasicAuthorization, basculechecks.AllowAll())
 				},
