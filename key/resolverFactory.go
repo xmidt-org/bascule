@@ -32,6 +32,8 @@ const (
 	// if there are any parameters.  URI templates accepted by this package have either no parameters
 	// or exactly one (1) parameter with this name.
 	KeyIdParameterName = "keyId"
+
+	DefaultKeysUpdateInterval = 24 * time.Hour
 )
 
 var (
@@ -138,6 +140,9 @@ func ProvideResolver(key string, optional bool) fx.Option {
 						return nil, nil
 					}
 					return nil, fmt.Errorf("%w at key %s", ErrNoResolverFactory, key)
+				}
+				if in.R.UpdateInterval < 1 {
+					in.R.UpdateInterval = DefaultKeysUpdateInterval
 				}
 				return in.R.NewResolver()
 			},
