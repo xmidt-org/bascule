@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.10.1]
+- Added raw parsers for bearer acquirer. [#110](https://github.com/xmidt-org/bascule/pull/110)
+- Added default keys update interval value. [#110](https://github.com/xmidt-org/bascule/pull/110)
+
 ## [v0.10.0]
 - fixed Authorization keys in the constructor to be case sensitive. [#74](https://github.com/xmidt-org/bascule/pull/74)
 - Removed unused check. [#79](https://github.com/xmidt-org/bascule/pull/79)
@@ -99,7 +103,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.10.1...HEAD
+[v0.10.1]: https://github.com/xmidt-org/bascule/compare/v0.10.0...v0.10.1
 [v0.10.0]: https://github.com/xmidt-org/bascule/compare/v0.9.0...v0.10.0
 [v0.9.0]: https://github.com/xmidt-org/bascule/compare/v0.8.1...v0.9.0
 [v0.8.1]: https://github.com/xmidt-org/bascule/compare/v0.8.0...v0.8.1
