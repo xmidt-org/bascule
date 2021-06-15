@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Comcast Cable Communications Management, LLC
+ * Copyright 2021 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,39 +18,12 @@
 package acquire
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
 )
-
-// TokenParser defines the function signature of a bearer token extractor from a payload.
-type TokenParser func([]byte) (string, error)
-
-// ParseExpiration defines the function signature of a bearer token expiration date extractor.
-type ParseExpiration func([]byte) (time.Time, error)
-
-// DefaultTokenParser extracts a bearer token as defined by a SimpleBearer in a payload.
-func DefaultTokenParser(data []byte) (string, error) {
-	var bearer SimpleBearer
-
-	if errUnmarshal := json.Unmarshal(data, &bearer); errUnmarshal != nil {
-		return "", fmt.Errorf("unable to parse bearer token: %w", errUnmarshal)
-	}
-	return bearer.Token, nil
-}
-
-// DefaultExpirationParser extracts a bearer token expiration date as defined by a SimpleBearer in a payload.
-func DefaultExpirationParser(data []byte) (time.Time, error) {
-	var bearer SimpleBearer
-
-	if errUnmarshal := json.Unmarshal(data, &bearer); errUnmarshal != nil {
-		return time.Time{}, fmt.Errorf("unable to parse bearer token expiration: %w", errUnmarshal)
-	}
-	return time.Now().Add(time.Duration(bearer.ExpiresInSeconds) * time.Second), nil
-}
 
 // RemoteBearerTokenAcquirerOptions provides configuration for the RemoteBearerTokenAcquirer.
 type RemoteBearerTokenAcquirerOptions struct {
