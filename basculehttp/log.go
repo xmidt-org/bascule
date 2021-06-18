@@ -51,20 +51,27 @@ func getZapLogger(f func(context.Context) *zap.Logger) func(context.Context) log
 	}
 }
 
+func sanitizeHeaders(headers http.Header) (filtered http.Header) {
+	filtered = headers.Clone()
+	if authHeader := filtered.Get("Authorization"); authHeader != "" {
+		filtered.Del("Authorization")
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 {
+			filtered.Set("Authorization-Type", parts[0])
+		}
+	}
+	return
+}
+
 // SetLogger creates an alice constructor that sets up a zap logger that can be
 // used for all logging related to the current request.  The logger is added to
 // the request's context.
 func SetLogger(logger *zap.Logger) alice.Constructor {
 	return func(delegate http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logHeader := r.Header.Clone()
-			if str := logHeader.Get("Authorization"); str != "" {
-				logHeader.Del("Authorization")
-				logHeader.Set("Authorization-Type", strings.Split(str, " ")[0])
-			}
 			r = r.WithContext(sallust.With(r.Context(),
 				logger.With(
-					zap.Reflect("requestHeaders", logHeader), //lgtm [go/clear-text-logging]
+					zap.Reflect("requestHeaders", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
 					zap.String("requestURL", r.URL.EscapedPath()),
 					zap.String("method", r.Method))))
 			delegate.ServeHTTP(w, r)
