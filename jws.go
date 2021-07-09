@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 )
 
 // JWTParser parses raw Tokens into JWT objects
@@ -40,7 +40,7 @@ func (parser defaultJWTParser) ParseJWT(token string, claims jwt.Claims, parseFu
 }
 
 // DefaultJWTParser is the parser implementation that simply delegates to
-// the jwt-go library's jws.ParseJWT function.
+// the jwt library's jws.ParseJWT function.
 var DefaultJWTParser JWTParser = defaultJWTParser{}
 
 type ClaimsWithLeeway struct {
