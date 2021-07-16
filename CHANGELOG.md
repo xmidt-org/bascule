@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - Update setLogger Authorization header filtering logic. [#111](https://github.com/xmidt-org/bascule/pull/111)
+- Switched to github.com/golang-jwt/jwt to address a security vulnerability. [#112](https://github.com/xmidt-org/bascule/pull/112)
 
 ## [v0.10.1]
 - Added raw parsers for bearer acquirer. [#110](https://github.com/xmidt-org/bascule/pull/110)
