@@ -5,8 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v0.10.2]
 - Update setLogger Authorization header filtering logic. [#111](https://github.com/xmidt-org/bascule/pull/111)
 - Switched to github.com/golang-jwt/jwt to address a security vulnerability. [#112](https://github.com/xmidt-org/bascule/pull/112)
+- Fix goconst linting warning [#113](https://github.com/xmidt-org/bascule/pull/113)
+
 
 ## [v0.10.1]
 - Added raw parsers for bearer acquirer. [#110](https://github.com/xmidt-org/bascule/pull/110)
@@ -105,7 +109,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.10.2...HEAD
+[v0.10.2]: https://github.com/xmidt-org/bascule/compare/v0.10.1...v0.10.2
 [v0.10.1]: https://github.com/xmidt-org/bascule/compare/v0.10.0...v0.10.1
 [v0.10.0]: https://github.com/xmidt-org/bascule/compare/v0.9.0...v0.10.0
 [v0.9.0]: https://github.com/xmidt-org/bascule/compare/v0.8.1...v0.9.0
