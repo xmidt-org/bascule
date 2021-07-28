@@ -28,9 +28,10 @@ import (
 	"github.com/xmidt-org/touchstone/touchtest"
 )
 
+const testServerName = "testserver"
+
 func TestNewMetricListener(t *testing.T) {
 	m := &AuthValidationMeasures{}
-	s := "testserver"
 	tests := []struct {
 		description            string
 		measures               *AuthValidationMeasures
@@ -42,11 +43,11 @@ func TestNewMetricListener(t *testing.T) {
 			description: "Success",
 			measures:    m,
 			options: []Option{
-				WithServer(s),
+				WithServer(testServerName),
 				WithServer(""),
 			},
 			expectedMetricListener: &MetricListener{
-				server:   s,
+				server:   testServerName,
 				measures: m,
 			},
 		},
@@ -81,7 +82,6 @@ func TestNewMetricListener(t *testing.T) {
 }
 
 func TestOnAuthenticated(t *testing.T) {
-	server := "testserver"
 	tests := []struct {
 		description     string
 		token           bascule.Token
@@ -113,7 +113,7 @@ func TestOnAuthenticated(t *testing.T) {
 			)
 			expectedRegistry.Register(expectedCounter)
 			expectedCounter.With(prometheus.Labels{
-				ServerLabel:  server,
+				ServerLabel:  testServerName,
 				OutcomeLabel: tc.expectedOutcome,
 			}).Inc()
 			actualRegistry := prometheus.NewPedanticRegistry()
@@ -129,7 +129,7 @@ func TestOnAuthenticated(t *testing.T) {
 			actualRegistry.MustRegister(mockMeasures.ValidationOutcome)
 
 			m := &MetricListener{
-				server:   server,
+				server:   testServerName,
 				measures: &mockMeasures,
 			}
 			m.OnAuthenticated(bascule.Authentication{Token: tc.token})
@@ -139,7 +139,6 @@ func TestOnAuthenticated(t *testing.T) {
 	}
 }
 func TestOnErrorResponse(t *testing.T) {
-	server := "testserver"
 	tests := []struct {
 		description string
 		reason      ErrorResponseReason
@@ -181,7 +180,7 @@ func TestOnErrorResponse(t *testing.T) {
 			)
 			expectedRegistry.Register(expectedCounter)
 			expectedCounter.With(prometheus.Labels{
-				ServerLabel:  server,
+				ServerLabel:  testServerName,
 				OutcomeLabel: tc.reason.String(),
 			}).Inc()
 			actualRegistry := prometheus.NewPedanticRegistry()
@@ -197,7 +196,7 @@ func TestOnErrorResponse(t *testing.T) {
 			actualRegistry.MustRegister(mockMeasures.ValidationOutcome)
 
 			m := &MetricListener{
-				server:   server,
+				server:   testServerName,
 				measures: &mockMeasures,
 			}
 			m.OnErrorResponse(tc.reason, errors.New("testing error"))
