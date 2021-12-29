@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"time"
 
+	"errors"
+
 	"github.com/golang-jwt/jwt"
-	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 )
 

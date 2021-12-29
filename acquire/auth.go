@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/pkg/errors"
+	"errors"
 )
 
 //ErrEmptyCredentials is returned whenever an Acquirer is attempted to
