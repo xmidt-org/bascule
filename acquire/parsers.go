@@ -19,10 +19,9 @@ package acquire
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
-
-	"errors"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/spf13/cast"

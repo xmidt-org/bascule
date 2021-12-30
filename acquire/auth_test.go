@@ -18,11 +18,10 @@
 package acquire
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"errors"
 
 	"github.com/stretchr/testify/assert"
 )
