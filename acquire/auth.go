@@ -19,10 +19,9 @@
 package acquire
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/pkg/errors"
 )
 
 //ErrEmptyCredentials is returned whenever an Acquirer is attempted to
