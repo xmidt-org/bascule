@@ -19,13 +19,17 @@ package basculehttp
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"strings"
 
 	"github.com/go-kit/kit/log"
 	"github.com/justinas/alice"
+	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/candlelight"
 	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/sallust/sallustkit"
+	"github.com/xmidt-org/tr1d1um/transaction"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -69,11 +73,48 @@ func sanitizeHeaders(headers http.Header) (filtered http.Header) {
 func SetLogger(logger *zap.Logger) alice.Constructor {
 	return func(delegate http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(sallust.With(r.Context(),
-				logger.With(
-					zap.Reflect("requestHeaders", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
-					zap.String("requestURL", r.URL.EscapedPath()),
-					zap.String("method", r.Method))))
+			var tid string
+
+			if tid = r.Header.Get(transaction.HeaderWPATID); tid == "" {
+				tid = transaction.GenTID()
+			}
+
+			var satClientID = "N/A"
+
+			// retrieve satClientID from request context
+			if auth, ok := bascule.FromContext(r.Context()); ok {
+				satClientID = auth.Token.Principal()
+			}
+
+			var source string
+			host, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				source = r.RemoteAddr
+			} else {
+				source = host
+			}
+
+			logger = logger.With(
+				zap.Reflect("requestHeaders", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
+				zap.String("requestURL", r.URL.EscapedPath()),
+				zap.String("method", r.Method),
+				zap.Reflect("request", transaction.Request{
+					Address: source,
+					Path:    r.URL.Path,
+					Query:   r.URL.RawQuery,
+					Method:  r.Method},
+				),
+				zap.String("tid", tid),
+				zap.String("satClientID", satClientID),
+			)
+			traceID, spanID, ok := candlelight.ExtractTraceInfo(r.Context())
+			if ok {
+				logger = logger.With(
+					zap.String(candlelight.TraceIdLogKeyName, traceID),
+					zap.String(candlelight.SpanIDLogKeyName, spanID),
+				)
+			}
+			r = r.WithContext(sallust.With(r.Context(), logger))
 			delegate.ServeHTTP(w, r)
 		})
 	}
