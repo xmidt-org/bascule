@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/justinas/alice"
-	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/candlelight"
 	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/sallust/sallustkit"
@@ -74,16 +73,8 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 	return func(delegate http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var tid string
-
-			if tid = r.Header.Get(transaction.HeaderWPATID); tid == "" {
+			if tid = r.Header.Get(candlelight.HeaderWPATIDKeyName); tid == "" {
 				tid = transaction.GenTID()
-			}
-
-			var satClientID = "N/A"
-
-			// retrieve satClientID from request context
-			if auth, ok := bascule.FromContext(r.Context()); ok {
-				satClientID = auth.Token.Principal()
 			}
 
 			var source string
@@ -98,14 +89,10 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 				zap.Reflect("requestHeaders", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
 				zap.String("requestURL", r.URL.EscapedPath()),
 				zap.String("method", r.Method),
-				zap.Reflect("request", transaction.Request{
-					Address: source,
-					Path:    r.URL.Path,
-					Query:   r.URL.RawQuery,
-					Method:  r.Method},
-				),
+				zap.String("request.address", source),
+				zap.String("requiest.path", r.URL.Path),
+				zap.String("request.query", r.URL.RawQuery),
 				zap.String("tid", tid),
-				zap.String("satClientID", satClientID),
 			)
 			traceID, spanID, ok := candlelight.ExtractTraceInfo(r.Context())
 			if ok {
@@ -151,4 +138,10 @@ func ProvideLogger() fx.Option {
 			},
 		),
 	)
+}
+
+func SetBasculeInfo(ctx context.Context) alice.Constructor {
+	return func(delegate http.Handler) http.Handler {
+
+	}
 }
