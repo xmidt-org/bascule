@@ -249,6 +249,7 @@ func TestCheckCapabilities(t *testing.T) {
 }
 
 func TestGetCapabilities(t *testing.T) {
+	type badInt int
 	goodKeyVal := []string{"cap1", "cap2"}
 	emptyVal := []string{}
 	tests := []struct {
@@ -299,7 +300,7 @@ func TestGetCapabilities(t *testing.T) {
 		},
 		{
 			description:  "Non String List Capabilities Error",
-			keyValue:     []int{0, 1, 2},
+			keyValue:     []badInt{0, 1, 2},
 			expectedVals: emptyVal,
 			expectedErr:  ErrCapabilityNotStringSlice,
 		},
