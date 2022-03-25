@@ -29,7 +29,6 @@ import (
 	"github.com/xmidt-org/candlelight"
 	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/sallust/sallustkit"
-	"github.com/xmidt-org/tr1d1um/transaction"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -75,7 +74,7 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var tid string
 			if tid = r.Header.Get(candlelight.HeaderWPATIDKeyName); tid == "" {
-				tid = transaction.GenTID()
+				tid = candlelight.GenTID()
 			}
 
 			var source string
