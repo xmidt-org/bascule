@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/justinas/alice"
+	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/candlelight"
 	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/sallust/sallustkit"
@@ -140,8 +141,24 @@ func ProvideLogger() fx.Option {
 	)
 }
 
+// SetBasculeInfo takes the logger and bascule Auth out of the context and adds
+// relevant bascule information to the logger before putting the logger
+// back in the context.
 func SetBasculeInfo(ctx context.Context) alice.Constructor {
 	return func(delegate http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var satClientID = "N/A"
+			// retrieve satClientID from request context
+			if auth, ok := bascule.FromContext(r.Context()); ok {
+				satClientID = auth.Token.Principal()
+			}
 
+			logger := sallust.Get(ctx)
+			logger.With(zap.String("satClientID", satClientID))
+
+			sallust.With(ctx, logger)
+
+			delegate.ServeHTTP(w, r)
+		})
 	}
 }
