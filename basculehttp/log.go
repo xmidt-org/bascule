@@ -72,8 +72,8 @@ func sanitizeHeaders(headers http.Header) (filtered http.Header) {
 func SetLogger(logger *zap.Logger) alice.Constructor {
 	return func(delegate http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var tid string
-			if tid = r.Header.Get(candlelight.HeaderWPATIDKeyName); tid == "" {
+			tid := r.Header.Get(candlelight.HeaderWPATIDKeyName)
+			if tid == "" {
 				tid = candlelight.GenTID()
 			}
 
@@ -86,13 +86,13 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 			}
 
 			logger = logger.With(
-				zap.Reflect("requestHeaders", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
-				zap.String("requestURL", r.URL.EscapedPath()),
-				zap.String("method", r.Method),
+				zap.Reflect("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
+				zap.String("request.URL", r.URL.EscapedPath()),
+				zap.String("request.method", r.Method),
 				zap.String("request.address", source),
 				zap.String("requiest.path", r.URL.Path),
 				zap.String("request.query", r.URL.RawQuery),
-				zap.String("tid", tid),
+				zap.String("request.tid", tid),
 			)
 			traceID, spanID, ok := candlelight.ExtractTraceInfo(r.Context())
 			if ok {
