@@ -90,7 +90,7 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 				zap.String("request.URL", r.URL.EscapedPath()),
 				zap.String("request.method", r.Method),
 				zap.String("request.address", source),
-				zap.String("requiest.path", r.URL.Path),
+				zap.String("request.path", r.URL.Path),
 				zap.String("request.query", r.URL.RawQuery),
 				zap.String("request.tid", tid),
 			)
