@@ -19,11 +19,14 @@ package basculehttp
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"strings"
 
 	"github.com/go-kit/kit/log"
 	"github.com/justinas/alice"
+	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/candlelight"
 	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/sallust/sallustkit"
 	"go.uber.org/fx"
@@ -69,11 +72,36 @@ func sanitizeHeaders(headers http.Header) (filtered http.Header) {
 func SetLogger(logger *zap.Logger) alice.Constructor {
 	return func(delegate http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(sallust.With(r.Context(),
-				logger.With(
-					zap.Reflect("requestHeaders", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
-					zap.String("requestURL", r.URL.EscapedPath()),
-					zap.String("method", r.Method))))
+			tid := r.Header.Get(candlelight.HeaderWPATIDKeyName)
+			if tid == "" {
+				tid = candlelight.GenTID()
+			}
+
+			var source string
+			host, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				source = r.RemoteAddr
+			} else {
+				source = host
+			}
+
+			logger = logger.With(
+				zap.Reflect("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
+				zap.String("request.URL", r.URL.EscapedPath()),
+				zap.String("request.method", r.Method),
+				zap.String("request.address", source),
+				zap.String("request.path", r.URL.Path),
+				zap.String("request.query", r.URL.RawQuery),
+				zap.String("request.tid", tid),
+			)
+			traceID, spanID, ok := candlelight.ExtractTraceInfo(r.Context())
+			if ok {
+				logger = logger.With(
+					zap.String(candlelight.TraceIdLogKeyName, traceID),
+					zap.String(candlelight.SpanIDLogKeyName, spanID),
+				)
+			}
+			r = r.WithContext(sallust.With(r.Context(), logger))
 			delegate.ServeHTTP(w, r)
 		})
 	}
@@ -110,4 +138,26 @@ func ProvideLogger() fx.Option {
 			},
 		),
 	)
+}
+
+// SetBasculeInfo takes the logger and bascule Auth out of the context and adds
+// relevant bascule information to the logger before putting the logger
+// back in the context.
+func SetBasculeInfo(ctx context.Context) alice.Constructor {
+	return func(delegate http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var satClientID = "N/A"
+			// retrieve satClientID from request context
+			if auth, ok := bascule.FromContext(r.Context()); ok {
+				satClientID = auth.Token.Principal()
+			}
+
+			logger := sallust.Get(ctx)
+			logger.With(zap.String("satClientID", satClientID))
+
+			sallust.With(ctx, logger)
+
+			delegate.ServeHTTP(w, r)
+		})
+	}
 }

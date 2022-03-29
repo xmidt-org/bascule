@@ -242,6 +242,8 @@ func TestPrepMetrics(t *testing.T) {
 		unusedRegex    = regexp.MustCompile(unusedEndpoint)
 	)
 
+	type badInt int
+
 	tests := []struct {
 		description          string
 		noPartnerID          bool
@@ -303,6 +305,7 @@ func TestPrepMetrics(t *testing.T) {
 			url:           goodURL,
 			includeToken:  true,
 			includeMethod: true,
+			includeURL:    true,
 			expectedMetricValues: metricValues{
 				method: "get",
 				client: client,
@@ -316,6 +319,7 @@ func TestPrepMetrics(t *testing.T) {
 			includeToken:      true,
 			includeMethod:     true,
 			includeAttributes: true,
+			includeURL:        true,
 			expectedMetricValues: metricValues{
 				method: "get",
 				client: client,
@@ -324,11 +328,12 @@ func TestPrepMetrics(t *testing.T) {
 		},
 		{
 			description:       "Non String Slice Partner ID Error",
-			partnerIDs:        []int{0, 1, 2},
+			partnerIDs:        []badInt{0, 1, 2},
 			url:               goodURL,
 			includeToken:      true,
 			includeMethod:     true,
 			includeAttributes: true,
+			includeURL:        true,
 			expectedMetricValues: metricValues{
 				method: "get",
 				client: client,
@@ -342,6 +347,7 @@ func TestPrepMetrics(t *testing.T) {
 			includeToken:      true,
 			includeMethod:     true,
 			includeAttributes: true,
+			includeURL:        true,
 			expectedMetricValues: metricValues{
 				method: "get",
 				client: client,
