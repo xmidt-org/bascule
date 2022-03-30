@@ -136,6 +136,12 @@ func ProvideLogger() fx.Option {
 					return WithELogger(getZapLogger(getLogger))
 				},
 			},
+
+			// add info to logger
+			fx.Annotated{
+				Name:   "alice_set_info",
+				Target: SetBasculeInfo,
+			},
 		),
 	)
 }
