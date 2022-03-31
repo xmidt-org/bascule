@@ -139,29 +139,32 @@ func ProvideLogger() fx.Option {
 
 			// add info to logger
 			fx.Annotated{
-				Name:   "alice_set_info",
+				Name:   "alice_set_logger_info",
 				Target: SetBasculeInfo,
 			},
 		),
 	)
 }
 
-// SetBasculeInfo takes the logger and bascule Auth out of the context and adds
+// SetBasculeInfo creates an alice constructor that takes
+// the logger and bascule Auth and adds
 // relevant bascule information to the logger before putting the logger
 // back in the context.
-func SetBasculeInfo(ctx context.Context) alice.Constructor {
+func SetBasculeInfo() alice.Constructor {
 	return func(delegate http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			logger := sallust.Get(ctx)
+
 			var satClientID = "N/A"
 			// retrieve satClientID from request context
 			if auth, ok := bascule.FromContext(r.Context()); ok {
 				satClientID = auth.Token.Principal()
 			}
 
-			logger := sallust.Get(ctx)
 			logger.With(zap.String("satClientID", satClientID))
 
-			sallust.With(ctx, logger)
+			r = r.WithContext(sallust.With(ctx, logger))
 
 			delegate.ServeHTTP(w, r)
 		})

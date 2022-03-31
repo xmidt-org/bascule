@@ -35,7 +35,7 @@ type ChainIn struct {
 	Constructor   alice.Constructor `name:"alice_constructor"`
 	Enforcer      alice.Constructor `name:"alice_enforcer"`
 	Listener      alice.Constructor `name:"alice_listener"`
-	SetLoggerInfo alice.Constructor `name:"alice_set_info"`
+	SetLoggerInfo alice.Constructor `name:"alice_set_logger_info"`
 }
 
 // Build provides the alice constructors chained together in a set order.
