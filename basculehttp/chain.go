@@ -31,15 +31,16 @@ type MetricListenerIn struct {
 // ChainIn is used for uber fx wiring.
 type ChainIn struct {
 	fx.In
-	SetLogger   alice.Constructor `name:"alice_set_logger"`
-	Constructor alice.Constructor `name:"alice_constructor"`
-	Enforcer    alice.Constructor `name:"alice_enforcer"`
-	Listener    alice.Constructor `name:"alice_listener"`
+	SetLogger     alice.Constructor `name:"alice_set_logger"`
+	Constructor   alice.Constructor `name:"alice_constructor"`
+	Enforcer      alice.Constructor `name:"alice_enforcer"`
+	Listener      alice.Constructor `name:"alice_listener"`
+	SetLoggerInfo alice.Constructor `name:"alice_set_logger_info"`
 }
 
 // Build provides the alice constructors chained together in a set order.
 func (c ChainIn) Build() alice.Chain {
-	return alice.New(c.SetLogger, c.Constructor, c.Enforcer, c.Listener)
+	return alice.New(c.SetLogger, c.Constructor, c.Enforcer, c.Listener, c.SetLoggerInfo)
 }
 
 // ProvideServerChain builds the alice middleware and then provides them
