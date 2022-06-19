@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Update dependencies. [130](https://github.com/xmidt-org/bascule/pull/130)
+- Update CI system. [129](https://github.com/xmidt-org/bascule/pull/129)
+- Add new middleware for specifying the logger. [126](https://github.com/xmidt-org/bascule/pull/126)
 - Added fields to SetLoggerLogger func and bumped cast, viper, arrange, and zap packages. [122](https://github.com/xmidt-org/bascule/pull/122)
 - Removed "github.com/pkg/errors" dependency for "errors". [#116](https://github.com/xmidt-org/bascule/pull/116)
 
