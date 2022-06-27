@@ -19,10 +19,9 @@ require (
 	github.com/xmidt-org/sallust v0.1.5
 	github.com/xmidt-org/touchstone v0.1.1
 	github.com/xmidt-org/webpa-common v1.11.9
-	go.opentelemetry.io/otel/exporters/stdout v0.20.0 // indirect
 	go.uber.org/fx v1.17.1
 	go.uber.org/zap v1.21.0
-	golang.org/x/sys v0.0.0-20220624220833-87e55d714810 // indirect
+	golang.org/x/sys v0.0.0-20220627191245-f75cf1eec38b // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 )
