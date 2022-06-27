@@ -9,11 +9,10 @@ require (
 	github.com/justinas/alice v1.2.0
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/prometheus/client_golang v1.12.2
-	github.com/prometheus/common v0.34.0 // indirect
+	github.com/prometheus/common v0.35.0 // indirect
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/viper v1.12.0
-	github.com/stretchr/objx v0.4.0 // indirect
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	github.com/subosito/gotenv v1.4.0 // indirect
 	github.com/xmidt-org/arrange v0.3.0
 	github.com/xmidt-org/candlelight v0.0.10
@@ -23,6 +22,7 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout v0.20.0 // indirect
 	go.uber.org/fx v1.17.1
 	go.uber.org/zap v1.21.0
+	golang.org/x/sys v0.0.0-20220624220833-87e55d714810 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 )
