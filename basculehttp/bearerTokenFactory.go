@@ -48,8 +48,8 @@ var (
 // converting it into a bascule Token.
 type BearerTokenFactory struct {
 	fx.In
-	DefaultKeyID string            `name:"default_key_id"`
-	Resolver     clortho.Resolver  //`name:"key_resolver"`
+	DefaultKeyID string `name:"default_key_id"`
+	Resolver     clortho.Resolver
 	Parser       bascule.JWTParser `optional:"true"`
 	Leeway       bascule.Leeway    `name:"jwt_leeway" optional:"true"`
 }
@@ -114,7 +114,6 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 // needed to build a bearer token factory.  It provides a constructor option
 // with the bearer token factory.
 func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
-
 	return fx.Options(
 		clorthofx.Provide(),
 		fx.Provide(
@@ -133,5 +132,22 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 				},
 			},
 		),
+	)
+}
+
+func ProvideResolver(key string, optional bool, options ...clortho.ResolverOption) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name: "key_resolver",
+			Target: func(r ...clortho.Resolver) (clortho.Resolver, error) {
+				if options[0] == nil {
+					if optional {
+						return nil, nil
+					}
+					return nil, fmt.Errorf("Error No Resolver at key %s", key)
+				}
+				return clortho.NewResolver(options...)
+			},
+		},
 	)
 }
