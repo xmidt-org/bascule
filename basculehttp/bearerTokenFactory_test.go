@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
-	"github.com/xmidt-org/bascule/key"
+	"github.com/xmidt-org/clortho"
 	"go.uber.org/fx"
 )
 
@@ -123,18 +123,18 @@ func TestBearerTokenFactory(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
-			r := new(key.MockResolver)
+			r := new(MockResolver)
 			p := new(mockParser)
-			pair := new(key.MockPair)
+			key := new(MockKey)
 			if tc.parseCalled {
 				token := jwt.NewWithClaims(jwt.SigningMethodHS256, tc.claims)
 				token.Valid = tc.validToken
 				p.On("ParseJWT", mock.Anything, mock.Anything, mock.Anything).Return(token, tc.parseErr).Once()
 			}
 			if tc.resolveCalled {
-				r.On("ResolveKey", mock.Anything, mock.Anything).Return(pair, tc.resolveErr).Once()
+				r.On("Resolve", mock.Anything, mock.Anything).Return(key, tc.resolveErr).Once()
 				if tc.resolveErr == nil {
-					pair.On("Public").Return(nil).Once()
+					key.On("Public").Return(nil).Once()
 				}
 			}
 			btf := BearerTokenFactory{
@@ -178,12 +178,14 @@ good:
 		optional       bool
 		optionExpected bool
 		expectedErr    error
+		options        clortho.ResolverOption
 	}{
 		{
 			description:    "Success",
 			key:            "good",
 			optional:       false,
 			optionExpected: true,
+			options:        clortho.WithKeyIDTemplate("http://getkeys.com/{keyID}"),
 		},
 		{
 			description: "Silent failure",
@@ -207,7 +209,7 @@ good:
 				),
 				arrange.TestLogger(t),
 				arrange.ForViper(v),
-				ProvideBearerTokenFactory(tc.key, tc.optional),
+				ProvideBearerTokenFactory(tc.key, tc.optional, tc.options),
 				fx.Invoke(
 					func(in In) {
 						result = in

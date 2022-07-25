@@ -26,7 +26,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
-	"github.com/xmidt-org/bascule/key"
+	"github.com/xmidt-org/clortho"
 	"go.uber.org/fx"
 )
 
@@ -48,7 +48,7 @@ var (
 type BearerTokenFactory struct {
 	fx.In
 	DefaultKeyID string            `name:"default_key_id"`
-	Resolver     key.Resolver      `name:"key_resolver"`
+	Resolver     clortho.Resolver  `name:"key_resolver"`
 	Parser       bascule.JWTParser `optional:"true"`
 	Leeway       bascule.Leeway    `name:"jwt_leeway" optional:"true"`
 }
@@ -68,11 +68,11 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 			keyID = btf.DefaultKeyID
 		}
 
-		pair, err := btf.Resolver.ResolveKey(ctx, keyID)
+		key, err := btf.Resolver.Resolve(ctx, keyID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve key: %v", err)
 		}
-		return pair.Public(), nil
+		return key, nil
 	}
 
 	leewayclaims := bascule.ClaimsWithLeeway{
@@ -112,9 +112,10 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 // ProvideBearerTokenFactory uses the key given to unmarshal configuration
 // needed to build a bearer token factory.  It provides a constructor option
 // with the bearer token factory.
-func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
+func ProvideBearerTokenFactory(configKey string, optional bool, options ...clortho.ResolverOption) fx.Option {
+
 	return fx.Options(
-		key.ProvideResolver(fmt.Sprintf("%s.key", configKey), optional),
+		ProvideResolver(fmt.Sprintf("%s.key", configKey), optional, options...),
 		fx.Provide(
 			fx.Annotated{
 				Name: "jwt_leeway",
@@ -137,5 +138,22 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 				},
 			},
 		),
+	)
+}
+
+func ProvideResolver(key string, optional bool, options ...clortho.ResolverOption) fx.Option {
+	return fx.Provide(
+		fx.Annotated{
+			Name: "key_resolver",
+			Target: func(r ...clortho.Resolver) (clortho.Resolver, error) {
+				if options[0] == nil {
+					if optional {
+						return nil, nil
+					}
+					return nil, fmt.Errorf("Error No Resolver at key %s", key)
+				}
+				return clortho.NewResolver(options...)
+			},
+		},
 	)
 }
