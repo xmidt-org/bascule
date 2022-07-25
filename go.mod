@@ -9,7 +9,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/common v0.37.0 // indirect
-	github.com/spf13/afero v1.9.0 // indirect
+	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0
@@ -24,7 +24,7 @@ require (
 	go.opentelemetry.io/otel/exporters/zipkin v1.8.0 // indirect
 	go.uber.org/fx v1.17.1
 	go.uber.org/zap v1.21.0
-	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 )
