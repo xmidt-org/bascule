@@ -112,10 +112,10 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 // ProvideBearerTokenFactory uses the key given to unmarshal configuration
 // needed to build a bearer token factory.  It provides a constructor option
 // with the bearer token factory.
-func ProvideBearerTokenFactory(configKey string, optional bool, options ...clortho.ResolverOption) fx.Option {
+func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 
 	return fx.Options(
-		ProvideResolver(fmt.Sprintf("%s.key", configKey), optional, options...),
+		ProvideResolver(configKey, optional),
 		fx.Provide(
 			fx.Annotated{
 				Name: "jwt_leeway",
@@ -141,18 +141,17 @@ func ProvideBearerTokenFactory(configKey string, optional bool, options ...clort
 	)
 }
 
-func ProvideResolver(key string, optional bool, options ...clortho.ResolverOption) fx.Option {
+// ProvideResolver is a helper function for wiring up a Resolver with uber fx.
+// Any options added with uber fx will be used to create the resolver.
+func ProvideResolver(key string, optional bool) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
 			Name: "key_resolver",
-			Target: func(r ...clortho.Resolver) (clortho.Resolver, error) {
-				if options[0] == nil {
-					if optional {
-						return nil, nil
-					}
-					return nil, fmt.Errorf("Error No Resolver at key %s", key)
+			Target: func(in ...clortho.ResolverOption) (clortho.Resolver, error) {
+				if optional {
+					return nil, nil
 				}
-				return clortho.NewResolver(options...)
+				return clortho.NewResolver(clortho.WithKeyIDTemplate(key))
 			},
 		},
 	)
