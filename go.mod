@@ -15,6 +15,7 @@ require (
 	github.com/subosito/gotenv v1.4.0 // indirect
 	github.com/xmidt-org/arrange v0.3.0
 	github.com/xmidt-org/candlelight v0.0.10
+	github.com/xmidt-org/clortho v0.0.2
 	github.com/xmidt-org/sallust v0.1.6
 	github.com/xmidt-org/touchstone v0.1.1
 	github.com/xmidt-org/webpa-common v1.11.9
