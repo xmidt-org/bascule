@@ -115,7 +115,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 
 	return fx.Options(
-		ProvideResolver(configKey, optional),
+		ProvideResolver(fmt.Sprintf("%s.key", configKey), optional),
 		fx.Provide(
 			fx.Annotated{
 				Name: "jwt_leeway",
@@ -141,8 +141,7 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 	)
 }
 
-// ProvideResolver is a helper function for wiring up a Resolver with uber fx.
-// Any options added with uber fx will be used to create the resolver.
+// ProvideResolver is a helper function for wiring up a Clortho Resolver
 func ProvideResolver(key string, optional bool) fx.Option {
 	return fx.Provide(
 		fx.Annotated{

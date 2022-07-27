@@ -53,7 +53,7 @@ func (p *mockParser) ParseJWT(token string, claims jwt.Claims, parseFunc jwt.Key
 	return t, err
 }
 
-// MockKey is a mock for key.  It's exposed for other package tests.
+// MockKey is a mock for key.
 type MockKey struct {
 	mock.Mock
 }
