@@ -80,7 +80,7 @@ capabilities:
 
 		// the parts we care about
 		ProvideMetrics(),
-		//ProvideBearerTokenFactory("bearer", false),
+		ProvideBearerTokenFactory("bearer", false),
 		basculechecks.ProvideMetrics(),
 		basculechecks.ProvideCapabilitiesMapValidator("capabilities"),
 		ProvideBearerValidator(),
@@ -170,7 +170,7 @@ capabilities:
 				// the parts we care about
 				ProvideMetrics(),
 				ProvideBasicAuth(""),
-				//ProvideBearerTokenFactory("bearer", true),
+				ProvideBearerTokenFactory("bearer", true),
 				basculechecks.ProvideMetrics(),
 				basculechecks.ProvideRegexCapabilitiesValidator("capabilities"),
 				ProvideBearerValidator(),

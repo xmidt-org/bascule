@@ -179,14 +179,12 @@ good:
 		optional       bool
 		optionExpected bool
 		expectedErr    error
-		options        clortho.ResolverOption
 	}{
 		{
 			description:    "Success",
 			key:            "good",
 			optional:       false,
 			optionExpected: true,
-			options:        clortho.WithKeyIDTemplate("http://getkeys.com/{keyID}"),
 		},
 		{
 			description: "Silent failure",
@@ -210,7 +208,7 @@ good:
 				),
 				arrange.TestLogger(t),
 				arrange.ForViper(v),
-				ProvideBearerTokenFactory(tc.key, tc.optional, tc.options),
+				ProvideBearerTokenFactory(tc.key, tc.optional),
 				fx.Invoke(
 					func(in In) {
 						result = in
@@ -228,6 +226,76 @@ good:
 				return
 			}
 			assert.Nil(result.Options)
+			require.Error(err)
+			assert.True(strings.Contains(err.Error(), tc.expectedErr.Error()),
+				fmt.Errorf("error [%v] doesn't contain error [%v]",
+					err, tc.expectedErr),
+			)
+		})
+	}
+}
+
+func TestProvideResolver(t *testing.T) {
+	type In struct {
+		fx.In
+		R clortho.Resolver `name:"key_resolver"`
+	}
+
+	const yaml = `
+good:
+  factory:
+    uri: "http://test:1111/keys/{keyId}"
+  purpose: 0
+  updateInterval: 604800000000000
+`
+	v := viper.New()
+	v.SetConfigType("yaml")
+	require.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
+
+	goodResolver, err := clortho.NewResolver(clortho.WithKeyIDTemplate("good"))
+	require.Nil(t, err)
+
+	tests := []struct {
+		description      string
+		key              string
+		optional         bool
+		expectedResolver clortho.Resolver
+		expectedErr      error
+	}{
+		{
+			description:      "Success",
+			key:              "good",
+			optional:         false,
+			expectedResolver: goodResolver,
+		},
+		{
+			description: "Silent failure",
+			key:         "bad",
+			optional:    true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			result := In{}
+			assert := assert.New(t)
+			require := require.New(t)
+			app := fx.New(
+				arrange.TestLogger(t),
+				arrange.ForViper(v),
+				ProvideResolver(tc.key, tc.optional),
+				fx.Invoke(
+					func(in In) {
+						result = in
+					},
+				),
+			)
+			err := app.Err()
+
+			assert.Equal(tc.expectedResolver, result.R)
+			if tc.expectedErr == nil {
+				assert.NoError(err)
+				return
+			}
 			require.Error(err)
 			assert.True(strings.Contains(err.Error(), tc.expectedErr.Error()),
 				fmt.Errorf("error [%v] doesn't contain error [%v]",

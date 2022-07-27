@@ -135,18 +135,17 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 	)
 }
 
-func ProvideResolver(key string, optional bool, options ...clortho.ResolverOption) fx.Option {
+// ProvideResolver is a helper function for wiring up a Resolver with uber fx.
+// Any options added with uber fx will be used to create the resolver.
+func ProvideResolver(key string, optional bool) fx.Option {
 	return fx.Provide(
 		fx.Annotated{
 			Name: "key_resolver",
-			Target: func(r ...clortho.Resolver) (clortho.Resolver, error) {
-				if options[0] == nil {
-					if optional {
-						return nil, nil
-					}
-					return nil, fmt.Errorf("Error No Resolver at key %s", key)
+			Target: func(in ...clortho.ResolverOption) (clortho.Resolver, error) {
+				if optional {
+					return nil, nil
 				}
-				return clortho.NewResolver(options...)
+				return clortho.NewResolver(clortho.WithKeyIDTemplate(key))
 			},
 		},
 	)
