@@ -72,7 +72,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve key: %v", err)
 		}
-		return key, nil
+		return key.Public(), nil
 	}
 
 	leewayclaims := bascule.ClaimsWithLeeway{

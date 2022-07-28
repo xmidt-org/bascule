@@ -145,6 +145,7 @@ func TestBearerTokenFactory(t *testing.T) {
 			req := httptest.NewRequest("get", "/", nil)
 			token, err := btf.ParseAndValidate(context.Background(), req, "", tc.value)
 			assert.Equal(tc.expectedToken, token)
+			key.AssertExpectations(t)
 			if tc.expectedErr == nil || err == nil {
 				assert.Equal(tc.expectedErr, err)
 			} else {
