@@ -55,33 +55,33 @@ func (p *mockParser) ParseJWT(token string, claims jwt.Claims, parseFunc jwt.Key
 	return t, err
 }
 
-// MockKey is a mock for key.
-type MockKey struct {
+// mockKey is a mock for key.
+type mockKey struct {
 	mock.Mock
 	clortho.Thumbprinter
 }
 
-func (key *MockKey) Public() crypto.PublicKey {
+func (key *mockKey) Public() crypto.PublicKey {
 	arguments := key.Called()
 	return arguments.Get(0)
 }
 
-func (key *MockKey) KeyType() string {
+func (key *mockKey) KeyType() string {
 	arguments := key.Called()
 	return arguments.String(0)
 }
 
-func (key *MockKey) KeyID() string {
+func (key *mockKey) KeyID() string {
 	arguments := key.Called()
 	return arguments.String(0)
 }
 
-func (key *MockKey) KeyUsage() string {
+func (key *mockKey) KeyUsage() string {
 	arguments := key.Called()
 	return arguments.String(0)
 }
 
-func (key *MockKey) Raw() interface{} {
+func (key *mockKey) Raw() interface{} {
 	arguments := key.Called()
 	return arguments.Get(0)
 }
