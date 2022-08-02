@@ -125,7 +125,7 @@ func TestBearerTokenFactory(t *testing.T) {
 			assert := assert.New(t)
 			r := new(MockResolver)
 			p := new(mockParser)
-			key := new(MockKey)
+			key := new(mockKey)
 			if tc.parseCalled {
 				token := jwt.NewWithClaims(jwt.SigningMethodHS256, tc.claims)
 				token.Valid = tc.validToken
