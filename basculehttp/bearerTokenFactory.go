@@ -27,6 +27,7 @@ import (
 	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/clortho"
+	"github.com/xmidt-org/clortho/clorthofx"
 	"go.uber.org/fx"
 )
 
@@ -48,7 +49,7 @@ var (
 type BearerTokenFactory struct {
 	fx.In
 	DefaultKeyID string            `name:"default_key_id"`
-	Resolver     clortho.Resolver  `name:"key_resolver"`
+	Resolver     clortho.Resolver  //`name:"key_resolver"`
 	Parser       bascule.JWTParser `optional:"true"`
 	Leeway       bascule.Leeway    `name:"jwt_leeway" optional:"true"`
 }
@@ -115,7 +116,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 
 	return fx.Options(
-		ProvideResolver(fmt.Sprintf("%s.key", configKey), optional),
+		clorthofx.Provide(),
 		fx.Provide(
 			fx.Annotated{
 				Name: "jwt_leeway",
@@ -128,30 +129,9 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 					if f.Parser == nil {
 						f.Parser = bascule.DefaultJWTParser
 					}
-					if f.Resolver == nil {
-						if optional {
-							return nil, nil
-						}
-						return nil, ErrNilResolver
-					}
 					return WithTokenFactory(BearerAuthorization, f), nil
 				},
 			},
 		),
-	)
-}
-
-// ProvideResolver is a helper function for wiring up a Clortho Resolver
-func ProvideResolver(key string, optional bool) fx.Option {
-	return fx.Provide(
-		fx.Annotated{
-			Name: "key_resolver",
-			Target: func(in ...clortho.ResolverOption) (clortho.Resolver, error) {
-				if optional {
-					return nil, nil
-				}
-				return clortho.NewResolver(clortho.WithKeyIDTemplate(key))
-			},
-		},
 	)
 }
