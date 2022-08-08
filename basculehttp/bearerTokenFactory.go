@@ -134,18 +134,3 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 		),
 	)
 }
-
-// ProvideResolver is a helper function for wiring up a Clortho Resolver
-func ProvideResolver(key string, optional bool) fx.Option {
-	return fx.Provide(
-		fx.Annotated{
-			Name: "key_resolver",
-			Target: func(in ...clortho.ResolverOption) (clortho.Resolver, error) {
-				if optional {
-					return nil, nil
-				}
-				return clortho.NewResolver(clortho.WithKeyIDTemplate(key))
-			},
-		},
-	)
-}
