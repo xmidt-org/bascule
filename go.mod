@@ -23,7 +23,7 @@ require (
 	go.opentelemetry.io/otel/exporters/zipkin v1.9.0 // indirect
 	go.uber.org/fx v1.18.1
 	go.uber.org/zap v1.22.0
-	golang.org/x/sys v0.0.0-20220804214406-8e32c043e418 // indirect
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
