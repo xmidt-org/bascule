@@ -18,8 +18,13 @@
 package basculehttp
 
 import (
+	"crypto"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/clortho"
+
+	"context"
 
 	"github.com/golang-jwt/jwt"
 )
@@ -48,4 +53,53 @@ func (p *mockParser) ParseJWT(token string, claims jwt.Claims, parseFunc jwt.Key
 	}
 	_, err = parseFunc(t)
 	return t, err
+}
+
+// mockKey is a mock for key.
+type mockKey struct {
+	mock.Mock
+	clortho.Thumbprinter
+}
+
+func (key *mockKey) Public() crypto.PublicKey {
+	arguments := key.Called()
+	return arguments.Get(0)
+}
+
+func (key *mockKey) KeyType() string {
+	arguments := key.Called()
+	return arguments.String(0)
+}
+
+func (key *mockKey) KeyID() string {
+	arguments := key.Called()
+	return arguments.String(0)
+}
+
+func (key *mockKey) KeyUsage() string {
+	arguments := key.Called()
+	return arguments.String(0)
+}
+
+func (key *mockKey) Raw() interface{} {
+	arguments := key.Called()
+	return arguments.Get(0)
+}
+
+// MockResolver is a stretchr mock for Resolver.  It's exposed for other package tests.
+type MockResolver struct {
+	mock.Mock
+}
+
+func (resolver *MockResolver) Resolve(ctx context.Context, keyId string) (clortho.Key, error) {
+	arguments := resolver.Called(ctx, keyId)
+	if key, ok := arguments.Get(0).(clortho.Key); ok {
+		return key, arguments.Error(1)
+	} else {
+		return nil, arguments.Error(1)
+	}
+}
+func (resolver *MockResolver) AddListener(l clortho.ResolveListener) clortho.CancelListenerFunc {
+	arguments := resolver.Called(l)
+	return arguments.Get(0).(clortho.CancelListenerFunc)
 }

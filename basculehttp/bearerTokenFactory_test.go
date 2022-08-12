@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
-	"github.com/xmidt-org/bascule/key"
 	"go.uber.org/fx"
 )
 
@@ -123,18 +122,18 @@ func TestBearerTokenFactory(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			assert := assert.New(t)
-			r := new(key.MockResolver)
+			r := new(MockResolver)
 			p := new(mockParser)
-			pair := new(key.MockPair)
+			key := new(mockKey)
 			if tc.parseCalled {
 				token := jwt.NewWithClaims(jwt.SigningMethodHS256, tc.claims)
 				token.Valid = tc.validToken
 				p.On("ParseJWT", mock.Anything, mock.Anything, mock.Anything).Return(token, tc.parseErr).Once()
 			}
 			if tc.resolveCalled {
-				r.On("ResolveKey", mock.Anything, mock.Anything).Return(pair, tc.resolveErr).Once()
+				r.On("Resolve", mock.Anything, mock.Anything).Return(key, tc.resolveErr).Once()
 				if tc.resolveErr == nil {
-					pair.On("Public").Return(nil).Once()
+					key.On("Public").Return(nil).Once()
 				}
 			}
 			btf := BearerTokenFactory{
@@ -145,6 +144,7 @@ func TestBearerTokenFactory(t *testing.T) {
 			req := httptest.NewRequest("get", "/", nil)
 			token, err := btf.ParseAndValidate(context.Background(), req, "", tc.value)
 			assert.Equal(tc.expectedToken, token)
+			key.AssertExpectations(t)
 			if tc.expectedErr == nil || err == nil {
 				assert.Equal(tc.expectedErr, err)
 			} else {
@@ -222,7 +222,6 @@ good:
 					require.NotNil(result.Options[0])
 					return
 				}
-				require.Nil(result.Options[0])
 				return
 			}
 			assert.Nil(result.Options)

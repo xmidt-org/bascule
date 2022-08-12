@@ -26,7 +26,8 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
-	"github.com/xmidt-org/bascule/key"
+	"github.com/xmidt-org/clortho"
+	"github.com/xmidt-org/clortho/clorthofx"
 	"go.uber.org/fx"
 )
 
@@ -47,8 +48,8 @@ var (
 // converting it into a bascule Token.
 type BearerTokenFactory struct {
 	fx.In
-	DefaultKeyID string            `name:"default_key_id"`
-	Resolver     key.Resolver      `name:"key_resolver"`
+	DefaultKeyID string `name:"default_key_id"`
+	Resolver     clortho.Resolver
 	Parser       bascule.JWTParser `optional:"true"`
 	Leeway       bascule.Leeway    `name:"jwt_leeway" optional:"true"`
 }
@@ -68,11 +69,11 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 			keyID = btf.DefaultKeyID
 		}
 
-		pair, err := btf.Resolver.ResolveKey(ctx, keyID)
+		key, err := btf.Resolver.Resolve(ctx, keyID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve key: %v", err)
 		}
-		return pair.Public(), nil
+		return key.Public(), nil
 	}
 
 	leewayclaims := bascule.ClaimsWithLeeway{
@@ -114,7 +115,7 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 // with the bearer token factory.
 func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 	return fx.Options(
-		key.ProvideResolver(fmt.Sprintf("%s.key", configKey), optional),
+		clorthofx.Provide(),
 		fx.Provide(
 			fx.Annotated{
 				Name: "jwt_leeway",
@@ -126,12 +127,6 @@ func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
 				Target: func(f BearerTokenFactory) (COption, error) {
 					if f.Parser == nil {
 						f.Parser = bascule.DefaultJWTParser
-					}
-					if f.Resolver == nil {
-						if optional {
-							return nil, nil
-						}
-						return nil, ErrNilResolver
 					}
 					return WithTokenFactory(BearerAuthorization, f), nil
 				},
