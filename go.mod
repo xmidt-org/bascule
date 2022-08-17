@@ -15,7 +15,7 @@ require (
 	github.com/subosito/gotenv v1.4.0 // indirect
 	github.com/xmidt-org/arrange v0.3.0
 	github.com/xmidt-org/candlelight v0.0.10
-	github.com/xmidt-org/clortho v0.0.3
+	github.com/xmidt-org/clortho v0.0.4
 	github.com/xmidt-org/sallust v0.1.6
 	github.com/xmidt-org/touchstone v0.1.1
 	go.opentelemetry.io/otel/exporters/jaeger v1.9.0 // indirect
