@@ -3,7 +3,6 @@
 The library for authorization: both acquiring and validating.
 
 [![Build Status](https://github.com/xmidt-org/bascule/actions/workflows/ci.yml/badge.svg)](https://github.com/xmidt-org/bascule/actions/workflows/ci.yml)
-[![Dependency Updateer](https://github.com/xmidt-org/bascule/actions/workflows/updater.yml/badge.svg)](https://github.com/xmidt-org/bascule/actions/workflows/updater.yml)
 [![codecov.io](http://codecov.io/github/xmidt-org/bascule/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/bascule?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xmidt-org/bascule)](https://goreportcard.com/report/github.com/xmidt-org/bascule)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xmidt-org_bascule&metric=alert_status)](https://sonarcloud.io/dashboard?id=xmidt-org_bascule)
