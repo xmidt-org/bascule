@@ -31,10 +31,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	errorKey interface{} = "error"
-)
-
 // defaultGetLoggerFunc returns the default logger, which doesn't do anything.
 func defaultGetLoggerFunc(_ context.Context) *zap.Logger {
 	return sallust.Default()

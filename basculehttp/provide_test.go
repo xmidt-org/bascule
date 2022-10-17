@@ -106,6 +106,7 @@ func TestProvideOptionalMiddleware(t *testing.T) {
 	basicAuth := `
 basic: ["dXNlcjpwYXNz"]
 `
+	// nolint:gosec
 	bearerAuth := `
 bearer:
   key:

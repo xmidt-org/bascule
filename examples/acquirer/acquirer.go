@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -40,7 +40,7 @@ func main() {
 	defer resp.Body.Close()
 
 	if resp.Body != nil {
-		respBody, err := ioutil.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to read body: %v\n", err.Error())
 			os.Exit(1)
