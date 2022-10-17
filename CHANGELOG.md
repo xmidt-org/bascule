@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- [Enable & Fix Linter #149](https://github.com/xmidt-org/bascule/issues/149)
+- [Remove go-kit/kit & go-kit/log #148](https://github.com/xmidt-org/bascule/issues/148)
+- [Move to zap logger #103](https://github.com/xmidt-org/bascule/issues/103)
+- Security patch, remove debug logged token
 
 ## [v0.11.0]
 - Refactored basculehttp to use Clortho instead of key package. [135](https://github.com/xmidt-org/bascule/pull/135)
