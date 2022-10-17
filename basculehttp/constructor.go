@@ -24,11 +24,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 const (
@@ -77,13 +76,13 @@ type constructor struct {
 	headerName          string
 	headerDelimiter     string
 	authorizations      map[bascule.Authorization]TokenFactory
-	getLogger           func(context.Context) log.Logger
+	getLogger           func(context.Context) *zap.Logger
 	parseURL            ParseURL
 	onErrorResponse     OnErrorResponse
 	onErrorHTTPResponse OnErrorHTTPResponse
 }
 
-func (c *constructor) authenticationOutput(logger log.Logger, request *http.Request) (bascule.Authentication, ErrorResponseReason, error) {
+func (c *constructor) authenticationOutput(logger *zap.Logger, request *http.Request) (bascule.Authentication, ErrorResponseReason, error) {
 	urlVal := *request.URL // copy the URL before modifying it
 	u, err := c.parseURL(&urlVal)
 	if err != nil {
@@ -128,13 +127,13 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 		}
 		auth, errReason, err := c.authenticationOutput(logger, r)
 		if err != nil {
-			level.Error(logger).Log(errorKey, err, "auth", r.Header.Get(c.headerName))
+			logger.Error(err.Error(), zap.String("auth", r.Header.Get(c.headerName)))
 			c.onErrorResponse(errReason, err)
 			c.onErrorHTTPResponse(w, errReason)
 			return
 		}
 		ctx := bascule.WithAuthentication(r.Context(), auth)
-		level.Debug(logger).Log("msg", "authentication added to context", "token", auth.Token, "key", auth.Authorization)
+		logger.Debug("authentication added to context", zap.Any("token", auth.Token), zap.String("key", string(auth.Authorization)))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -193,7 +192,7 @@ func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 
 // WithCLogger sets the function to use to get the logger from the context.
 // If no logger is set, nothing is logged.
-func WithCLogger(getLogger func(context.Context) log.Logger) COption {
+func WithCLogger(getLogger func(context.Context) *zap.Logger) COption {
 	return func(c *constructor) {
 		if getLogger != nil {
 			c.getLogger = getLogger

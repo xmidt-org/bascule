@@ -23,35 +23,21 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-kit/kit/log"
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/candlelight"
 	"github.com/xmidt-org/sallust"
-	"github.com/xmidt-org/sallust/sallustkit"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 var (
-	defaultLogger = log.NewNopLogger()
-
 	errorKey interface{} = "error"
 )
 
 // defaultGetLoggerFunc returns the default logger, which doesn't do anything.
-func defaultGetLoggerFunc(_ context.Context) log.Logger {
-	return defaultLogger
-}
-
-// getZapLogger converts a zap logger to a go-kit logger. This won't be needed
-// when basculehttp starts using the zap logger directly.
-func getZapLogger(f func(context.Context) *zap.Logger) func(context.Context) log.Logger {
-	return func(ctx context.Context) log.Logger {
-		return sallustkit.Logger{
-			Zap: f(ctx),
-		}
-	}
+func defaultGetLoggerFunc(_ context.Context) *zap.Logger {
+	return sallust.Default()
 }
 
 func sanitizeHeaders(headers http.Header) (filtered http.Header) {
@@ -86,7 +72,7 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 			}
 
 			logger = logger.With(
-				zap.Reflect("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
+				zap.Any("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
 				zap.String("request.URL", r.URL.EscapedPath()),
 				zap.String("request.method", r.Method),
 				zap.String("request.address", source),
@@ -125,7 +111,7 @@ func ProvideLogger() fx.Option {
 			fx.Annotated{
 				Group: "bascule_constructor_options",
 				Target: func(getLogger func(context.Context) *zap.Logger) COption {
-					return WithCLogger(getZapLogger(getLogger))
+					return WithCLogger(getLogger)
 				},
 			},
 
@@ -133,7 +119,7 @@ func ProvideLogger() fx.Option {
 			fx.Annotated{
 				Group: "bascule_enforcer_options",
 				Target: func(getLogger func(context.Context) *zap.Logger) EOption {
-					return WithELogger(getZapLogger(getLogger))
+					return WithELogger(getLogger)
 				},
 			},
 

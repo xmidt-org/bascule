@@ -18,25 +18,11 @@
 package basculehttp
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
-
-func TestGetZapLogger(t *testing.T) {
-	l := zap.NewNop()
-	f := getZapLogger(func(_ context.Context) *zap.Logger {
-		return l
-	})
-	result := f(context.Background())
-	assert.NotNil(t, result)
-	assert.NotPanics(t, func() {
-		result.Log("msg", "testing", "error", "nope", "level", "debug")
-	})
-}
 
 func TestSanitizeHeaders(t *testing.T) {
 	testCases := []struct {

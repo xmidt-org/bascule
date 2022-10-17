@@ -21,24 +21,24 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
-	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/basculechecks"
+	"github.com/xmidt-org/sallust"
+	"go.uber.org/zap"
 )
 
 func TestEnforcer(t *testing.T) {
 	e := NewEnforcer(
 		WithNotFoundBehavior(Allow),
-		WithELogger(func(_ context.Context) log.Logger { return nil }),
+		WithELogger(func(_ context.Context) *zap.Logger { return nil }),
 	)
 	e2 := NewEnforcer(
 		WithRules("jwt", bascule.Validators{basculechecks.NonEmptyType()}),
-		WithELogger(func(_ context.Context) log.Logger {
-			return log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
+		WithELogger(func(_ context.Context) *zap.Logger {
+			return sallust.Default()
 		}),
 		WithEErrorResponseFunc(DefaultOnErrorResponse),
 	)

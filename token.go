@@ -33,9 +33,9 @@ type Token interface {
 	Attributes() Attributes
 }
 
-//Attributes is the interface that wraps methods which dictate how to interact
-//with a token's attributes. Getter functions return a boolean as second element
-//which indicates that a value of the requested type exists at the given key path.
+// Attributes is the interface that wraps methods which dictate how to interact
+// with a token's attributes. Getter functions return a boolean as second element
+// which indicates that a value of the requested type exists at the given key path.
 type Attributes interface {
 	Get(key string) (interface{}, bool)
 }

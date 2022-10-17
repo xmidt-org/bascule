@@ -22,11 +22,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 //go:generate stringer -type=NotFoundBehavior
@@ -54,7 +53,7 @@ type EOptionsIn struct {
 type enforcer struct {
 	notFoundBehavior NotFoundBehavior
 	rules            map[bascule.Authorization]bascule.Validator
-	getLogger        func(context.Context) log.Logger
+	getLogger        func(context.Context) *zap.Logger
 	onErrorResponse  OnErrorResponse
 }
 
@@ -68,7 +67,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
 			err := errors.New("no authentication found")
-			logger.Log(level.Key(), level.ErrorValue(), errorKey, err.Error())
+			logger.Error(err.Error())
 			e.onErrorResponse(MissingAuthentication, err)
 			response.WriteHeader(http.StatusForbidden)
 			return
@@ -76,9 +75,8 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		rules, ok := e.rules[auth.Authorization]
 		if !ok {
 			err := errors.New("no rules found for authorization")
-			logger.Log(level.Key(), level.ErrorValue(),
-				errorKey, err.Error(), "rules", rules,
-				"authorization", auth.Authorization, "behavior", e.notFoundBehavior)
+			logger.Error(err.Error(), zap.Any("rules", rules),
+				zap.String("authorization", string(auth.Authorization)), zap.Int("behavior", int(e.notFoundBehavior)))
 			switch e.notFoundBehavior {
 			case Forbid:
 				e.onErrorResponse(ChecksNotFound, err)
@@ -94,13 +92,13 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		} else {
 			err := rules.Check(ctx, auth.Token)
 			if err != nil {
-				logger.Log(level.Key(), level.ErrorValue(), errorKey, err)
+				logger.Error(err.Error())
 				e.onErrorResponse(ChecksFailed, err)
 				WriteResponse(response, http.StatusForbidden, err)
 				return
 			}
 		}
-		logger.Log(level.Key(), level.DebugValue(), "msg", "authentication accepted by enforcer")
+		logger.Debug("authentication accepted by enforcer")
 		next.ServeHTTP(response, request)
 	})
 }
@@ -146,7 +144,7 @@ func WithRules(key bascule.Authorization, v bascule.Validator) EOption {
 
 // WithELogger sets the function to use to get the logger from the context.
 // If no logger is set, nothing is logged.
-func WithELogger(getLogger func(context.Context) log.Logger) EOption {
+func WithELogger(getLogger func(context.Context) *zap.Logger) EOption {
 	return func(e *enforcer) {
 		if getLogger != nil {
 			e.getLogger = getLogger

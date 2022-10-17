@@ -1,9 +1,8 @@
 module github.com/xmidt-org/bascule
 
-go 1.12
+go 1.19
 
 require (
-	github.com/go-kit/kit v0.12.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/justinas/alice v1.2.0
 	github.com/prometheus/client_golang v1.13.0

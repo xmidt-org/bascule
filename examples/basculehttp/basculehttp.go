@@ -1,41 +1,36 @@
 package main
 
 import (
-	"context"
 	"net/http"
-	"os"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/basculehttp"
+	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/webpa-common/logging"
+	"go.uber.org/zap"
 )
 
-func SetLogger(logger log.Logger) func(delegate http.Handler) http.Handler {
+func SetLogger(logger *zap.Logger) func(delegate http.Handler) http.Handler {
 	return func(delegate http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.WithContext(logging.WithLogger(r.Context(),
-					log.With(logger, "requestHeaders", r.Header, "requestURL", r.URL.EscapedPath(), "method", r.Method)))
+					logger.With(zap.Any("requestHeaders", r.Header), zap.String("requestURL", r.URL.EscapedPath()), zap.String("method", r.Method))))
 				delegate.ServeHTTP(w, ctx)
 			})
 	}
 }
 
-func GetLogger(ctx context.Context) bascule.Logger {
-	return log.With(logging.GetLogger(ctx), "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
-}
-
 // currently only sets up basic auth
-func authChain(logger log.Logger) alice.Chain {
+func authChain(logger *zap.Logger) alice.Chain {
 	basicAllowed := map[string]string{
 		"testuser": "testpass",
 		"pls":      "letmein",
 	}
 	options := []basculehttp.COption{
-		basculehttp.WithCLogger(GetLogger),
+		basculehttp.WithCLogger(sallust.Get),
 		basculehttp.WithTokenFactory("Basic", basculehttp.BasicTokenFactory(basicAllowed)),
 	}
 
@@ -48,7 +43,7 @@ func authChain(logger log.Logger) alice.Chain {
 	}
 
 	authEnforcer := basculehttp.NewEnforcer(
-		basculehttp.WithELogger(GetLogger),
+		basculehttp.WithELogger(sallust.Get),
 		basculehttp.WithRules("Basic", basicRules),
 	)
 
@@ -62,9 +57,8 @@ func simpleResponse(writer http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
-	logger := log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
 	router := mux.NewRouter()
-	authFuncs := authChain(logger)
+	authFuncs := authChain(sallust.Default())
 	router.Handle("/test", authFuncs.ThenFunc(simpleResponse))
 	http.ListenAndServe(":6000", router)
 }
