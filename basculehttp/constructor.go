@@ -133,7 +133,6 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 			return
 		}
 		ctx := bascule.WithAuthentication(r.Context(), auth)
-		logger.Debug("authentication added to context", zap.Any("token", auth.Token), zap.String("key", string(auth.Authorization)))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
