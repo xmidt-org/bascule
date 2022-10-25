@@ -18,12 +18,12 @@
 package basculehttp
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/sallust"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -53,7 +53,7 @@ type EOptionsIn struct {
 type enforcer struct {
 	notFoundBehavior NotFoundBehavior
 	rules            map[bascule.Authorization]bascule.Validator
-	getLogger        func(context.Context) *zap.Logger
+	getLogger        sallust.GetLoggerFunc
 	onErrorResponse  OnErrorResponse
 }
 
@@ -144,7 +144,7 @@ func WithRules(key bascule.Authorization, v bascule.Validator) EOption {
 
 // WithELogger sets the function to use to get the logger from the context.
 // If no logger is set, nothing is logged.
-func WithELogger(getLogger func(context.Context) *zap.Logger) EOption {
+func WithELogger(getLogger sallust.GetLoggerFunc) EOption {
 	return func(e *enforcer) {
 		if getLogger != nil {
 			e.getLogger = getLogger
