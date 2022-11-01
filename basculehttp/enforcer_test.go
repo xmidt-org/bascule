@@ -27,19 +27,16 @@ import (
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/basculechecks"
 	"github.com/xmidt-org/sallust"
-	"go.uber.org/zap"
 )
 
 func TestEnforcer(t *testing.T) {
 	e := NewEnforcer(
 		WithNotFoundBehavior(Allow),
-		WithELogger(func(_ context.Context) *zap.Logger { return nil }),
+		WithELogger(sallust.GetNilLogger),
 	)
 	e2 := NewEnforcer(
 		WithRules("jwt", bascule.Validators{basculechecks.NonEmptyType()}),
-		WithELogger(func(_ context.Context) *zap.Logger {
-			return sallust.Default()
-		}),
+		WithELogger(sallust.GetDefaultLogger),
 		WithEErrorResponseFunc(DefaultOnErrorResponse),
 	)
 	emptyAttributes := bascule.NewAttributes(map[string]interface{}{})

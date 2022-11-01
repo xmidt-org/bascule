@@ -62,7 +62,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 		ctx := request.Context()
 		logger := e.getLogger(ctx)
 		if logger == nil {
-			logger = defaultGetLoggerFunc(ctx)
+			logger = sallust.Get(ctx)
 		}
 		auth, ok := bascule.FromContext(ctx)
 		if !ok {
@@ -109,7 +109,7 @@ func (e *enforcer) decorate(next http.Handler) http.Handler {
 func NewEnforcer(options ...EOption) func(http.Handler) http.Handler {
 	e := &enforcer{
 		rules:           make(map[bascule.Authorization]bascule.Validator),
-		getLogger:       defaultGetLoggerFunc,
+		getLogger:       sallust.Get,
 		onErrorResponse: DefaultOnErrorResponse,
 	}
 

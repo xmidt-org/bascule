@@ -26,6 +26,7 @@ import (
 
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/sallust"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -123,7 +124,7 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := c.getLogger(r.Context())
 		if logger == nil {
-			logger = defaultGetLoggerFunc(r.Context())
+			logger = sallust.Get(r.Context())
 		}
 		auth, errReason, err := c.authenticationOutput(logger, r)
 		if err != nil {
@@ -145,7 +146,7 @@ func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 		headerName:          DefaultHeaderName,
 		headerDelimiter:     DefaultHeaderDelimiter,
 		authorizations:      make(map[bascule.Authorization]TokenFactory),
-		getLogger:           defaultGetLoggerFunc,
+		getLogger:           sallust.Get,
 		parseURL:            DefaultParseURLFunc,
 		onErrorResponse:     DefaultOnErrorResponse,
 		onErrorHTTPResponse: DefaultOnErrorHTTPResponse,

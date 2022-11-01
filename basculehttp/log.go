@@ -18,7 +18,6 @@
 package basculehttp
 
 import (
-	"context"
 	"net"
 	"net/http"
 	"strings"
@@ -30,11 +29,6 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
-
-// defaultGetLoggerFunc returns the default logger, which doesn't do anything.
-func defaultGetLoggerFunc(_ context.Context) *zap.Logger {
-	return sallust.Default()
-}
 
 func sanitizeHeaders(headers http.Header) (filtered http.Header) {
 	filtered = headers.Clone()
