@@ -14,7 +14,7 @@ require (
 	github.com/xmidt-org/arrange v0.3.0
 	github.com/xmidt-org/candlelight v0.0.12
 	github.com/xmidt-org/clortho v0.0.4
-	github.com/xmidt-org/sallust v0.1.6
+	github.com/xmidt-org/sallust v0.2.0
 	github.com/xmidt-org/touchstone v0.1.2
 	go.uber.org/fx v1.18.2
 	go.uber.org/zap v1.23.0
