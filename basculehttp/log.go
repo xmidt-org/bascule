@@ -85,7 +85,7 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 				source = host
 			}
 
-			logger = logger.With(
+			l := logger.With(
 				zap.Reflect("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
 				zap.String("request.URL", r.URL.EscapedPath()),
 				zap.String("request.method", r.Method),
@@ -96,12 +96,12 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 			)
 			traceID, spanID, ok := candlelight.ExtractTraceInfo(r.Context())
 			if ok {
-				logger = logger.With(
+				l = l.With(
 					zap.String(candlelight.TraceIdLogKeyName, traceID),
 					zap.String(candlelight.SpanIDLogKeyName, spanID),
 				)
 			}
-			r = r.WithContext(sallust.With(r.Context(), logger))
+			r = r.WithContext(sallust.With(r.Context(), l))
 			delegate.ServeHTTP(w, r)
 		})
 	}
