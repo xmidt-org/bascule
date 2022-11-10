@@ -88,7 +88,7 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 			l := logger.With(
 				zap.Reflect("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
 				zap.String("request.URL", r.URL.EscapedPath()),
-				zap.String("request.method", r.Method),
+				zap.String("request.Method", r.Method),
 				zap.String("request.address", source),
 				zap.String("request.path", r.URL.Path),
 				zap.String("request.query", r.URL.RawQuery),
