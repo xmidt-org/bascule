@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.11.1]
+- [SetLogger Bug: Shared logger among requests creates repeating logging context #159](https://github.com/xmidt-org/bascule/issues/159)
+- [CVE-2022-32149 (High) detected in golang.org/x/text-v0.3.7 #153](https://github.com/xmidt-org/bascule/issues/153)
+
 ## [v0.11.0]
 - Refactored basculehttp to use Clortho instead of key package. [135](https://github.com/xmidt-org/bascule/pull/135)
 - Update dependencies. [131](https://github.com/xmidt-org/bascule/pull/131)
@@ -119,7 +123,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.11.1...HEAD
+[v0.11.1]: https://github.com/xmidt-org/bascule/compare/v0.11.0...v0.11.1
 [v0.11.0]: https://github.com/xmidt-org/bascule/compare/v0.10.2...v0.11.0
 [v0.10.2]: https://github.com/xmidt-org/bascule/compare/v0.10.1...v0.10.2
 [v0.10.1]: https://github.com/xmidt-org/bascule/compare/v0.10.0...v0.10.1
