@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v0.11.2]
 - [Enable & Fix Linter #149](https://github.com/xmidt-org/bascule/issues/149)
 - [Remove go-kit/kit & go-kit/log #148](https://github.com/xmidt-org/bascule/issues/148)
 - [Move to zap logger #103](https://github.com/xmidt-org/bascule/issues/103)
@@ -127,7 +129,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.11.2...HEAD
+[v0.11.2]: https://github.com/xmidt-org/bascule/compare/v0.11.1...v0.11.2
 [v0.11.1]: https://github.com/xmidt-org/bascule/compare/v0.11.0...v0.11.1
 [v0.11.0]: https://github.com/xmidt-org/bascule/compare/v0.10.2...v0.11.0
 [v0.10.2]: https://github.com/xmidt-org/bascule/compare/v0.10.1...v0.10.2
