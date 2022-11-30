@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule/basculechecks"
+	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/touchstone"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
@@ -76,6 +77,9 @@ capabilities:
 					return "current"
 				},
 			},
+			func() sallust.GetLoggerFunc {
+				return sallust.Get
+			},
 		),
 
 		// the parts we care about
@@ -106,6 +110,7 @@ func TestProvideOptionalMiddleware(t *testing.T) {
 	basicAuth := `
 basic: ["dXNlcjpwYXNz"]
 `
+	// nolint:gosec
 	bearerAuth := `
 bearer:
   key:
@@ -165,8 +170,10 @@ capabilities:
 							return "current"
 						},
 					},
+					func() sallust.GetLoggerFunc {
+						return sallust.Get
+					},
 				),
-
 				// the parts we care about
 				ProvideMetrics(),
 				ProvideBasicAuth(""),

@@ -24,11 +24,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/sallust"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 const (
@@ -77,13 +77,13 @@ type constructor struct {
 	headerName          string
 	headerDelimiter     string
 	authorizations      map[bascule.Authorization]TokenFactory
-	getLogger           func(context.Context) log.Logger
+	getLogger           sallust.GetLoggerFunc
 	parseURL            ParseURL
 	onErrorResponse     OnErrorResponse
 	onErrorHTTPResponse OnErrorHTTPResponse
 }
 
-func (c *constructor) authenticationOutput(logger log.Logger, request *http.Request) (bascule.Authentication, ErrorResponseReason, error) {
+func (c *constructor) authenticationOutput(logger *zap.Logger, request *http.Request) (bascule.Authentication, ErrorResponseReason, error) {
 	urlVal := *request.URL // copy the URL before modifying it
 	u, err := c.parseURL(&urlVal)
 	if err != nil {
@@ -124,17 +124,16 @@ func (c *constructor) decorate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := c.getLogger(r.Context())
 		if logger == nil {
-			logger = defaultGetLoggerFunc(r.Context())
+			logger = sallust.Get(r.Context())
 		}
 		auth, errReason, err := c.authenticationOutput(logger, r)
 		if err != nil {
-			level.Error(logger).Log(errorKey, err, "auth", r.Header.Get(c.headerName))
+			logger.Error(err.Error(), zap.String("auth", r.Header.Get(c.headerName)))
 			c.onErrorResponse(errReason, err)
 			c.onErrorHTTPResponse(w, errReason)
 			return
 		}
 		ctx := bascule.WithAuthentication(r.Context(), auth)
-		level.Debug(logger).Log("msg", "authentication added to context", "token", auth.Token, "key", auth.Authorization)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -147,7 +146,7 @@ func NewConstructor(options ...COption) func(http.Handler) http.Handler {
 		headerName:          DefaultHeaderName,
 		headerDelimiter:     DefaultHeaderDelimiter,
 		authorizations:      make(map[bascule.Authorization]TokenFactory),
-		getLogger:           defaultGetLoggerFunc,
+		getLogger:           sallust.Get,
 		parseURL:            DefaultParseURLFunc,
 		onErrorResponse:     DefaultOnErrorResponse,
 		onErrorHTTPResponse: DefaultOnErrorHTTPResponse,
@@ -193,7 +192,7 @@ func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 
 // WithCLogger sets the function to use to get the logger from the context.
 // If no logger is set, nothing is logged.
-func WithCLogger(getLogger func(context.Context) log.Logger) COption {
+func WithCLogger(getLogger sallust.GetLoggerFunc) COption {
 	return func(c *constructor) {
 		if getLogger != nil {
 			c.getLogger = getLogger

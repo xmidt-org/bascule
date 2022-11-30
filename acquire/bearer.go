@@ -19,7 +19,7 @@ package acquire
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -106,7 +106,7 @@ func (acquirer *RemoteBearerTokenAcquirer) Acquire() (string, error) {
 		return "", fmt.Errorf("received non 200 code acquiring Bearer: code %v", resp.Status)
 	}
 
-	respBody, errRead := ioutil.ReadAll(resp.Body)
+	respBody, errRead := io.ReadAll(resp.Body)
 	if errRead != nil {
 		return "", fmt.Errorf("error reading HTTP response body: %v", errRead)
 	}

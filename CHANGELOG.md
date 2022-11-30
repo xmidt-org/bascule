@@ -5,13 +5,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- [Enable & Fix Linter #149](https://github.com/xmidt-org/bascule/issues/149)
+- [Remove go-kit/kit & go-kit/log #148](https://github.com/xmidt-org/bascule/issues/148)
+- [Move to zap logger #103](https://github.com/xmidt-org/bascule/issues/103)
+- Security patch, remove debug logged token
 
 ## [v0.11.1]
 - [SetLogger Bug: Shared logger among requests creates repeating logging context #159](https://github.com/xmidt-org/bascule/issues/159)
 - [CVE-2022-32149 (High) detected in golang.org/x/text-v0.3.7 #153](https://github.com/xmidt-org/bascule/issues/153)
 
 ## [v0.11.0]
-- Refactored basculehttp to use Clortho instead of key package. [135](https://github.com/xmidt-org/bascule/pull/135)
+- Refactored basculehttp to use Clortho instead of key package [135](https://github.com/xmidt-org/bascule/pull/135)
 - Update dependencies. [131](https://github.com/xmidt-org/bascule/pull/131)
     -  [github.com/gorilla/sessions v1.2.1 cwe-613 no patch available](https://ossindex.sonatype.org/vulnerability/sonatype-2021-4899)
 - Update dependencies. [130](https://github.com/xmidt-org/bascule/pull/130)

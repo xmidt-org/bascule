@@ -18,41 +18,17 @@
 package basculehttp
 
 import (
-	"context"
 	"net"
 	"net/http"
 	"strings"
 
-	"github.com/go-kit/kit/log"
 	"github.com/justinas/alice"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/candlelight"
 	"github.com/xmidt-org/sallust"
-	"github.com/xmidt-org/sallust/sallustkit"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
-
-var (
-	defaultLogger = log.NewNopLogger()
-
-	errorKey interface{} = "error"
-)
-
-// defaultGetLoggerFunc returns the default logger, which doesn't do anything.
-func defaultGetLoggerFunc(_ context.Context) log.Logger {
-	return defaultLogger
-}
-
-// getZapLogger converts a zap logger to a go-kit logger. This won't be needed
-// when basculehttp starts using the zap logger directly.
-func getZapLogger(f func(context.Context) *zap.Logger) func(context.Context) log.Logger {
-	return func(ctx context.Context) log.Logger {
-		return sallustkit.Logger{
-			Zap: f(ctx),
-		}
-	}
-}
 
 func sanitizeHeaders(headers http.Header) (filtered http.Header) {
 	filtered = headers.Clone()
@@ -86,7 +62,7 @@ func SetLogger(logger *zap.Logger) alice.Constructor {
 			}
 
 			l := logger.With(
-				zap.Reflect("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
+				zap.Any("request.Headers", sanitizeHeaders(r.Header)), //lgtm [go/clear-text-logging]
 				zap.String("request.URL", r.URL.EscapedPath()),
 				zap.String("request.Method", r.Method),
 				zap.String("request.address", source),
@@ -124,16 +100,16 @@ func ProvideLogger() fx.Option {
 			// add logger constructor option
 			fx.Annotated{
 				Group: "bascule_constructor_options",
-				Target: func(getLogger func(context.Context) *zap.Logger) COption {
-					return WithCLogger(getZapLogger(getLogger))
+				Target: func(getLogger sallust.GetLoggerFunc) COption {
+					return WithCLogger(getLogger)
 				},
 			},
 
 			// add logger enforcer option
 			fx.Annotated{
 				Group: "bascule_enforcer_options",
-				Target: func(getLogger func(context.Context) *zap.Logger) EOption {
-					return WithELogger(getZapLogger(getLogger))
+				Target: func(getLogger sallust.GetLoggerFunc) EOption {
+					return WithELogger(getLogger)
 				},
 			},
 

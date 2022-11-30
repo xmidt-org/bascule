@@ -18,14 +18,12 @@
 package basculehttp
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
-	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/xmidt-org/sallust"
 )
 
 func TestConstructor(t *testing.T) {
@@ -37,9 +35,7 @@ func TestConstructor(t *testing.T) {
 		WithHeaderDelimiter(testDelimiter),
 		nil,
 		WithTokenFactory("Basic", BasicTokenFactory{"codex": "codex"}),
-		WithCLogger(func(_ context.Context) log.Logger {
-			return log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
-		}),
+		WithCLogger(sallust.GetDefaultLogger),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
 		WithCErrorHTTPResponseFunc(LegacyOnErrorHTTPResponse),
@@ -47,7 +43,7 @@ func TestConstructor(t *testing.T) {
 	c2 := NewConstructor(
 		WithHeaderName(""),
 		WithHeaderDelimiter(""),
-		WithCLogger(func(_ context.Context) log.Logger { return nil }),
+		WithCLogger(sallust.GetNilLogger),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("", nil)),
 	)
 	tests := []struct {
