@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [CVE-2022-32149 (High) detected in golang.org/x/text-v0.3.7 #153](https://github.com/xmidt-org/bascule/issues/153)
 
 ## [v0.11.0]
-- Refactored basculehttp to use Clortho instead of key package. [135](https://github.com/xmidt-org/bascule/pull/135)
+- Refactored basculehttp to use Clortho instead of key package [135](https://github.com/xmidt-org/bascule/pull/135)
 - Update dependencies. [131](https://github.com/xmidt-org/bascule/pull/131)
     -  [github.com/gorilla/sessions v1.2.1 cwe-613 no patch available](https://ossindex.sonatype.org/vulnerability/sonatype-2021-4899)
 - Update dependencies. [130](https://github.com/xmidt-org/bascule/pull/130)
