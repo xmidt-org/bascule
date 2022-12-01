@@ -15,7 +15,7 @@ require (
 	github.com/xmidt-org/sallust v0.2.0
 	github.com/xmidt-org/touchstone v0.1.2
 	go.uber.org/fx v1.18.2
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.24.0
 )
 
 require (
