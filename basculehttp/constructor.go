@@ -77,7 +77,7 @@ type constructor struct {
 	headerName          string
 	headerDelimiter     string
 	authorizations      map[bascule.Authorization]TokenFactory
-	getLogger           sallust.GetLoggerFunc
+	getLogger           func(context.Context) *zap.Logger
 	parseURL            ParseURL
 	onErrorResponse     OnErrorResponse
 	onErrorHTTPResponse OnErrorHTTPResponse
@@ -192,7 +192,7 @@ func WithTokenFactory(key bascule.Authorization, tf TokenFactory) COption {
 
 // WithCLogger sets the function to use to get the logger from the context.
 // If no logger is set, nothing is logged.
-func WithCLogger(getLogger sallust.GetLoggerFunc) COption {
+func WithCLogger(getLogger func(context.Context) *zap.Logger) COption {
 	return func(c *constructor) {
 		if getLogger != nil {
 			c.getLogger = getLogger

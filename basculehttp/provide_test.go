@@ -18,6 +18,7 @@
 package basculehttp
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -77,7 +78,7 @@ capabilities:
 					return "current"
 				},
 			},
-			func() sallust.GetLoggerFunc {
+			func() func(context.Context) *zap.Logger {
 				return sallust.Get
 			},
 		),
@@ -170,7 +171,7 @@ capabilities:
 							return "current"
 						},
 					},
-					func() sallust.GetLoggerFunc {
+					func() func(context.Context) *zap.Logger {
 						return sallust.Get
 					},
 				),
