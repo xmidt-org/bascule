@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- [Remove deprecated sallust code #167](https://github.com/xmidt-org/bascule/pull/167)
 
 ## [v0.11.2]
 - [SetLogger Bug: Shared logger among requests creates repeating logging context #159](https://github.com/xmidt-org/bascule/issues/159)
