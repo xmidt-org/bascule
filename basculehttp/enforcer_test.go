@@ -32,11 +32,11 @@ import (
 func TestEnforcer(t *testing.T) {
 	e := NewEnforcer(
 		WithNotFoundBehavior(Allow),
-		WithELogger(sallust.GetNilLogger),
+		WithELogger(sallust.Get),
 	)
 	e2 := NewEnforcer(
 		WithRules("jwt", bascule.Validators{basculechecks.NonEmptyType()}),
-		WithELogger(sallust.GetDefaultLogger),
+		WithELogger(sallust.Get),
 		WithEErrorResponseFunc(DefaultOnErrorResponse),
 	)
 	emptyAttributes := bascule.NewAttributes(map[string]interface{}{})
