@@ -18,7 +18,6 @@
 package basculehttp
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -28,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule/basculechecks"
-	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/touchstone"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
@@ -77,9 +75,6 @@ capabilities:
 				Target: func() string {
 					return "current"
 				},
-			},
-			func() func(context.Context) *zap.Logger {
-				return sallust.Get
 			},
 		),
 
@@ -170,9 +165,6 @@ capabilities:
 						Target: func() string {
 							return "current"
 						},
-					},
-					func() func(context.Context) *zap.Logger {
-						return sallust.Get
 					},
 				),
 				// the parts we care about
