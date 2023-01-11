@@ -18,6 +18,7 @@
 package basculehttp
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"strings"
@@ -100,7 +101,7 @@ func ProvideLogger() fx.Option {
 			// add logger constructor option
 			fx.Annotated{
 				Group: "bascule_constructor_options",
-				Target: func(getLogger sallust.GetLoggerFunc) COption {
+				Target: func(getLogger func(context.Context) *zap.Logger) COption {
 					return WithCLogger(getLogger)
 				},
 			},
@@ -108,7 +109,7 @@ func ProvideLogger() fx.Option {
 			// add logger enforcer option
 			fx.Annotated{
 				Group: "bascule_enforcer_options",
-				Target: func(getLogger sallust.GetLoggerFunc) EOption {
+				Target: func(getLogger func(context.Context) *zap.Logger) EOption {
 					return WithELogger(getLogger)
 				},
 			},

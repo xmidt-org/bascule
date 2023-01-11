@@ -35,7 +35,7 @@ func TestConstructor(t *testing.T) {
 		WithHeaderDelimiter(testDelimiter),
 		nil,
 		WithTokenFactory("Basic", BasicTokenFactory{"codex": "codex"}),
-		WithCLogger(sallust.GetDefaultLogger),
+		WithCLogger(sallust.Get),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("/test", DefaultParseURLFunc)),
 		WithCErrorResponseFunc(DefaultOnErrorResponse),
 		WithCErrorHTTPResponseFunc(LegacyOnErrorHTTPResponse),
@@ -43,7 +43,7 @@ func TestConstructor(t *testing.T) {
 	c2 := NewConstructor(
 		WithHeaderName(""),
 		WithHeaderDelimiter(""),
-		WithCLogger(sallust.GetNilLogger),
+		WithCLogger(sallust.Get),
 		WithParseURLFunc(CreateRemovePrefixURLFunc("", nil)),
 	)
 	tests := []struct {
