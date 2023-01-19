@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- [Bug: Normalize both url path and capability substring for endpoint authorization #170](https://github.com/xmidt-org/bascule/issues/170)
 
 ## [v0.11.3]
 - [Remove deprecated sallust code #167](https://github.com/xmidt-org/bascule/pull/167)
