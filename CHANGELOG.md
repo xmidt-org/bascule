@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v0.11.4]
 - [Bug: Normalize both url path and capability substring for endpoint authorization #170](https://github.com/xmidt-org/bascule/issues/170)
 
 ## [v0.11.3]
@@ -134,7 +136,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added constructor, enforcer, and listener alice decorators
 - Basic code and structure established
 
-[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.11.3...HEAD
+[Unreleased]: https://github.com/xmidt-org/bascule/compare/v0.11.4...HEAD
+[v0.11.4]: https://github.com/xmidt-org/bascule/compare/v0.11.3...v0.11.4
 [v0.11.3]: https://github.com/xmidt-org/bascule/compare/v0.11.2...v0.11.3
 [v0.11.2]: https://github.com/xmidt-org/bascule/compare/v0.11.1...v0.11.2
 [v0.11.1]: https://github.com/xmidt-org/bascule/compare/v0.11.0...v0.11.1
