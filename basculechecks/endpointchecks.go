@@ -69,6 +69,8 @@ type RegexEndpointCheck struct {
 // there to be an endpoint regular expression and an http method - separated by
 // a colon. The expected format of a capability is: <prefix><endpoint
 // regex>:<method>
+// Note, the endpoint url path and the capabilities substring (used for authorization)
+// will be normalized to have a leading `/` if missing.
 func NewRegexEndpointCheck(prefix string, acceptAllMethod string) (RegexEndpointCheck, error) {
 	matchPrefix, err := regexp.Compile("^" + prefix + "(.+):(.+?)$")
 	if err != nil {
@@ -97,12 +99,12 @@ func (r RegexEndpointCheck) Authorized(capability string, urlToMatch string, met
 		return false
 	}
 
-	re, err := regexp.Compile(matches[1]) //url regex that capability grants access to
+	re, err := regexp.Compile(urlPathNormalization(matches[1])) //url regex that capability grants access to
 	if err != nil {
 		return false
 	}
 
-	matchIdxs := re.FindStringIndex(urlToMatch)
+	matchIdxs := re.FindStringIndex(urlPathNormalization(urlToMatch))
 	if matchIdxs == nil || matchIdxs[0] != 0 {
 		return false
 	}
@@ -113,4 +115,14 @@ func (r RegexEndpointCheck) Authorized(capability string, urlToMatch string, met
 // Name returns the endpoint check's name.
 func (e RegexEndpointCheck) Name() string {
 	return "regex"
+}
+
+// urlPathNormalization returns an url path with a leading `/` if missing,
+// otherwise the same unmodified url path is returned.
+func urlPathNormalization(url string) string {
+	if url[0] == '/' {
+		return url
+	}
+
+	return "/" + url
 }
