@@ -9,7 +9,7 @@ require (
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.1
-	github.com/xmidt-org/arrange v0.3.0
+	github.com/xmidt-org/arrange v0.4.0
 	github.com/xmidt-org/candlelight v0.0.13
 	github.com/xmidt-org/clortho v0.0.4
 	github.com/xmidt-org/sallust v0.2.1
