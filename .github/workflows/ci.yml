@@ -24,6 +24,6 @@ jobs:
     with:
       copyright-skip:   true
       style-skip:       true
-      go-generate-skip: true
+      go-generate-deps: golang.org/x/tools/cmd/stringer@latest
       release-type:     library
     secrets: inherit
