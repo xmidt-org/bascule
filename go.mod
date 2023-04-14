@@ -12,7 +12,7 @@ require (
 	github.com/xmidt-org/arrange v0.4.0
 	github.com/xmidt-org/candlelight v0.0.15
 	github.com/xmidt-org/clortho v0.0.4
-	github.com/xmidt-org/sallust v0.2.1
+	github.com/xmidt-org/sallust v0.2.2
 	github.com/xmidt-org/touchstone v0.1.2
 	go.uber.org/fx v1.19.2
 	go.uber.org/zap v1.24.0
@@ -75,6 +75,6 @@ require (
 	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
