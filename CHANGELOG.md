@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.11.5]
+- [Add Bascule Helper Package #185](https://github.com/xmidt-org/bascule/issues/185)
+
 ## [v0.11.4]
 - [Bug: Normalize both url path and capability substring for endpoint authorization #170](https://github.com/xmidt-org/bascule/issues/170)
 
