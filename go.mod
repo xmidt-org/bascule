@@ -8,7 +8,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/justinas/alice v1.2.0
 	github.com/prometheus/client_golang v1.15.1
-	github.com/spf13/cast v1.5.0
+	github.com/spf13/cast v1.5.1
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
 	github.com/xmidt-org/arrange v0.4.0
