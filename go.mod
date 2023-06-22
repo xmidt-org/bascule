@@ -12,7 +12,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/xmidt-org/arrange v0.4.0
-	github.com/xmidt-org/candlelight v0.0.17
+	github.com/xmidt-org/candlelight v0.0.18
 	github.com/xmidt-org/clortho v0.0.4
 	github.com/xmidt-org/sallust v0.2.2
 	github.com/xmidt-org/touchstone v0.1.2
