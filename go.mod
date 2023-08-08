@@ -11,7 +11,7 @@ require (
 	github.com/spf13/cast v1.5.1
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
-	github.com/xmidt-org/arrange v0.4.0
+	github.com/xmidt-org/arrange v0.5.0
 	github.com/xmidt-org/candlelight v0.0.18
 	github.com/xmidt-org/clortho v0.0.4
 	github.com/xmidt-org/sallust v0.2.2
