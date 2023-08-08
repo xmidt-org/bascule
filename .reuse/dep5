@@ -1,0 +1,69 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: rbus-go
+Upstream-Contact: Weston Schmidt <weston_scmidt@alumni.purdue.edu>
+Source: https://github.com/xmidt-org/bascule
+
+Files: CONTRIBUTING.md
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: .golangci.yaml
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: go.mod
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: go.sum
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: .gitignore
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: NOTICE
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: CHANGELOG.md
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: MAINTAINERS.md
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: README.md
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: basculehttp/README.md
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: basculehttp/notfoundbehavior_string.go
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: .whitesource
+Copyright: SPDX-FileCopyrightText: 2020 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: examples/acquirer/go.mod
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: examples/acquirer/go.sum
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: examples/basculehttp/go.mod
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: examples/basculehttp/go.sum
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+

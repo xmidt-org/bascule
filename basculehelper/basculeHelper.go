@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
+
 package basculehelper
 
 //Deprecated: this is a bascule helper package that uses older bascule functions from webpa-common in order to implement
