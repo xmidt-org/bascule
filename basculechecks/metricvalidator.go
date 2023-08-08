@@ -44,7 +44,7 @@ var (
 
 // CapabilitiesChecker is an object that can determine if a request is
 // authorized given a bascule.Authentication object.  If it's not authorized, an
-//  error is given for logging and metrics.
+// error is given for logging and metrics.
 type CapabilitiesChecker interface {
 	CheckAuthentication(auth bascule.Authentication, vals ParsedValues) error
 }

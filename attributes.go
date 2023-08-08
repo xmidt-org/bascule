@@ -28,8 +28,8 @@ func (a BasicAttributes) Get(key string) (interface{}, bool) {
 	return v, ok
 }
 
-//NewAttributes builds an Attributes instance with
-//the given map as datasource.
+// NewAttributes builds an Attributes instance with
+// the given map as datasource.
 func NewAttributes(m map[string]interface{}) Attributes {
 	return BasicAttributes(m)
 }
