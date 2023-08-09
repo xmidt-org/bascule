@@ -72,49 +72,41 @@ func TestProvideOptionalMiddleware(t *testing.T) {
 		fx.In
 		AuthChain alice.Chain `name:"auth_chain"`
 	}
-	//basicAuth := EncodedBasicKeys{[]string{"dXNlcjpwYXNz"}}
-	// nolint:gosec
-	/*
-	   	bearerAuth := `
-	   bearer:
-	     key:
-	       factory:
-	         uri: "http://test:1111/keys/{keyId}"
-	       purpose: 0
-	       updateInterval: 604800000000000
-	   `
-	   	var yamls = map[string]string{
-	   		"everything included": basicAuth + bearerAuth + `
-	   capabilities:
-	     type: "enforce"
-	     prefix: "test"
-	     acceptAllMethod: "all"
-	     endpointBuckets:
-	        - "aaaa\\b"
-	        - "bbbn/.*\\b"
-	   `,
-	   		"capabilities monitoring": basicAuth + bearerAuth + `
-	   capabilities:
-	     type: "monitor"
-	     prefix: "test"
-	     acceptAllMethod: "all"
-	     endpointBuckets:
-	       - "aaaa\\b"
-	       - "bbbn/.*\\b"
-	   `,
-	   		"no capability check": basicAuth + bearerAuth,
-	   		"basic only":          basicAuth,
-	   		"bearer only":         bearerAuth,
-	   		"empty config":        ``,
-	   	}
-	*/
-
+	basic := EncodedBasicKeys{[]string{"dXNlcjpwYXNz"}}
 	tests := []struct {
-		desc  string
-		basic *EncodedBasicKeys
+		desc string
+		opts []fx.Option
 	}{
 		{
-			desc: "basic auth",
+			desc: "basic auth, enforce",
+			opts: []fx.Option{
+				fx.Supply(basic),
+				fx.Supply(basculechecks.CapabilitiesValidatorConfig{
+					Type:            "enforce",
+					Prefix:          "test",
+					AcceptAllMethod: "all",
+					EndpointBuckets: []string{"aaaa\\b", "bbbn/.*\\b"},
+				}),
+			},
+		},
+		{
+			desc: "basic auth, monitor",
+			opts: []fx.Option{
+				fx.Supply(basic),
+				fx.Supply(basculechecks.CapabilitiesValidatorConfig{
+					Type:            "monitor",
+					Prefix:          "test",
+					AcceptAllMethod: "all",
+					EndpointBuckets: []string{"aaaa\\b", "bbbn/.*\\b"},
+				}),
+			},
+		},
+		{
+			desc: "no capability check",
+			opts: []fx.Option{
+				fx.Supply(basic),
+				fx.Supply(basculechecks.CapabilitiesValidatorConfig{}),
+			},
 		},
 	}
 
@@ -128,6 +120,7 @@ func TestProvideOptionalMiddleware(t *testing.T) {
 				t,
 
 				// supplying dependencies
+				fx.Options(tc.opts...),
 				fx.Supply(zaptest.NewLogger(t)),
 				touchstone.Provide(),
 				fx.Provide(
