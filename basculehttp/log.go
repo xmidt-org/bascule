@@ -125,10 +125,7 @@ func SetBasculeInfo() alice.Constructor {
 				satClientID = auth.Token.Principal()
 			}
 
-			logger.With(zap.String("satClientID", satClientID))
-
-			r = r.WithContext(sallust.With(ctx, logger))
-
+			r = r.WithContext(sallust.With(ctx, logger.With(zap.String("satClientID", satClientID))))
 			delegate.ServeHTTP(w, r)
 		})
 	}
