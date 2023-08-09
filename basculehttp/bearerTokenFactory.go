@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/clortho"
 	"github.com/xmidt-org/clortho/clorthofx"
@@ -37,7 +36,7 @@ type BearerTokenFactory struct {
 	DefaultKeyID string `name:"default_key_id"`
 	Resolver     clortho.Resolver
 	Parser       bascule.JWTParser `optional:"true"`
-	Leeway       bascule.Leeway    `name:"jwt_leeway" optional:"true"`
+	Leeway       bascule.Leeway    `optional:"true"`
 }
 
 // ParseAndValidate expects the given value to be a JWT with a kid header.  The
@@ -99,15 +98,10 @@ func (btf BearerTokenFactory) ParseAndValidate(ctx context.Context, _ *http.Requ
 // ProvideBearerTokenFactory uses the key given to unmarshal configuration
 // needed to build a bearer token factory.  It provides a constructor option
 // with the bearer token factory.
-func ProvideBearerTokenFactory(configKey string, optional bool) fx.Option {
+func ProvideBearerTokenFactory(optional bool) fx.Option {
 	return fx.Options(
 		clorthofx.Provide(),
 		fx.Provide(
-			fx.Annotated{
-				Name: "jwt_leeway",
-				Target: arrange.UnmarshalKey(fmt.Sprintf("%s.leeway", configKey),
-					bascule.Leeway{}),
-			},
 			fx.Annotated{
 				Group: "bascule_constructor_options",
 				Target: func(f BearerTokenFactory) (COption, error) {

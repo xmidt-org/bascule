@@ -12,13 +12,12 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestBearerTokenFactory(t *testing.T) {
@@ -146,35 +145,23 @@ func TestProvideBearerTokenFactory(t *testing.T) {
 		Options []COption `group:"bascule_constructor_options"`
 	}
 
-	const yaml = `
-good:
-  key:
-    factory:
-      uri: "http://test:1111/keys/{keyId}"
-    purpose: 0
-    updateInterval: 604800000000000
-`
-	v := viper.New()
-	v.SetConfigType("yaml")
-	require.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
-
 	tests := []struct {
 		description    string
-		key            string
+		opts           fx.Option
 		optional       bool
 		optionExpected bool
 		expectedErr    error
 	}{
 		{
 			description:    "Success",
-			key:            "good",
+			opts:           fx.Supply(bascule.Leeway{}),
 			optional:       false,
 			optionExpected: true,
 		},
 		{
 			description: "Silent failure",
-			key:         "bad",
-			optional:    true,
+			//opts:        fx.Supply(bascule.Leeway{}),
+			optional: true,
 		},
 	}
 	for _, tc := range tests {
@@ -191,9 +178,8 @@ good:
 						},
 					},
 				),
-				arrange.TestLogger(t),
-				arrange.ForViper(v),
-				ProvideBearerTokenFactory(tc.key, tc.optional),
+				fx.Supply(zaptest.NewLogger(t)),
+				ProvideBearerTokenFactory(tc.optional),
 				fx.Invoke(
 					func(in In) {
 						result = in

@@ -12,12 +12,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestBasicTokenFactory(t *testing.T) {
@@ -131,34 +130,25 @@ func TestProvideBasicTokenFactory(t *testing.T) {
 		Options []COption `group:"bascule_constructor_options"`
 	}
 
-	const yaml = `
-good:
-  basic: ["dXNlcjpwYXNz", "dXNlcjpwYXNz", "dXNlcjpwYXNz"]
-bad:
-  basic: ["AAAAAAAA"]
-`
-	v := viper.New()
-	v.SetConfigType("yaml")
-	require.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
-
 	tests := []struct {
 		description    string
-		key            string
+		opt            fx.Option
 		optionExpected bool
 		expectedErr    error
 	}{
 		{
-			description:    "Success",
-			key:            "good",
+			description: "Success",
+			opt: fx.Supply(EncodedBasicKeys{
+				Basic: []string{"dXNlcjpwYXNz", "dXNlcjpwYXNz", "dXNlcjpwYXNz"},
+			}),
 			optionExpected: true,
 		},
 		{
 			description: "Disabled success",
-			key:         "nonexistent",
 		},
 		{
 			description: "Failure",
-			key:         "bad",
+			opt:         fx.Supply(EncodedBasicKeys{Basic: []string{"AAAAAAAA"}}),
 			expectedErr: errors.New("malformed"),
 		},
 	}
@@ -167,10 +157,14 @@ bad:
 			result := In{}
 			assert := assert.New(t)
 			require := require.New(t)
+
+			if tc.opt == nil {
+				tc.opt = fx.Supply(EncodedBasicKeys{})
+			}
 			app := fx.New(
-				arrange.TestLogger(t),
-				arrange.ForViper(v),
-				ProvideBasicTokenFactory(tc.key),
+				fx.Supply(zaptest.NewLogger(t)),
+				ProvideBasicTokenFactory(),
+				tc.opt,
 				fx.Invoke(
 					func(in In) {
 						result = in
@@ -180,12 +174,12 @@ bad:
 			err := app.Err()
 			if tc.expectedErr == nil {
 				assert.NoError(err)
-				assert.True(len(result.Options) == 1)
+				require.True(len(result.Options) == 1)
 				if tc.optionExpected {
-					require.NotNil(result.Options[0])
+					assert.NotNil(result.Options[0])
 					return
 				}
-				require.Nil(result.Options[0])
+				assert.Nil(result.Options[0])
 				return
 			}
 			assert.Nil(result.Options)

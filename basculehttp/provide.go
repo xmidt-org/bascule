@@ -17,12 +17,12 @@ type BearerValidatorsIn struct {
 	Capabilities bascule.Validator   `name:"bascule_validator_capabilities" optional:"true"`
 }
 
-// ProvideBasicAuth uses the key given to provide a constructor option to create
+// ProvideBasicAuth creates a basic auth token factory and provides it along with
 // basic tokens and an enforcer option to allow all basic tokens.  For basic
 // tokens, the token factory's validation checks are usually all that is needed.
-func ProvideBasicAuth(key string) fx.Option {
+func ProvideBasicAuth() fx.Option {
 	return fx.Options(
-		ProvideBasicTokenFactory(key),
+		ProvideBasicTokenFactory(),
 		fx.Provide(
 			fx.Annotated{
 				Group: "bascule_enforcer_options",
