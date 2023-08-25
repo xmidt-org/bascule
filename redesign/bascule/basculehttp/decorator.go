@@ -10,6 +10,7 @@ type Decorator[T bascule.Token] struct {
 	Next      http.Handler
 	Forbidden func(http.ResponseWriter, *http.Request, error)
 
+	Accessor      Accessor
 	Parser        bascule.TokenParser[T]
 	Authenticator bascule.Authenticator[T]
 	Authorizer    bascule.Authorizer[T]
@@ -17,7 +18,17 @@ type Decorator[T bascule.Token] struct {
 
 // ServeHTTP executes the security workflow for an HTTP request.
 func (h *Decorator[T]) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	token, err := h.Parser.ParseToken(request.Header.Get("Authorization"))
+	accessor := h.Accessor
+	if accessor == nil {
+		accessor = DefaultAccessor()
+	}
+
+	var token T
+	serialized, err := accessor.GetToken(request)
+	if err == nil {
+		token, err = h.Parser.ParseToken(serialized)
+	}
+
 	if err == nil {
 		err = h.Authenticator.Authenticate(token)
 	}
