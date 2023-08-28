@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
-	github.com/go-kit/kit v0.12.0
+	github.com/go-kit/kit v0.13.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/justinas/alice v1.2.0
 	github.com/prometheus/client_golang v1.16.0
