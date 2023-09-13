@@ -20,7 +20,7 @@ type Decorator[T bascule.Token] struct {
 func (h *Decorator[T]) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	accessor := h.Accessor
 	if accessor == nil {
-		accessor = DefaultAccessor()
+		accessor = defaultAccessor
 	}
 
 	var token T
