@@ -9,15 +9,18 @@ import (
 
 const DefaultAuthorizationHeader = "Authorization"
 
-// Accessor is the strategy for extracting the raw, serialized token
+// Accessor is the strategy for extracting the raw, serialized credentials
 // from an HTTP request.
 type Accessor interface {
-	GetToken(*http.Request) (string, error)
+	// GetCredentials obtains the raw, serialized credentials from the request.
+	GetCredentials(*http.Request) (string, error)
 }
 
 var defaultAccessor Accessor = AuthorizationAccessor{}
 
-// AuthorizationAccessor is an Accessor that pulls the serialized token
+func DefaultAccessor() Accessor { return defaultAccessor }
+
+// AuthorizationAccessor is an Accessor that pulls the serialized credentials
 // from an HTTP header of the format defined by https://www.rfc-editor.org/rfc/rfc7235#section-4.2.
 // Only the single header is considered.
 type AuthorizationAccessor struct {
@@ -34,7 +37,7 @@ func (aa AuthorizationAccessor) header() string {
 	return aa.Header
 }
 
-func (aa AuthorizationAccessor) GetToken(r *http.Request) (serialized string, err error) {
+func (aa AuthorizationAccessor) GetCredentials(r *http.Request) (serialized string, err error) {
 	header := aa.header()
 	serialized = r.Header.Get(header)
 
