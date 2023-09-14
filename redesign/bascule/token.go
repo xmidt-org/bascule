@@ -2,48 +2,7 @@ package bascule
 
 import (
 	"errors"
-	"strings"
 )
-
-// InvalidCredentialsError is returned typically by CredentialsParser.Parse
-// to indicate that a raw, serialized credentials were badly formatted.
-type InvalidCredentialsError struct {
-	// Cause represents any lower-level error that occurred.
-	Cause error
-
-	// Raw represents the raw credentials that couldn't be parsed.
-	Raw string
-}
-
-func (err *InvalidCredentialsError) Unwrap() error { return err.Cause }
-
-func (err *InvalidCredentialsError) Error() string {
-	var o strings.Builder
-	o.WriteString(`Invalid credentials: "`)
-	o.WriteString(err.Raw)
-	o.WriteString(`"`)
-	return o.String()
-}
-
-// Scheme represents how a security token should be parsed.  For HTTP, examples
-// of a scheme are "Bearer" and "Basic".
-type Scheme string
-
-// Credentials holds the raw, unparsed token information.
-type Credentials struct {
-	// Scheme is the parsing scheme used for the credential value.
-	Scheme Scheme
-
-	// Value is the raw, unparsed credential information.
-	Value string
-}
-
-// CredentialsParser produces Credentials from their serialized form.
-type CredentialsParser interface {
-	// Parse parses the raw, marshaled version of credentials and
-	// returns the Credentials object.
-	Parse(raw string) (Credentials, error)
-}
 
 // Token is a runtime representation of credentials.  This interface will be further
 // customized by infrastructure.

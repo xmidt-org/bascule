@@ -1,6 +1,7 @@
 package basculehttp
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/xmidt-org/bascule/redesign/bascule"
@@ -25,6 +26,13 @@ func WithAccessor(a Accessor) FrontDoorOption {
 func WithTokenFactory(tf bascule.TokenFactory) FrontDoorOption {
 	return frontDoorOptionFunc(func(fd *frontDoor) error {
 		fd.tokenFactory = tf
+		return nil
+	})
+}
+
+func WithChallenges(c ...Challenge) FrontDoorOption {
+	return frontDoorOptionFunc(func(fd *frontDoor) error {
+		fd.challenges = append(fd.challenges, c...)
 		return nil
 	})
 }
@@ -54,16 +62,44 @@ func NewFrontDoor(opts ...FrontDoorOption) (FrontDoor, error) {
 }
 
 type frontDoor struct {
-	forbidden func(http.ResponseWriter, *http.Request, error) // TODO
+	challenges Challenges
+	forbidden  func(http.ResponseWriter, *http.Request, error) // TODO
 
 	accessor     Accessor
 	tokenFactory bascule.TokenFactory
 }
 
-func (fd *frontDoor) handleInvalidCredentials(response http.ResponseWriter, request *http.Request, err error) {
+func (fd *frontDoor) handleMissingCredentials(response http.ResponseWriter, err *bascule.MissingCredentialsError) {
+	var statusCode = http.StatusForbidden
+	if fd.challenges.WriteHeader(response.Header()) > 0 {
+		statusCode = http.StatusUnauthorized
+	}
+
+	response.WriteHeader(statusCode)
+}
+
+func (fd *frontDoor) handleInvalidCredentials(response http.ResponseWriter, err *bascule.InvalidCredentialsError) {
 	response.Header().Set("Content-Type", "text/plain")
 	response.WriteHeader(http.StatusBadRequest)
 	response.Write([]byte(err.Error()))
+}
+
+func (fd *frontDoor) handleError(response http.ResponseWriter, request *http.Request, err error) {
+	{
+		var missing *bascule.MissingCredentialsError
+		if errors.As(err, &missing) {
+			fd.handleMissingCredentials(response, missing)
+			return
+		}
+	}
+
+	{
+		var invalid *bascule.InvalidCredentialsError
+		if errors.As(err, &invalid) {
+			fd.handleInvalidCredentials(response, invalid)
+			return
+		}
+	}
 }
 
 func (fd *frontDoor) Then(next http.Handler) http.Handler {
@@ -73,15 +109,14 @@ func (fd *frontDoor) Then(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		var token bascule.Token
 		raw, err := accessor.GetCredentials(request)
-		if err != nil {
-			fd.handleInvalidCredentials(response, request, err)
-			return
+		if err == nil {
+			token, err = fd.tokenFactory.NewToken(raw)
 		}
 
-		token, err := fd.tokenFactory.NewToken(raw)
 		if err != nil {
-			fd.forbidden(response, request, err)
+			fd.handleError(response, request, err)
 			return
 		}
 

@@ -7,8 +7,6 @@ import (
 	"github.com/xmidt-org/bascule/redesign/bascule"
 )
 
-const BasicScheme = "Basic"
-
 type basicToken struct {
 	credentials bascule.Credentials
 	userName    string

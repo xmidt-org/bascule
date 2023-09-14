@@ -1,14 +1,11 @@
 package basculehttp
 
 import (
-	"errors"
 	"net/http"
 	"strings"
-)
 
-// MissingCredentialsError is returned to indicate that an Accessor could not
-// locate any credentials in the HTTP request.
-var MissingCredentialsError = errors.New("No credentials found")
+	"github.com/xmidt-org/bascule/redesign/bascule"
+)
 
 const DefaultAuthorizationHeader = "Authorization"
 
@@ -46,9 +43,11 @@ func (aa AuthorizationAccessor) GetCredentials(r *http.Request) (serialized stri
 
 	if len(serialized) == 0 {
 		var reason strings.Builder
-		reason.WriteString("no token found in header ")
+		reason.WriteString("missing header ")
 		reason.WriteString(header)
-		err = MissingCredentialsError
+		err = &bascule.MissingCredentialsError{
+			Reason: reason.String(),
+		}
 	}
 
 	return
