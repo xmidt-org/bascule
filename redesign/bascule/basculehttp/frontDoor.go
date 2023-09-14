@@ -16,6 +16,8 @@ type frontDoorOptionFunc func(*frontDoor) error
 
 func (fdof frontDoorOptionFunc) apply(fd *frontDoor) error { return fdof(fd) }
 
+// WithAccessor associates a strategy for extracting the raw, serialized token
+// from a request.  If this option is not supplied, DefaultAccessor() is used.
 func WithAccessor(a Accessor) FrontDoorOption {
 	return frontDoorOptionFunc(func(fd *frontDoor) error {
 		fd.accessor = a
@@ -23,6 +25,7 @@ func WithAccessor(a Accessor) FrontDoorOption {
 	})
 }
 
+// WithTokenFactory associates the given token factory with a front door.
 func WithTokenFactory(tf bascule.TokenFactory) FrontDoorOption {
 	return frontDoorOptionFunc(func(fd *frontDoor) error {
 		fd.tokenFactory = tf
@@ -30,6 +33,11 @@ func WithTokenFactory(tf bascule.TokenFactory) FrontDoorOption {
 	})
 }
 
+// WithChallenges describes challenges to be issued when no credentials
+// are supplied.  If no challenges are associated with a FrontDoor, then
+// http.StatusForbidden is returned whenever credentials are not found in
+// the request.  Otherwise, http.StatusUnauthorized is returned along
+// with a WWW-Authenticate header for each challenge.
 func WithChallenges(c ...Challenge) FrontDoorOption {
 	return frontDoorOptionFunc(func(fd *frontDoor) error {
 		fd.challenges = append(fd.challenges, c...)
