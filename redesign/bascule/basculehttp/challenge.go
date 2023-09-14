@@ -11,6 +11,9 @@ const (
 	BasicScheme  bascule.Scheme = "Basic"
 	BearerScheme bascule.Scheme = "Bearer"
 
+	// WwwAuthenticateHeaderName is the HTTP header used for StatusUnauthorized challenges.
+	WwwAuthenticateHeaderName = "WWW-Authenticate"
+
 	// DefaultBasicRealm is the realm used for a basic challenge
 	// when no realm is supplied.
 	DefaultBasicRealm string = "bascule"
@@ -39,7 +42,7 @@ func (chs Challenges) WriteHeader(h http.Header) int {
 	var o strings.Builder
 	for _, ch := range chs {
 		ch.FormatAuthenticate(o)
-		h.Add("WWW-Authenticate", o.String())
+		h.Add(WwwAuthenticateHeaderName, o.String())
 		o.Reset()
 	}
 
