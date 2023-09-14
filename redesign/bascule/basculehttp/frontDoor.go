@@ -4,48 +4,91 @@ import (
 	"net/http"
 
 	"github.com/xmidt-org/bascule/redesign/bascule"
+	"go.uber.org/multierr"
 )
 
-// FrontDoor implements the HTTP-specific workflow for authentication.
-// Authorization is handled separately from this workflow.
-type FrontDoor struct {
-	Next      http.Handler
-	Forbidden func(http.ResponseWriter, *http.Request, error)
-
-	Accessor     Accessor
-	TokenFactory bascule.TokenFactory
+type FrontDoorOption interface {
+	apply(*frontDoor) error
 }
 
-func (fd *FrontDoor) accessor() Accessor {
-	if fd.Accessor != nil {
-		return fd.Accessor
+type frontDoorOptionFunc func(*frontDoor) error
+
+func (fdof frontDoorOptionFunc) apply(fd *frontDoor) error { return fdof(fd) }
+
+func WithAccessor(a Accessor) FrontDoorOption {
+	return frontDoorOptionFunc(func(fd *frontDoor) error {
+		fd.accessor = a
+		return nil
+	})
+}
+
+func WithTokenFactory(tf bascule.TokenFactory) FrontDoorOption {
+	return frontDoorOptionFunc(func(fd *frontDoor) error {
+		fd.tokenFactory = tf
+		return nil
+	})
+}
+
+// FrontDoor is a server middleware that handles the full authentication workflow.
+// Authorization is handled separately.
+type FrontDoor interface {
+	Then(next http.Handler) http.Handler
+}
+
+// NewFrontDoor constructs a FrontDoor middleware using the supplied options.
+func NewFrontDoor(opts ...FrontDoorOption) (FrontDoor, error) {
+	fd := &frontDoor{
+		accessor: DefaultAccessor(),
 	}
 
-	return defaultAccessor
+	var err error
+	for _, o := range opts {
+		err = multierr.Append(err, o.apply(fd))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return fd, nil
 }
 
-func (fd *FrontDoor) handleInvalidCredentials(response http.ResponseWriter, request *http.Request, err error) {
+type frontDoor struct {
+	forbidden func(http.ResponseWriter, *http.Request, error) // TODO
+
+	accessor     Accessor
+	tokenFactory bascule.TokenFactory
+}
+
+func (fd *frontDoor) handleInvalidCredentials(response http.ResponseWriter, request *http.Request, err error) {
 	response.Header().Set("Content-Type", "text/plain")
 	response.WriteHeader(http.StatusBadRequest)
 	response.Write([]byte(err.Error()))
 }
 
-func (fd *FrontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	raw, err := fd.accessor().GetCredentials(request)
-	if err != nil {
-		fd.handleInvalidCredentials(response, request, err)
-		return
+func (fd *frontDoor) Then(next http.Handler) http.Handler {
+	accessor := fd.accessor
+	if accessor == nil {
+		accessor = DefaultAccessor()
 	}
 
-	token, err := fd.TokenFactory.NewToken(raw)
-	if err != nil {
-		fd.Forbidden(response, request, err)
-		return
-	}
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		raw, err := accessor.GetCredentials(request)
+		if err != nil {
+			fd.handleInvalidCredentials(response, request, err)
+			return
+		}
 
-	request = request.WithContext(
-		bascule.WithToken(request.Context(), token),
-	)
+		token, err := fd.tokenFactory.NewToken(raw)
+		if err != nil {
+			fd.forbidden(response, request, err)
+			return
+		}
 
-	fd.Next.ServeHTTP(response, request)
+		request = request.WithContext(
+			bascule.WithToken(request.Context(), token),
+		)
+
+		next.ServeHTTP(response, request)
+	})
 }
