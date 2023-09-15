@@ -19,7 +19,7 @@ require (
 	github.com/xmidt-org/webpa-common/v2 v2.2.2
 	go.uber.org/fx v1.20.0
 	go.uber.org/multierr v1.11.0
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 )
 
 require (
