@@ -25,8 +25,8 @@ var (
 // JWT match the string meant for that endpoint exactly.  A CapabilitiesMap set
 // up with this will use the default KeyPath.
 type CapabilitiesMapConfig struct {
-	Endpoints map[string]string
-	Default   string
+	Endpoints map[string]string `json:"endpoints" yaml:"endpoints"`
+	Default   string            `json:"default" yaml:"default"`
 }
 
 // CapabilitiesMap runs a capability check based on the value of the parsedURL,

@@ -37,9 +37,9 @@ type ClaimsWithLeeway struct {
 // Leeway is the amount of buffer to include with the time, to allow for clock
 // skew.
 type Leeway struct {
-	EXP int64 `json:"expLeeway"`
-	NBF int64 `json:"nbfLeeway"`
-	IAT int64 `json:"iatLeeway"`
+	EXP int64 `json:"expLeeway" yaml:"expLeeway"`
+	NBF int64 `json:"nbfLeeway" yaml:"nbfLeeway"`
+	IAT int64 `json:"iatLeeway" yaml:"iatLeeway"`
 }
 
 // Valid implements the jwt.Claims interface, ensuring that the token claism
