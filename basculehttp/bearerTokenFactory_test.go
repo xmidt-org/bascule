@@ -6,18 +6,16 @@ package basculehttp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/clortho"
+	"github.com/xmidt-org/sallust"
 	"go.uber.org/fx"
 )
 
@@ -146,76 +144,82 @@ func TestProvideBearerTokenFactory(t *testing.T) {
 		Options []COption `group:"bascule_constructor_options"`
 	}
 
-	const yaml = `
-good:
-  key:
-    factory:
-      uri: "http://test:1111/keys/{keyId}"
-    purpose: 0
-    updateInterval: 604800000000000
-`
-	v := viper.New()
-	v.SetConfigType("yaml")
-	require.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
+	t.Run("Success", func(t *testing.T) {
+		result := In{}
+		require := require.New(t)
+		app := fx.New(
+			fx.Provide(
+				fx.Annotated{
+					Name: "default_key_id",
+					Target: func() string {
+						return "default"
+					},
+				},
+				fx.Annotated{
+					Name: "key_resolver",
+					Target: func() clortho.Resolver {
+						r := new(MockResolver)
+						return r
+					},
+				},
+				fx.Annotated{
+					Name: "parser",
+					Target: func() bascule.JWTParser {
+						p := new(mockParser)
+						return p
+					},
+				},
+				fx.Annotated{
+					Name: "jwt_leeway",
+					Target: func() bascule.Leeway {
+						return bascule.Leeway{EXP: 5}
+					},
+				},
+				func() (c sallust.Config) {
+					return sallust.Config{}
+				},
+			),
+			sallust.WithLogger(),
+			ProvideBearerTokenFactory(false),
+			fx.Invoke(
+				func(in In) {
+					result = in
+				},
+			),
+		)
+		err := app.Err()
+		require.NoError(err)
+		require.NotEmpty(result.Options)
+		require.NotNil(result.Options[0])
+	})
+}
 
-	tests := []struct {
-		description    string
-		key            string
-		optional       bool
-		optionExpected bool
-		expectedErr    error
-	}{
-		{
-			description:    "Success",
-			key:            "good",
-			optional:       false,
-			optionExpected: true,
-		},
-		{
-			description: "Silent failure",
-			key:         "bad",
-			optional:    true,
-		},
+func TestOptionalProvideBearerTokenFactory(t *testing.T) {
+	type In struct {
+		fx.In
+		Options []COption `group:"bascule_constructor_options"`
 	}
-	for _, tc := range tests {
-		t.Run(tc.description, func(t *testing.T) {
-			result := In{}
-			assert := assert.New(t)
-			require := require.New(t)
-			app := fx.New(
-				fx.Provide(
-					fx.Annotated{
-						Name: "default_key_id",
-						Target: func() string {
-							return "default"
-						},
-					},
-				),
-				arrange.TestLogger(t),
-				arrange.ForViper(v),
-				ProvideBearerTokenFactory(tc.key, tc.optional),
-				fx.Invoke(
-					func(in In) {
-						result = in
-					},
-				),
-			)
-			err := app.Err()
-			if tc.expectedErr == nil {
-				assert.NoError(err)
-				assert.True(len(result.Options) == 1)
-				if tc.optionExpected {
-					require.NotNil(result.Options[0])
-					return
-				}
-				return
-			}
-			assert.Nil(result.Options)
-			require.Error(err)
-			assert.True(strings.Contains(err.Error(), tc.expectedErr.Error()),
-				fmt.Errorf("error [%v] doesn't contain error [%v]",
-					err, tc.expectedErr),
-			)
-		})
-	}
+
+	t.Run("Silent failure", func(t *testing.T) {
+		result := In{}
+		require := require.New(t)
+		app := fx.New(
+			fx.Provide(
+				func() (c sallust.Config) {
+					return sallust.Config{}
+				},
+			),
+			sallust.WithLogger(),
+			ProvideBearerTokenFactory(true),
+			fx.Invoke(
+				func(in In) {
+					result = in
+				},
+			),
+		)
+		err := app.Err()
+		require.NoError(err)
+		require.NotEmpty(result.Options)
+		require.Nil(result.Options[0])
+	})
 }

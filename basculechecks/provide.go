@@ -4,7 +4,6 @@
 package basculechecks
 
 import (
-	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
 )
@@ -28,10 +27,9 @@ func ProvideMetricValidator(optional bool) fx.Option {
 // ProvideCapabilitiesMapValidator is an uber fx Provide() function that builds
 // a MetricValidator that uses a CapabilitiesMap and ConstChecks, using the
 // configuration found at the key provided.
-func ProvideCapabilitiesMapValidator(key string) fx.Option {
+func ProvideCapabilitiesMapValidator() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			arrange.UnmarshalKey(key, CapabilitiesMapConfig{}),
 			NewCapabilitiesMap,
 		),
 		ProvideMetricValidator(false),
@@ -41,10 +39,9 @@ func ProvideCapabilitiesMapValidator(key string) fx.Option {
 // ProvideRegexCapabilitiesValidator is an uber fx Provide() function that
 // builds a MetricValidator that uses a CapabilitiesValidator and
 // RegexEndpointCheck, using the configuration found at the key provided.
-func ProvideRegexCapabilitiesValidator(key string) fx.Option {
+func ProvideRegexCapabilitiesValidator() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			arrange.UnmarshalKey(key, CapabilitiesValidatorConfig{}),
 			NewCapabilitiesValidator,
 		),
 		ProvideMetricValidator(true),

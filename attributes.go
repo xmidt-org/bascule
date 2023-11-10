@@ -3,10 +3,6 @@
 
 package bascule
 
-import (
-	"github.com/xmidt-org/arrange"
-)
-
 type BasicAttributes map[string]interface{}
 
 func (a BasicAttributes) Get(key string) (interface{}, bool) {
@@ -34,20 +30,22 @@ func GetNestedAttribute(attributes Attributes, keys ...string) (interface{}, boo
 	result = attributes
 	for _, k := range keys {
 		var a Attributes
-		if result == nil {
+		switch r := result.(type) {
+		case BasicAttributes:
+			a = r
+		case Attributes:
+			a = r
+		case map[string]interface{}:
+			a = BasicAttributes(r)
+		default:
 			return nil, false
 		}
-		ok = arrange.TryConvert(result,
-			func(attr Attributes) { a = attr },
-			func(m map[string]interface{}) { a = BasicAttributes(m) },
-		)
-		if !ok {
-			return nil, false
-		}
+
 		result, ok = a.Get(k)
 		if !ok {
 			return nil, false
 		}
 	}
+
 	return result, ok
 }

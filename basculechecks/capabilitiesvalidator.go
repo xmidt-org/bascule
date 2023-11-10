@@ -61,10 +61,10 @@ type EndpointChecker interface {
 // CapabilitiesValidator set up with this will use the default KeyPath and an
 // EndpointRegexCheck.
 type CapabilitiesValidatorConfig struct {
-	Type            string
-	Prefix          string
-	AcceptAllMethod string
-	EndpointBuckets []string
+	Type            string   `json:"type" yaml:"type"`
+	Prefix          string   `json:"prefix" yaml:"prefix"`
+	AcceptAllMethod string   `json:"acceptAllMethod" yaml:"acceptAllMethod"`
+	EndpointBuckets []string `json:"endpointBuckets" yaml:"endpointBuckets"`
 }
 
 // CapabilitiesValidator checks the capabilities provided in a

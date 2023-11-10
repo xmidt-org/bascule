@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
 	"go.uber.org/fx"
 )
@@ -23,7 +22,7 @@ var (
 )
 
 type EncodedBasicKeys struct {
-	Basic []string
+	Basic []string `json:"basic" yaml:"basic"`
 }
 
 // EncodedBasicKeysIn contains string representations of the basic auth allowed.
@@ -108,10 +107,6 @@ func NewBasicTokenFactoryFromList(encodedBasicAuthKeys []string) (BasicTokenFact
 // factory.
 func ProvideBasicTokenFactory(key string) fx.Option {
 	return fx.Provide(
-		fx.Annotated{
-			Name:   "encoded_basic_auths",
-			Target: arrange.UnmarshalKey(key, EncodedBasicKeys{}),
-		},
 		fx.Annotated{
 			Group: "bascule_constructor_options",
 			Target: func(in EncodedBasicKeysIn) (COption, error) {
