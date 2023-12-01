@@ -12,11 +12,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/xmidt-org/arrange"
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/sallust"
 	"go.uber.org/fx"
 )
 
@@ -131,26 +130,18 @@ func TestProvideBasicTokenFactory(t *testing.T) {
 		Options []COption `group:"bascule_constructor_options"`
 	}
 
-	const yaml = `
-good:
-  basic: ["dXNlcjpwYXNz", "dXNlcjpwYXNz", "dXNlcjpwYXNz"]
-bad:
-  basic: ["AAAAAAAA"]
-`
-	v := viper.New()
-	v.SetConfigType("yaml")
-	require.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
-
 	tests := []struct {
 		description    string
 		key            string
 		optionExpected bool
+		keys           EncodedBasicKeys
 		expectedErr    error
 	}{
 		{
 			description:    "Success",
 			key:            "good",
 			optionExpected: true,
+			keys:           EncodedBasicKeys{Basic: []string{"dXNlcjpwYXNz", "dXNlcjpwYXNz", "dXNlcjpwYXNz"}},
 		},
 		{
 			description: "Disabled success",
@@ -159,6 +150,7 @@ bad:
 		{
 			description: "Failure",
 			key:         "bad",
+			keys:        EncodedBasicKeys{Basic: []string{"AAAAAAAA"}},
 			expectedErr: errors.New("malformed"),
 		},
 	}
@@ -168,8 +160,19 @@ bad:
 			assert := assert.New(t)
 			require := require.New(t)
 			app := fx.New(
-				arrange.TestLogger(t),
-				arrange.ForViper(v),
+				fx.Provide(
+					func() (c sallust.Config) {
+						return sallust.Config{}
+					},
+
+					fx.Annotated{
+						Name: "encoded_basic_auths",
+						Target: func() EncodedBasicKeys {
+							return tc.keys
+						},
+					},
+				),
+				sallust.WithLogger(),
 				ProvideBasicTokenFactory(tc.key),
 				fx.Invoke(
 					func(in In) {
@@ -179,8 +182,8 @@ bad:
 			)
 			err := app.Err()
 			if tc.expectedErr == nil {
-				assert.NoError(err)
-				assert.True(len(result.Options) == 1)
+				require.NoError(err)
+				require.True(len(result.Options) == 1)
 				if tc.optionExpected {
 					require.NotNil(result.Options[0])
 					return

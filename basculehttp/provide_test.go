@@ -4,15 +4,15 @@
 package basculehttp
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/justinas/alice"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/xmidt-org/arrange"
+	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/basculechecks"
+	"github.com/xmidt-org/clortho"
+	"github.com/xmidt-org/sallust"
 	"github.com/xmidt-org/touchstone"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
@@ -22,23 +22,6 @@ import (
 func TestProvideBearerMiddleware(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
-
-	const yaml = `
-bearer:
-  key:
-    factory:
-      uri: "http://test:1111/keys/{keyId}"
-    purpose: 0
-    updateInterval: 604800000000000
-capabilities:
-  endpoints:
-    ".*/a/.*": "whatsup"
-    ".*/b/.*": "nm"
-  default: "eh"
-`
-	v := viper.New()
-	v.SetConfigType("yaml")
-	require.NoError(v.ReadConfig(strings.NewReader(yaml)))
 	l, err := zap.NewDevelopment()
 	require.NoError(err)
 
@@ -51,24 +34,54 @@ capabilities:
 		t,
 
 		// supplying dependencies
-		arrange.LoggerFunc(l.Sugar().Infof),
 		fx.Supply(l),
-		arrange.ForViper(v),
 		touchstone.Provide(),
 		fx.Provide(
+			func() (c sallust.Config) {
+				return sallust.Config{}
+			},
+			func() (c basculechecks.CapabilitiesMapConfig) {
+				return basculechecks.CapabilitiesMapConfig{
+					Endpoints: map[string]string{
+						".*/a/.*": "whatsup",
+						".*/b/.*": "nm",
+					},
+					Default: "eh",
+				}
+			},
 			fx.Annotated{
 				Name: "default_key_id",
 				Target: func() string {
-					return "current"
+					return "default"
+				},
+			},
+			fx.Annotated{
+				Name: "key_resolver",
+				Target: func() clortho.Resolver {
+					r := new(MockResolver)
+					return r
+				},
+			},
+			fx.Annotated{
+				Name: "parser",
+				Target: func() bascule.JWTParser {
+					p := new(mockParser)
+					return p
+				},
+			},
+			fx.Annotated{
+				Name: "jwt_leeway",
+				Target: func() bascule.Leeway {
+					return bascule.Leeway{EXP: 5}
 				},
 			},
 		),
 
 		// the parts we care about
 		ProvideMetrics(),
-		ProvideBearerTokenFactory("bearer", false),
+		ProvideBearerTokenFactory(false),
 		basculechecks.ProvideMetrics(),
-		basculechecks.ProvideCapabilitiesMapValidator("capabilities"),
+		basculechecks.ProvideCapabilitiesMapValidator(),
 		ProvideBearerValidator(),
 		ProvideServerChain(),
 
@@ -89,89 +102,54 @@ func TestProvideOptionalMiddleware(t *testing.T) {
 		fx.In
 		AuthChain alice.Chain `name:"auth_chain"`
 	}
-	basicAuth := `
-basic: ["dXNlcjpwYXNz"]
-`
-	// nolint:gosec
-	bearerAuth := `
-bearer:
-  key:
-    factory:
-      uri: "http://test:1111/keys/{keyId}"
-    purpose: 0
-    updateInterval: 604800000000000
-`
-	var yamls = map[string]string{
-		"everything included": basicAuth + bearerAuth + `
-capabilities:
-  type: "enforce"
-  prefix: "test"
-  acceptAllMethod: "all"
-  endpointBuckets:
-     - "aaaa\\b"
-     - "bbbn/.*\\b"
-`,
-		"capabilities monitoring": basicAuth + bearerAuth + `
-capabilities:
-  type: "monitor"
-  prefix: "test"
-  acceptAllMethod: "all"
-  endpointBuckets:
-    - "aaaa\\b"
-    - "bbbn/.*\\b"
-`,
-		"no capability check": basicAuth + bearerAuth,
-		"basic only":          basicAuth,
-		"bearer only":         bearerAuth,
-		"empty config":        ``,
-	}
-	for desc, yaml := range yamls {
-		t.Run(desc, func(t *testing.T) {
-			assert := assert.New(t)
-			require := require.New(t)
+	t.Run("no capability check or bearer token factory or basic auth", func(t *testing.T) {
+		assert := assert.New(t)
+		require := require.New(t)
+		l, err := zap.NewDevelopment()
+		require.NoError(err)
 
-			v := viper.New()
-			v.SetConfigType("yaml")
-			require.NoError(v.ReadConfig(strings.NewReader(yaml)))
-			l, err := zap.NewDevelopment()
-			require.NoError(err)
+		result := In{}
+		app := fxtest.New(
+			t,
 
-			result := In{}
-			app := fxtest.New(
-				t,
-
-				// supplying dependencies
-				arrange.LoggerFunc(l.Sugar().Infof),
-				fx.Supply(l),
-				arrange.ForViper(v),
-				touchstone.Provide(),
-				fx.Provide(
-					fx.Annotated{
-						Name: "default_key_id",
-						Target: func() string {
-							return "current"
-						},
+			// supplying dependencies
+			fx.Supply(l),
+			touchstone.Provide(),
+			fx.Provide(
+				func() (c sallust.Config) {
+					return sallust.Config{}
+				},
+				fx.Annotated{
+					Name: "encoded_basic_auths",
+					Target: func() EncodedBasicKeys {
+						return EncodedBasicKeys{Basic: []string{"dXNlcjpwYXNz", "dXNlcjpwYXNz", "dXNlcjpwYXNz"}}
 					},
-				),
-				// the parts we care about
-				ProvideMetrics(),
-				ProvideBasicAuth(""),
-				ProvideBearerTokenFactory("bearer", true),
-				basculechecks.ProvideMetrics(),
-				basculechecks.ProvideRegexCapabilitiesValidator("capabilities"),
-				ProvideBearerValidator(),
-				ProvideServerChain(),
+				},
+				func() (c basculechecks.CapabilitiesValidatorConfig) {
+					return basculechecks.CapabilitiesValidatorConfig{
+						Type:            "enforce",
+						EndpointBuckets: []string{"abc", "def", `\M`, "adbecf"},
+					}
+				},
+			),
+			// the parts we care about
+			ProvideMetrics(),
+			ProvideBasicAuth(""),
+			ProvideBearerTokenFactory(true),
+			basculechecks.ProvideMetrics(),
+			basculechecks.ProvideRegexCapabilitiesValidator(),
+			ProvideBearerValidator(),
+			ProvideServerChain(),
 
-				fx.Invoke(
-					func(in In) {
-						result = in
-					},
-				),
-			)
-			require.NoError(app.Err())
-			app.RequireStart()
-			assert.NotNil(result.AuthChain)
-			app.RequireStop()
-		})
-	}
+			fx.Invoke(
+				func(in In) {
+					result = in
+				},
+			),
+		)
+		require.NoError(app.Err())
+		app.RequireStart()
+		assert.NotNil(result.AuthChain)
+		app.RequireStop()
+	})
 }
