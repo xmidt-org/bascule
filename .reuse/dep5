@@ -67,3 +67,10 @@ Files: examples/basculehttp/go.sum
 Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
+Files: v2/go.mod
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: v2/go.sum
+Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+License: Apache-2.0
