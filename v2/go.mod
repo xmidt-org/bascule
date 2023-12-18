@@ -18,6 +18,6 @@ require (
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
 )
