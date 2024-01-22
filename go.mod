@@ -13,7 +13,7 @@ require (
 	github.com/xmidt-org/candlelight v0.0.21
 	github.com/xmidt-org/clortho v0.0.4
 	github.com/xmidt-org/sallust v0.2.2
-	github.com/xmidt-org/touchstone v0.1.3
+	github.com/xmidt-org/touchstone v0.1.5
 	github.com/xmidt-org/webpa-common/v2 v2.3.2
 	go.uber.org/fx v1.20.1
 	go.uber.org/multierr v1.11.0
@@ -43,11 +43,10 @@ require (
 	github.com/lestrrat-go/iter v1.0.2 // indirect
 	github.com/lestrrat-go/jwx/v2 v2.0.16 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
-	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
-	github.com/prometheus/common v0.45.0 // indirect
+	github.com/prometheus/common v0.46.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.1 // indirect
