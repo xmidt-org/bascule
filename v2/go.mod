@@ -3,7 +3,7 @@ module github.com/xmidt-org/bascule/v2
 go 1.21
 
 require (
-	github.com/lestrrat-go/jwx/v2 v2.0.18
+	github.com/lestrrat-go/jwx/v2 v2.0.19
 	go.uber.org/multierr v1.11.0
 )
 
