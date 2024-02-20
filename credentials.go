@@ -49,6 +49,20 @@ func (err *InvalidCredentialsError) Error() string {
 	return o.String()
 }
 
+// UnsupportedSchemeError indicates that a credential scheme was not
+// supported via the particular way bascule was configured.
+type UnsupportedSchemeError struct {
+	Scheme Scheme
+}
+
+func (err *UnsupportedSchemeError) Error() string {
+	var o strings.Builder
+	o.WriteString(`Unsupported credential scheme: "`)
+	o.WriteString(string(err.Scheme))
+	o.WriteString(`"`)
+	return o.String()
+}
+
 // Scheme represents how a security token should be parsed.  For HTTP, examples
 // of a scheme are "Bearer" and "Basic".
 type Scheme string
