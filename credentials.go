@@ -5,30 +5,6 @@ package bascule
 
 import "strings"
 
-// MissingCredentialsError indicates that credentials could not be found.
-// Typically, this error will be returned by code that extracts credentials
-// from some other source, e.g. an HTTP request.
-type MissingCredentialsError struct {
-	// Cause represents the lower-level error that occurred, if any.
-	Cause error
-
-	// Reason contains any additional information about the missing credentials.
-	Reason string
-}
-
-func (err *MissingCredentialsError) Unwrap() error { return err.Cause }
-
-func (err *MissingCredentialsError) Error() string {
-	var o strings.Builder
-	o.WriteString("Missing credentials")
-	if len(err.Reason) > 0 {
-		o.WriteString(": ")
-		o.WriteString(err.Reason)
-	}
-
-	return o.String()
-}
-
 // InvalidCredentialsError is returned typically by CredentialsParser.Parse
 // to indicate that a raw, serialized credentials were badly formatted.
 type InvalidCredentialsError struct {
