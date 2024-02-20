@@ -19,9 +19,15 @@ func (err *InvalidCredentialsError) Unwrap() error { return err.Cause }
 
 func (err *InvalidCredentialsError) Error() string {
 	var o strings.Builder
-	o.WriteString(`Invalid credentials: "`)
+	o.WriteString(`Invalid credentials "`)
 	o.WriteString(err.Raw)
 	o.WriteString(`"`)
+
+	if err.Cause != nil {
+		o.WriteString(": ")
+		o.WriteString(err.Cause.Error())
+	}
+
 	return o.String()
 }
 
