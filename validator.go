@@ -10,7 +10,8 @@ import (
 )
 
 // Validator represents a general strategy for validating tokens.  Token validation
-// can happen either during authentication or authorization.
+// typically happens during authentication, but it can also happen during parsing
+// if a caller uses NewValidatingTokenParser.
 type Validator[T Token] interface {
 	// Validate validates a concrete token.  If this validator needs to interact
 	// with external systems, the supplied context can be passed to honor
