@@ -5,6 +5,25 @@ package bascule
 
 import "context"
 
+type credentialsContextKey struct{}
+
+// GetCredentials examines the context and returns the credentials used to
+// build the Token.  If no credentials are in the context, this function
+// returns false.
+func GetCredentials(ctx context.Context) (c Credentials, found bool) {
+	c, found = ctx.Value(credentialsContextKey{}).(Credentials)
+	return
+}
+
+// WitheCredentials constructs a new context with the supplied credentials.
+func WithCredentials(ctx context.Context, c Credentials) context.Context {
+	return context.WithValue(
+		ctx,
+		credentialsContextKey{},
+		c,
+	)
+}
+
 type tokenContextKey struct{}
 
 // GetToken retrieves a concrete Token from a context.  The supplied pointer
