@@ -1,4 +1,4 @@
-module github.com/xmidt-org/bascule
+module github.com/xmidt-org/bascule/v1
 
 go 1.21
 
