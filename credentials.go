@@ -58,3 +58,10 @@ type CredentialsParser interface {
 	// returns the Credentials object.
 	Parse(raw string) (Credentials, error)
 }
+
+// CredentialsParserFunc is a function type that implements CredentialsParser.
+type CredentialsParserFunc func(string) (Credentials, error)
+
+func (cpf CredentialsParserFunc) Parse(raw string) (Credentials, error) {
+	return cpf(raw)
+}
