@@ -91,7 +91,7 @@ func (fd *frontDoor) handleMissingCredentials(response http.ResponseWriter, err 
 
 func (fd *frontDoor) handleInvalidCredentials(response http.ResponseWriter, err *bascule.InvalidCredentialsError) {
 	response.Header().Set("Content-Type", "text/plain")
-	response.WriteHeader(http.StatusBadRequest)
+	response.WriteHeader(http.StatusUnauthorized)
 	response.Write([]byte(err.Error()))
 }
 
