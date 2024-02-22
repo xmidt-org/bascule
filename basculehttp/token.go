@@ -14,8 +14,8 @@ func (t *Token) Principal() string {
 // DefaultTokenParsers returns the default suite of parsers supported by
 // bascule.  This method returns a distinct instance each time it is called,
 // thus allowing calling code to tailor it independently of other calls.
-func DefaultTokenParsers() bascule.TokenParsers[*Token] {
-	return bascule.TokenParsers[*Token]{
+func DefaultTokenParsers() bascule.TokenParsers {
+	return bascule.TokenParsers{
 		BasicScheme: basicTokenParser{},
 	}
 }

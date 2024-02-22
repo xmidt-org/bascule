@@ -45,8 +45,8 @@ type FrontDoor struct {
 	protected         http.Handler
 	accessor          Accessor
 	credentialsParser bascule.CredentialsParser
-	tokenParsers      bascule.TokenParsers[*Token]
-	authentication    bascule.Validators[*Token]
+	tokenParsers      bascule.TokenParsers
+	authentication    bascule.Validators
 }
 
 func NewFrontDoor(opts ...FrontDoorOption) (fd *FrontDoor, err error) {
@@ -105,7 +105,7 @@ func (fd *FrontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	var (
 		ctx      = request.Context()
 		creds    bascule.Credentials
-		token    *Token
+		token    bascule.Token
 		raw, err = fd.accessor.GetCredentials(request)
 	)
 

@@ -32,7 +32,7 @@ func (err *InvalidBasicAuthError) Error() string {
 
 type basicTokenParser struct{}
 
-func (btp basicTokenParser) Parse(_ context.Context, c bascule.Credentials) (t *Token, err error) {
+func (btp basicTokenParser) Parse(_ context.Context, c bascule.Credentials) (t bascule.Token, err error) {
 	var decoded []byte
 	decoded, err = base64.StdEncoding.DecodeString(c.Value)
 	if err != nil {

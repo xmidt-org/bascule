@@ -16,21 +16,21 @@ type Token interface {
 }
 
 // TokenParser produces tokens from credentials.
-type TokenParser[T Token] interface {
-	// Parse turns a Credentials into a concrete token.  This method may validate parts
+type TokenParser interface {
+	// Parse turns a Credentials into a token.  This method may validate parts
 	// of the credential's value, but should not perform any authentication itself.
 	//
 	// Some token parsers may interact with external systems, such as databases.  The supplied
 	// context should be passed to any calls that might need to honor cancelation semantics.
-	Parse(context.Context, Credentials) (T, error)
+	Parse(context.Context, Credentials) (Token, error)
 }
 
-type validatingTokenParser[T Token] struct {
-	parser     TokenParser[T]
-	validators Validators[T]
+type validatingTokenParser struct {
+	parser     TokenParser
+	validators Validators
 }
 
-func (v *validatingTokenParser[T]) Parse(ctx context.Context, c Credentials) (token T, err error) {
+func (v *validatingTokenParser) Parse(ctx context.Context, c Credentials) (token Token, err error) {
 	token, err = v.parser.Parse(ctx, c)
 	if err == nil {
 		err = v.validators.Validate(ctx, token)
@@ -44,25 +44,25 @@ func (v *validatingTokenParser[T]) Parse(ctx context.Context, c Credentials) (to
 // (1) invoking tp.Parse, (2) applying validators if t.Parse succeeded.
 //
 // If v is an empty slice, this function returns tp unmodified.
-func NewValidatingTokenParser[T Token](tp TokenParser[T], v ...Validator[T]) TokenParser[T] {
+func NewValidatingTokenParser(tp TokenParser, v ...Validator) TokenParser {
 	if len(v) == 0 {
 		return tp
 	}
 
-	return &validatingTokenParser[T]{
+	return &validatingTokenParser{
 		parser:     tp,
-		validators: Validators[T](v).Clone(),
+		validators: Validators(v).Clone(),
 	}
 }
 
 // TokenParsers is a registry of parsers based on credential schemes.
 // The zero value of this type is valid and ready to use.
-type TokenParsers[T Token] map[Scheme]TokenParser[T]
+type TokenParsers map[Scheme]TokenParser
 
 // Register adds or replaces the parser associated with the given scheme.
-func (tp *TokenParsers[T]) Register(scheme Scheme, p TokenParser[T]) {
+func (tp *TokenParsers) Register(scheme Scheme, p TokenParser) {
 	if *tp == nil {
-		*tp = make(TokenParsers[T])
+		*tp = make(TokenParsers)
 	}
 
 	(*tp)[scheme] = p
@@ -70,7 +70,7 @@ func (tp *TokenParsers[T]) Register(scheme Scheme, p TokenParser[T]) {
 
 // Parse chooses a TokenParser based on the Scheme and invokes that
 // parser.  If the credential scheme is unsupported, an error is returned.
-func (tp TokenParsers[T]) Parse(ctx context.Context, c Credentials) (t T, err error) {
+func (tp TokenParsers) Parse(ctx context.Context, c Credentials) (t Token, err error) {
 	if p, ok := tp[c.Scheme]; ok {
 		t, err = p.Parse(ctx, c)
 	} else {
