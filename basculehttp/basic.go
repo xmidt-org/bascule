@@ -8,11 +8,6 @@ import (
 	"github.com/xmidt-org/bascule/v1"
 )
 
-const (
-	// BasicScheme is the bascule Scheme indicating basic authorization.
-	BasicScheme bascule.Scheme = "Basic"
-)
-
 // InvalidBasicAuthError indicates that the Basic credentials were improperly
 // encoded, either due to base64 issues or formatting.
 type InvalidBasicAuthError struct {
