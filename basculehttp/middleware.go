@@ -9,62 +9,70 @@ import (
 	"go.uber.org/multierr"
 )
 
-// FrontDoorOption is a functional option for tailoring a FrontDoor.
-type FrontDoorOption interface {
-	apply(*FrontDoor) error
+// MiddlewareOption is a functional option for tailoring a Middleware.
+type MiddlewareOption interface {
+	apply(*Middleware) error
 }
 
-type frontDoorOptionFunc func(*FrontDoor) error
+type middlewareOptionFunc func(*Middleware) error
 
-func (fdof frontDoorOptionFunc) apply(fd *FrontDoor) error {
-	return fdof(fd)
+func (mof middlewareOptionFunc) apply(m *Middleware) error {
+	return mof(m)
 }
 
-// WithProtected sets the HTTP handler that is to be protected by the front door.
-// If this option is omitted, http.DefaultServeMux is used.
-func WithProtected(h http.Handler) FrontDoorOption {
-	return frontDoorOptionFunc(func(fd *FrontDoor) error {
-		fd.protected = h
-		return nil
-	})
-}
-
-// WithAccessor defines how the front door will obtain the raw credentials from
-// HTTP requests.  If this option is omitted, DefaultAccessor() is used.
-func WithAccessor(a Accessor) FrontDoorOption {
-	return frontDoorOptionFunc(func(fd *FrontDoor) error {
-		fd.accessor = a
-		return nil
-	})
-}
-
-// FrontDoor implements the bascule HTTP workflow.  This type is an http.Handler
-// that protects a given handler using bascule's authentication and authorization
-// workflows.
-type FrontDoor struct {
-	protected         http.Handler
+// Middleware is an immutable configuration that can decorate multiple handlers.
+type Middleware struct {
 	accessor          Accessor
 	credentialsParser bascule.CredentialsParser
 	tokenParsers      bascule.TokenParsers
 	authentication    bascule.Validators
 }
 
-func NewFrontDoor(opts ...FrontDoorOption) (fd *FrontDoor, err error) {
-	fd = &FrontDoor{
-		protected:         http.DefaultServeMux,
+func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
+	m = &Middleware{
 		accessor:          DefaultAccessor(),
 		credentialsParser: DefaultCredentialsParser(),
 		tokenParsers:      DefaultTokenParsers(),
 	}
 
 	for _, o := range opts {
-		err = multierr.Append(err, o.apply(fd))
+		err = multierr.Append(err, o.apply(m))
 	}
 
 	return
 }
 
-func (fd *FrontDoor) writeError(response http.ResponseWriter, defaultCode int, err error) {
+func (m *Middleware) clone() (clone Middleware) {
+	clone = *m
+	clone.tokenParsers = clone.tokenParsers.Clone()
+	return
+}
+
+func (m *Middleware) Then(protected http.Handler) http.Handler {
+	if protected == nil {
+		protected = http.DefaultServeMux
+	}
+
+	return &frontDoor{
+		Middleware: m.clone(),
+		protected:  protected,
+	}
+}
+
+func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
+	if protected == nil {
+		return m.Then(nil)
+	}
+
+	return m.Then(protected)
+}
+
+type frontDoor struct {
+	Middleware
+	protected http.Handler
+}
+
+func (fd *frontDoor) writeError(response http.ResponseWriter, defaultCode int, err error) {
 	var (
 		statusCode  = defaultCode
 		content     []byte
@@ -101,7 +109,7 @@ func (fd *FrontDoor) writeError(response http.ResponseWriter, defaultCode int, e
 	response.Write(content) // TODO: handle errors here somehow
 }
 
-func (fd *FrontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	var (
 		ctx      = request.Context()
 		creds    bascule.Credentials

@@ -59,6 +59,16 @@ func NewValidatingTokenParser(tp TokenParser, v ...Validator) TokenParser {
 // The zero value of this type is valid and ready to use.
 type TokenParsers map[Scheme]TokenParser
 
+// Clone produces a distinct copy of this instance.
+func (tp TokenParsers) Clone() TokenParsers {
+	clone := make(TokenParsers, len(tp))
+	for k, v := range tp {
+		clone[k] = v
+	}
+
+	return clone
+}
+
 // Register adds or replaces the parser associated with the given scheme.
 func (tp *TokenParsers) Register(scheme Scheme, p TokenParser) {
 	if *tp == nil {
