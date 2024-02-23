@@ -26,6 +26,8 @@ var defaultCredentialsParser bascule.CredentialsParser = bascule.CredentialsPars
 // DefaultCredentialsParser returns the default strategy for parsing credentials.  This
 // builtin strategy is tolerant of extra whitespace, and does not define any particular
 // format for the value of the credentials.
+//
+// This parser assumes the format specified in https://www.rfc-editor.org/rfc/rfc7235.
 func DefaultCredentialsParser() bascule.CredentialsParser {
 	return defaultCredentialsParser
 }

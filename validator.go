@@ -16,6 +16,10 @@ type Validator interface {
 	// Validate validates a token.  If this validator needs to interact
 	// with external systems, the supplied context can be passed to honor
 	// cancelation semantics.
+	//
+	// This method may be passed a token that it doesn't support, e.g. a Basic
+	// validator can be passed a JWT token.  In that case, this method should
+	// simply return nil.
 	Validate(context.Context, Token) error
 }
 
