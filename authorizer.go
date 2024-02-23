@@ -11,38 +11,42 @@ import (
 
 // Authorizer is a strategy for determining if a given token represents
 // adequate permissions to access a resource.
-type Authorizer[T Token, R any] interface {
+type Authorizer[R any] interface {
 	// Authorize tests if a given token holds the correct permissions to
 	// access a given resource.  If this method needs to access external
 	// systems, it should pass the supplied context to honor context
 	// cancelation semantics.
-	Authorize(ctx context.Context, token T, resource R) error
+	//
+	// If this method doesn't support the given token, it should return nil.
+	Authorize(ctx context.Context, token Token, resource R) error
 }
 
-// Authorizers is an aggregate Authorizer for a particular kind of token
-// and resource.
-type Authorizers[T Token, R any] []Authorizer[T, R]
+// Authorizers is a collection of Authorizers that exposes factory methods
+// for creating Authorizer instances joined by boolean operations.
+type Authorizers[R any] []Authorizer[R]
 
 // Add appends authorizers to this aggregate Authorizers.
-func (as *Authorizers[T, R]) Add(a ...Authorizer[T, R]) {
+func (as *Authorizers[R]) Add(a ...Authorizer[R]) {
 	if *as == nil {
-		*as = make(Authorizers[T, R], len(a))
+		*as = make(Authorizers[R], len(a))
 	}
 
 	*as = append(*as, a...)
 }
 
-func (as Authorizers[T, R]) Clone() Authorizers[T, R] {
-	clone := make(Authorizers[T, R], 0, len(as))
+// Clone creates a distinct Authorizers instance with the same sequence
+// of Authorizer strategies.
+func (as Authorizers[R]) Clone() Authorizers[R] {
+	clone := make(Authorizers[R], 0, len(as))
 	clone = append(clone, as...)
 	return clone
 }
 
-type requireAll[T Token, R any] struct {
-	authorizers Authorizers[T, R]
+type requireAll[R any] struct {
+	authorizers Authorizers[R]
 }
 
-func (ra requireAll[T, R]) Authorize(ctx context.Context, token T, resource R) error {
+func (ra requireAll[R]) Authorize(ctx context.Context, token Token, resource R) error {
 	for _, a := range ra.authorizers {
 		if err := a.Authorize(ctx, token, resource); err != nil {
 			return err
@@ -58,17 +62,17 @@ func (ra requireAll[T, R]) Authorize(ctx context.Context, token T, resource R) e
 //
 // The returned Authorizer will invoke all of this sequence's individual authorizers
 // in the order they occur in the slice, stopping at the first error.
-func (as Authorizers[T, R]) RequireAll() Authorizer[T, R] {
-	return requireAll[T, R]{
+func (as Authorizers[R]) RequireAll() Authorizer[R] {
+	return requireAll[R]{
 		authorizers: as.Clone(),
 	}
 }
 
-type requireAny[T Token, R any] struct {
-	authorizers Authorizers[T, R]
+type requireAny[R any] struct {
+	authorizers Authorizers[R]
 }
 
-func (ra requireAny[T, R]) Authorize(ctx context.Context, token T, resource R) error {
+func (ra requireAny[R]) Authorize(ctx context.Context, token Token, resource R) error {
 	var err error
 	for _, a := range ra.authorizers {
 		authErr := a.Authorize(ctx, token, resource)
@@ -90,8 +94,8 @@ func (ra requireAny[T, R]) Authorize(ctx context.Context, token T, resource R) e
 // they occur in this sequence, returning a nil error upon the first non-nil error.  If
 // all the authorizers returned an error, the returned error will be an aggregate of
 // those errors.
-func (as Authorizers[T, R]) RequireAny() Authorizer[T, R] {
-	return requireAny[T, R]{
+func (as Authorizers[R]) RequireAny() Authorizer[R] {
+	return requireAny[R]{
 		authorizers: as.Clone(),
 	}
 }
