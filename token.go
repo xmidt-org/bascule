@@ -25,49 +25,9 @@ type TokenParser interface {
 	Parse(context.Context, Credentials) (Token, error)
 }
 
-type validatingTokenParser struct {
-	parser     TokenParser
-	validators Validators
-}
-
-func (v *validatingTokenParser) Parse(ctx context.Context, c Credentials) (token Token, err error) {
-	token, err = v.parser.Parse(ctx, c)
-	if err == nil {
-		err = v.validators.Validate(ctx, token)
-	}
-
-	return
-}
-
-// NewValidatingTokenParser decorates a TokenParser such that the given validators are
-// applied after Parse is called.  The returned TokenParser will handle the workflow of
-// (1) invoking tp.Parse, (2) applying validators if t.Parse succeeded.
-//
-// If v is an empty slice, this function returns tp unmodified.
-func NewValidatingTokenParser(tp TokenParser, v ...Validator) TokenParser {
-	if len(v) == 0 {
-		return tp
-	}
-
-	return &validatingTokenParser{
-		parser:     tp,
-		validators: Validators(v).Clone(),
-	}
-}
-
 // TokenParsers is a registry of parsers based on credential schemes.
 // The zero value of this type is valid and ready to use.
 type TokenParsers map[Scheme]TokenParser
-
-// Clone produces a distinct copy of this instance.
-func (tp TokenParsers) Clone() TokenParsers {
-	clone := make(TokenParsers, len(tp))
-	for k, v := range tp {
-		clone[k] = v
-	}
-
-	return clone
-}
 
 // Register adds or replaces the parser associated with the given scheme.
 func (tp *TokenParsers) Register(scheme Scheme, p TokenParser) {

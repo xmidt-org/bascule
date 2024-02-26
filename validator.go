@@ -35,12 +35,6 @@ func (vs *Validators) Add(v ...Validator) {
 	*vs = append(*vs, v...)
 }
 
-func (vs Validators) Clone() Validators {
-	clone := make(Validators, 0, len(vs))
-	clone = append(clone, vs...)
-	return clone
-}
-
 // Validate applies each validator in sequence.  All validators are run, and
 // any errors are glued together via multierr.
 func (vs Validators) Validate(ctx context.Context, token Token) (err error) {

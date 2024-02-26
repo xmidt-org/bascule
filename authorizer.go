@@ -33,14 +33,6 @@ func (as *Authorizers[R]) Add(a ...Authorizer[R]) {
 	*as = append(*as, a...)
 }
 
-// Clone creates a distinct Authorizers instance with the same sequence
-// of Authorizer strategies.
-func (as Authorizers[R]) Clone() Authorizers[R] {
-	clone := make(Authorizers[R], 0, len(as))
-	clone = append(clone, as...)
-	return clone
-}
-
 // Authorize requires all authorizers in this sequence to allow access.  This
 // method supplies a logical AND.
 //
@@ -77,12 +69,17 @@ func (ra requireAny[R]) Authorize(ctx context.Context, token Token, resource R) 
 }
 
 // Any returns an Authorizer which is a logical OR:  each authorizer is executed in
-// order, and any authorizer that allows access results in an immediate return.
+// order, and any authorizer that allows access results in an immediate return.  The
+// returned Authorizer's state is distinct and is unaffected by subsequent changes
+// to the Authorizers set.
 //
 // Any error returns from the returned Authorizer will be an aggregate of all the errors
 // returned from each element.
 func (as Authorizers[R]) Any() Authorizer[R] {
 	return requireAny[R]{
-		a: as.Clone(),
+		a: append(
+			make(Authorizers[R], 0, len(as)),
+			as...,
+		),
 	}
 }
