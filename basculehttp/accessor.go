@@ -43,6 +43,12 @@ func (err *MissingHeaderError) Error() string {
 	return o.String()
 }
 
+// StatusCode returns http.StatusUnauthorized, as the request carries
+// no authorization in it.
+func (err *MissingHeaderError) StatusCode() int {
+	return http.StatusUnauthorized
+}
+
 // Accessor is the strategy for obtaining credentials from an HTTP request.
 type Accessor interface {
 	// GetCredentials returns the raw credentials from a request.
