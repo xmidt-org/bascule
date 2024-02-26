@@ -5,9 +5,8 @@ package basculehttp
 
 import (
 	"context"
-	"encoding"
-	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/xmidt-org/bascule/v1"
 	"go.uber.org/multierr"
@@ -83,6 +82,34 @@ func WithChallenges(ch ...Challenge) MiddlewareOption {
 	})
 }
 
+// WithErrorStatusCoder sets the strategy used to write errors to HTTP responses.  If this
+// option is omitted or if esc is nil, DefaultErrorStatusCoder is used.
+func WithErrorStatusCoder(esc ErrorStatusCoder) MiddlewareOption {
+	return middlewareOptionFunc(func(m *Middleware) error {
+		if esc != nil {
+			m.errorStatusCoder = esc
+		} else {
+			m.errorStatusCoder = DefaultErrorStatusCoder
+		}
+
+		return nil
+	})
+}
+
+// WithErrorMarshaler sets the strategy used to marshal errors to HTTP response bodies.  If this
+// option is omitted or if esc is nil, DefaultErrorMarshaler is used.
+func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
+	return middlewareOptionFunc(func(m *Middleware) error {
+		if em != nil {
+			m.errorMarshaler = em
+		} else {
+			m.errorMarshaler = DefaultErrorMarshaler
+		}
+
+		return nil
+	})
+}
+
 // Middleware is an immutable configuration that can decorate multiple handlers.
 type Middleware struct {
 	accessor          Accessor
@@ -90,13 +117,20 @@ type Middleware struct {
 	tokenParsers      bascule.TokenParsers
 	authentication    bascule.Validators
 	challenges        Challenges
+
+	errorStatusCoder ErrorStatusCoder
+	errorMarshaler   ErrorMarshaler
 }
 
+// NewMiddleware creates an immutable Middleware instance from a supplied set of options.
+// No options will result in a Middleware with default behavior.
 func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
 	m = &Middleware{
 		accessor:          DefaultAccessor(),
 		credentialsParser: DefaultCredentialsParser(),
 		tokenParsers:      DefaultTokenParsers(),
+		errorStatusCoder:  DefaultErrorStatusCoder,
+		errorMarshaler:    DefaultErrorMarshaler,
 	}
 
 	for _, o := range opts {
@@ -106,6 +140,8 @@ func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
 	return
 }
 
+// Then produces an http.Handler that uses this Middleware's workflow to protected
+// a given handler.
 func (m *Middleware) Then(protected http.Handler) http.Handler {
 	if protected == nil {
 		protected = http.DefaultServeMux
@@ -117,6 +153,7 @@ func (m *Middleware) Then(protected http.Handler) http.Handler {
 	}
 }
 
+// ThenFunc is like Then, but protects a handler function.
 func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
 	if protected == nil {
 		return m.Then(nil)
@@ -132,45 +169,21 @@ func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
 //
 // If the error supports JSON or text marshaling, that is used for the response body.  Otherwise, a text/plain
 // response with the Error() method's text is used.
-func (m *Middleware) writeError(response http.ResponseWriter, defaultCode int, err error) {
-	var (
-		statusCode  = defaultCode
-		content     []byte
-		contentType string
-		marshalErr  error
-	)
-
-	type statusCoder interface {
-		StatusCode() int
-	}
-
-	if sc, ok := err.(statusCoder); ok {
-		statusCode = sc.StatusCode()
-	}
-
-	switch m := err.(type) {
-	case json.Marshaler:
-		content, marshalErr = m.MarshalJSON()
-		contentType = "application/json"
-
-	case encoding.TextMarshaler:
-		content, marshalErr = m.MarshalText()
-		contentType = "text/plain; charset=utf-8"
-	}
-
-	if len(content) == 0 || marshalErr != nil {
-		// fallback to simply writing the error text
-		content = []byte(err.Error())
-		contentType = "text/plain; charset=utf-8"
-	}
-
-	response.Header().Set("Content-Type", contentType)
+func (m *Middleware) writeError(response http.ResponseWriter, request *http.Request, defaultCode int, err error) {
+	statusCode := m.errorStatusCoder(request, defaultCode, err)
 	if statusCode == http.StatusUnauthorized {
 		m.challenges.WriteHeader(response.Header())
 	}
 
-	response.WriteHeader(statusCode)
-	response.Write(content) // TODO: handle errors here somehow
+	contentType, content, marshalErr := m.errorMarshaler(request, err)
+
+	// TODO: what if marshalErr != nil ?
+	if marshalErr == nil {
+		response.Header().Set("Content-Type", contentType)
+		response.Header().Set("Content-Length", strconv.Itoa(len(content)))
+		response.WriteHeader(statusCode)
+		response.Write(content) // TODO: handle errors here somehow
+	}
 }
 
 func (m *Middleware) getCredentialsAndToken(ctx context.Context, request *http.Request) (c bascule.Credentials, t bascule.Token, err error) {
@@ -203,14 +216,14 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	creds, token, err := fd.middleware.getCredentialsAndToken(ctx, request)
 	if err != nil {
 		// by default, failing to parse a token is a malformed request
-		fd.middleware.writeError(response, http.StatusBadRequest, err)
+		fd.middleware.writeError(response, request, http.StatusBadRequest, err)
 		return
 	}
 
 	ctx = bascule.WithCredentials(ctx, creds)
 	err = fd.middleware.authenticate(ctx, token)
 	if err == nil {
-		fd.middleware.writeError(response, http.StatusUnauthorized, err)
+		fd.middleware.writeError(response, request, http.StatusUnauthorized, err)
 		return
 	}
 
