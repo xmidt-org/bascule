@@ -28,7 +28,9 @@ type Claims interface {
 	// NotBefore returns the nbf field of the JWT.
 	NotBefore() time.Time
 
-	// Subject returns the sub field of the JWT.
+	// Subject returns the sub field of the JWT.  For tokens that
+	// implement this interface, this method returns the same value
+	// as tne Principal method.
 	Subject() string
 }
 
