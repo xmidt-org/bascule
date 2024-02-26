@@ -39,20 +39,24 @@ type Challenge interface {
 // a StatusUnauthorized response.
 type Challenges []Challenge
 
+// Add appends challenges to this set.
+func (chs *Challenges) Add(ch ...Challenge) {
+	if *chs == nil {
+		*chs = make(Challenges, 0, len(ch))
+	}
+
+	*chs = append(*chs, ch...)
+}
+
 // WriteHeader inserts one WWW-Authenticate header per challenge in this set.
 // If this set is empty, the given http.Header is not modified.
-//
-// This method returns the count of headers added, which will be zero (0) for
-// an empty Challenges.
-func (chs Challenges) WriteHeader(h http.Header) int {
+func (chs Challenges) WriteHeader(h http.Header) {
 	var o strings.Builder
 	for _, ch := range chs {
 		ch.FormatAuthenticate(o)
 		h.Add(WwwAuthenticateHeaderName, o.String())
 		o.Reset()
 	}
-
-	return len(chs)
 }
 
 // BasicChallenge represents a WWW-Authenticate basic auth challenge.
