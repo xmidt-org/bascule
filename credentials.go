@@ -34,6 +34,7 @@ func (err *InvalidCredentialsError) Error() string {
 // UnsupportedSchemeError indicates that a credential scheme was not
 // supported via the particular way bascule was configured.
 type UnsupportedSchemeError struct {
+	// Scheme is the authorization scheme that wasn't supported.
 	Scheme Scheme
 }
 
