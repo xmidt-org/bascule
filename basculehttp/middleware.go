@@ -82,6 +82,20 @@ func WithChallenges(ch ...Challenge) MiddlewareOption {
 	})
 }
 
+// WithAuthorization adds authorizers to this Middleware.  Each invocation of this option
+// is cumulative.  Authorizers are executed for each request in the order supplied
+// via this option.
+//
+// A Middleware requires all its options to pass in order to allow access.  Callers can
+// use Authorizers.Any to create authorizers that require only (1) authorizer to pass.
+// This is useful for use cases like admin access or alternate capabilities.
+func WithAuthorization(a ...bascule.Authorizer[*http.Request]) MiddlewareOption {
+	return middlewareOptionFunc(func(m *Middleware) error {
+		m.authorization.Add(a...)
+		return nil
+	})
+}
+
 // WithErrorStatusCoder sets the strategy used to write errors to HTTP responses.  If this
 // option is omitted or if esc is nil, DefaultErrorStatusCoder is used.
 func WithErrorStatusCoder(esc ErrorStatusCoder) MiddlewareOption {
@@ -116,6 +130,7 @@ type Middleware struct {
 	credentialsParser bascule.CredentialsParser
 	tokenParsers      bascule.TokenParsers
 	authentication    bascule.Validators
+	authorization     bascule.Authorizers[*http.Request]
 	challenges        Challenges
 
 	errorStatusCoder ErrorStatusCoder
@@ -204,6 +219,10 @@ func (m *Middleware) authenticate(ctx context.Context, token bascule.Token) erro
 	return m.authentication.Validate(ctx, token)
 }
 
+func (m *Middleware) authorize(ctx context.Context, token bascule.Token, request *http.Request) error {
+	return m.authorization.Authorize(ctx, token, request)
+}
+
 // frontDoor is the internal handler implementation that protects a handler
 // using the bascule workflow.
 type frontDoor struct {
@@ -228,5 +247,11 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	}
 
 	ctx = bascule.WithToken(ctx, token)
+	err = fd.middleware.authorize(ctx, token, request)
+	if err == nil {
+		fd.middleware.writeError(response, request, http.StatusUnauthorized, err)
+		return
+	}
+
 	fd.protected.ServeHTTP(response, request.WithContext(ctx))
 }
