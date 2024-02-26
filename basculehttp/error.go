@@ -6,6 +6,7 @@ package basculehttp
 import (
 	"encoding"
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -14,9 +15,6 @@ import (
 // The defaultCode is used when this strategy cannot determine the code from the error.
 // This default can be a sentinel for decorators, e.g. zero (0), or can be an actual
 // status code.
-//
-// Implementations should never unwrap err.  This is because the outermost wrapped
-// error is almost always what a caller intends to carry the status code.
 type ErrorStatusCoder func(request *http.Request, defaultCode int, err error) int
 
 // DefaultErrorStatusCoder is the strategy used when no ErrorStatusCoder is supplied.
@@ -30,7 +28,8 @@ func DefaultErrorStatusCoder(_ *http.Request, defaultCode int, err error) int {
 		StatusCode() int
 	}
 
-	if sc, ok := err.(statusCoder); ok {
+	var sc statusCoder
+	if errors.As(err, &sc) {
 		return sc.StatusCode()
 	}
 
@@ -39,13 +38,10 @@ func DefaultErrorStatusCoder(_ *http.Request, defaultCode int, err error) int {
 
 // ErrorMarshaler is a strategy for marshaling an error's contents, particularly to
 // be used in an HTTP response body.
-//
-// Implementations should not unwrap err.  This is because the outermost wrapped error
-// is what a typical caller expects will carry the error contents.
 type ErrorMarshaler func(request *http.Request, err error) (contentType string, content []byte, marshalErr error)
 
 // DefaultErrorMarshaler examines the error for several standard marshalers.  The supported marshalers
-// together with the returned content types are as follows:
+// together with the returned content types are as follows, in order:
 //
 //   - json.Marshaler                 "application/json"
 //   - encoding.TextMarshaler         "text/plain; charset=utf-8"
@@ -54,20 +50,26 @@ type ErrorMarshaler func(request *http.Request, err error) (contentType string, 
 // If the error or any of its wrapped errors does not implement a supported marshaler interface,
 // the error's Error() text is used with a content type of "text/plain; charset=utf-8".
 func DefaultErrorMarshaler(_ *http.Request, err error) (contentType string, content []byte, marshalErr error) {
-	switch m := err.(type) {
-	case json.Marshaler:
-		contentType = "application/json"
-		content, marshalErr = m.MarshalJSON()
+	// walk the wrapped errors manually, since that's way more efficient
+	// that walking the error tree once for each desired type
+	for wrapped := err; wrapped != nil && len(content) == 0 && marshalErr == nil; wrapped = errors.Unwrap(wrapped) {
+		switch m := wrapped.(type) { //nolint: errorlint
+		case json.Marshaler:
+			contentType = "application/json"
+			content, marshalErr = m.MarshalJSON()
 
-	case encoding.TextMarshaler:
-		contentType = "text/plain; charset=utf-8"
-		content, marshalErr = m.MarshalText()
+		case encoding.TextMarshaler:
+			contentType = "text/plain; charset=utf-8"
+			content, marshalErr = m.MarshalText()
 
-	case encoding.BinaryMarshaler:
-		contentType = "application/octet-stream"
-		content, marshalErr = m.MarshalBinary()
+		case encoding.BinaryMarshaler:
+			contentType = "application/octet-stream"
+			content, marshalErr = m.MarshalBinary()
+		}
+	}
 
-	default:
+	if len(content) == 0 && marshalErr == nil {
+		// fallback
 		contentType = "text/plain; charset=utf-8"
 		content = []byte(err.Error())
 	}
