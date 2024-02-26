@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+*.swp
 
 # Example binaries
 examples/acquirer/acquirer
