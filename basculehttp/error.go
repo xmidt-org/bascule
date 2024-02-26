@@ -14,6 +14,9 @@ import (
 // The defaultCode is used when this strategy cannot determine the code from the error.
 // This default can be a sentinel for decorators, e.g. zero (0), or can be an actual
 // status code.
+//
+// Implementations should never unwrap err.  This is because the outermost wrapped
+// error is almost always what a caller intends to carry the status code.
 type ErrorStatusCoder func(request *http.Request, defaultCode int, err error) int
 
 // DefaultErrorStatusCoder is the strategy used when no ErrorStatusCoder is supplied.
@@ -36,6 +39,9 @@ func DefaultErrorStatusCoder(_ *http.Request, defaultCode int, err error) int {
 
 // ErrorMarshaler is a strategy for marshaling an error's contents, particularly to
 // be used in an HTTP response body.
+//
+// Implementations should not unwrap err.  This is because the outermost wrapped error
+// is what a typical caller expects will carry the error contents.
 type ErrorMarshaler func(request *http.Request, err error) (contentType string, content []byte, marshalErr error)
 
 // DefaultErrorMarshaler examines the error for several standard marshalers.  The supported marshalers
@@ -67,4 +73,22 @@ func DefaultErrorMarshaler(_ *http.Request, err error) (contentType string, cont
 	}
 
 	return
+}
+
+type statusCodeError struct {
+	error
+	statusCode int
+}
+
+func (err *statusCodeError) StatusCode() int {
+	return err.statusCode
+}
+
+// UseStatusCode associates an HTTP status code with the given error.
+// This function will override any existing status code associated with err.
+func UseStatusCode(statusCode int, err error) error {
+	return &statusCodeError{
+		error:      err,
+		statusCode: statusCode,
+	}
 }

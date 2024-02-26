@@ -230,6 +230,7 @@ type frontDoor struct {
 	protected  http.Handler
 }
 
+// ServeHTTP implements the bascule workflow, using the configured middleware.
 func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	creds, token, err := fd.middleware.getCredentialsAndToken(ctx, request)
