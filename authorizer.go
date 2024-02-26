@@ -21,8 +21,7 @@ type Authorizer[R any] interface {
 	Authorize(ctx context.Context, token Token, resource R) error
 }
 
-// Authorizers is a collection of Authorizers that exposes factory methods
-// for creating Authorizer instances joined by boolean operations.
+// Authorizers is a collection of Authorizers.
 type Authorizers[R any] []Authorizer[R]
 
 // Add appends authorizers to this aggregate Authorizers.
@@ -42,12 +41,13 @@ func (as Authorizers[R]) Clone() Authorizers[R] {
 	return clone
 }
 
-type requireAll[R any] struct {
-	authorizers Authorizers[R]
-}
-
-func (ra requireAll[R]) Authorize(ctx context.Context, token Token, resource R) error {
-	for _, a := range ra.authorizers {
+// Authorize requires all authorizers in this sequence to allow access.  This
+// method supplies a logical AND.
+//
+// Because authorization can be arbitrarily expensive, execution halts at the first failed
+// authorization attempt.
+func (as Authorizers[R]) Authorize(ctx context.Context, token Token, resource R) error {
+	for _, a := range as {
 		if err := a.Authorize(ctx, token, resource); err != nil {
 			return err
 		}
@@ -56,25 +56,15 @@ func (ra requireAll[R]) Authorize(ctx context.Context, token Token, resource R) 
 	return nil
 }
 
-// RequireAll returns an Authorizer that requires all the authorizers in this
-// aggregate to approve access to the resource, i.e. a logical AND.  Any subsequent
-// changes to this Authorizers will not be reflected in the returned Authorizer.
-//
-// The returned Authorizer will invoke all of this sequence's individual authorizers
-// in the order they occur in the slice, stopping at the first error.
-func (as Authorizers[R]) RequireAll() Authorizer[R] {
-	return requireAll[R]{
-		authorizers: as.Clone(),
-	}
-}
-
 type requireAny[R any] struct {
-	authorizers Authorizers[R]
+	a Authorizers[R]
 }
 
+// Authorize returns nil at the first authorizer that returns nil, i.e. accepts the access.
+// Otherwise, this method returns an aggregate error of all the authorization errors.
 func (ra requireAny[R]) Authorize(ctx context.Context, token Token, resource R) error {
 	var err error
-	for _, a := range ra.authorizers {
+	for _, a := range ra.a {
 		authErr := a.Authorize(ctx, token, resource)
 		if authErr == nil {
 			return nil
@@ -86,16 +76,13 @@ func (ra requireAny[R]) Authorize(ctx context.Context, token Token, resource R) 
 	return err
 }
 
-// RequireAny returns an Authorizer that only requires one (1) of the authorizers in
-// this sequence to approve access to the resource, i.e. a logical OR.  Any subsequent
-// changes to this Authorizers will not be reflected in the returned Authorizer.
+// Any returns an Authorizer which is a logical OR:  each authorizer is executed in
+// order, and any authorizer that allows access results in an immediate return.
 //
-// The return Authorizer will invoke each individual Authorizer in the order in which
-// they occur in this sequence, returning a nil error upon the first non-nil error.  If
-// all the authorizers returned an error, the returned error will be an aggregate of
-// those errors.
-func (as Authorizers[R]) RequireAny() Authorizer[R] {
+// Any error returns from the returned Authorizer will be an aggregate of all the errors
+// returned from each element.
+func (as Authorizers[R]) Any() Authorizer[R] {
 	return requireAny[R]{
-		authorizers: as.Clone(),
+		a: as.Clone(),
 	}
 }
