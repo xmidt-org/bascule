@@ -3,7 +3,15 @@
 
 package bascule
 
-import "context"
+import (
+	"context"
+)
+
+// Contexter is anything that logically holds a context.  For example, *http.Request
+// implements this interface.
+type Contexter interface {
+	Context() context.Context
+}
 
 type credentialsContextKey struct{}
 
@@ -15,7 +23,13 @@ func GetCredentials(ctx context.Context) (c Credentials, found bool) {
 	return
 }
 
-// WitheCredentials constructs a new context with the supplied credentials.
+// GetCredentialsFrom uses the context held by src to obtain credentials.
+// As with GetCredentials, if no credentials are found this function returns false.
+func GetCredentialsFrom(src Contexter) (Credentials, bool) {
+	return GetCredentials(src.Context())
+}
+
+// WithCredentials constructs a new context with the supplied credentials.
 func WithCredentials(ctx context.Context, c Credentials) context.Context {
 	return context.WithValue(
 		ctx,
@@ -26,17 +40,21 @@ func WithCredentials(ctx context.Context, c Credentials) context.Context {
 
 type tokenContextKey struct{}
 
-// GetToken retrieves a concrete Token from a context.  The supplied pointer
-// must be non-nil.  If the context contained a token of the correct type,
-// the object pointed to by t is set to that token and this function returns true.
-// Otherwise, this function returns false.
-func GetToken[T Token](ctx context.Context, t *T) (found bool) {
-	*t, found = ctx.Value(tokenContextKey{}).(T)
+// GetToken retrieves a Token from a context.  If not token is in the context,
+// this function returns false.
+func GetToken(ctx context.Context) (t Token, found bool) {
+	t, found = ctx.Value(tokenContextKey{}).(Token)
 	return
 }
 
+// GetTokenFrom uses the context held by src to obtain a Token.  As with GetToken,
+// if no token is found this function returns false.
+func GetTokenFrom(src Contexter) (Token, bool) {
+	return GetToken(src.Context())
+}
+
 // WithToken constructs a new context with the supplied token.
-func WithToken[T Token](ctx context.Context, t T) context.Context {
+func WithToken(ctx context.Context, t Token) context.Context {
 	return context.WithValue(
 		ctx,
 		tokenContextKey{},
