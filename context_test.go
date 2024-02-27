@@ -2,31 +2,13 @@ package bascule
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 )
 
 type ContextTestSuite struct {
-	suite.Suite
-}
-
-func (suite *ContextTestSuite) testCredentials() Credentials {
-	return Credentials{
-		Scheme: Scheme("Test"),
-		Value:  "test",
-	}
-}
-
-func (suite *ContextTestSuite) testToken() Token {
-	return &testToken{
-		principal: "test",
-	}
-}
-
-func (suite *ContextTestSuite) contexter(ctx context.Context) Contexter {
-	return new(http.Request).WithContext(ctx)
+	TestSuite
 }
 
 func (suite *ContextTestSuite) testGetCredentialsSuccess() {

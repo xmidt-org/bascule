@@ -25,6 +25,13 @@ type TokenParser interface {
 	Parse(context.Context, Credentials) (Token, error)
 }
 
+// TokenParserFunc is a closure type that implements TokenParser.
+type TokenParserFunc func(context.Context, Credentials) (Token, error)
+
+func (tpf TokenParserFunc) Parse(ctx context.Context, c Credentials) (Token, error) {
+	return tpf(ctx, c)
+}
+
 // TokenParsers is a registry of parsers based on credential schemes.
 // The zero value of this type is valid and ready to use.
 type TokenParsers map[Scheme]TokenParser

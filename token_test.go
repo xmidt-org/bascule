@@ -1,9 +1,15 @@
 package bascule
 
-type testToken struct {
-	principal string
+import (
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+)
+
+type TokenParsersSuite struct {
+	suite.Suite
 }
 
-func (tt *testToken) Principal() string {
-	return tt.principal
+func TestTokenParsers(t *testing.T) {
+	suite.Run(t, new(TokenParsersSuite))
 }

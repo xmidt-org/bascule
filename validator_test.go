@@ -9,7 +9,7 @@ import (
 )
 
 type ValidatorsTestSuite struct {
-	suite.Suite
+	TestSuite
 }
 
 func (suite *ValidatorsTestSuite) TestValidate() {
@@ -51,17 +51,12 @@ func (suite *ValidatorsTestSuite) TestValidate() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase.name, func() {
-			testCtx := context.WithValue(
-				context.Background(),
-				struct{}{},
-				"value",
+			var (
+				testCtx   = suite.testContext()
+				testToken = suite.testToken()
+				vs        Validators
 			)
 
-			var testToken Token = &testToken{
-				principal: "test",
-			}
-
-			var vs Validators
 			for _, err := range testCase.results {
 				err := err
 				vs.Add(

@@ -9,7 +9,7 @@ import (
 )
 
 type AuthorizersTestSuite struct {
-	suite.Suite
+	TestSuite
 }
 
 func (suite *AuthorizersTestSuite) TestAuthorize() {
@@ -52,17 +52,12 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase.name, func() {
-			testCtx := context.WithValue(
-				context.Background(),
-				struct{}{},
-				"value",
+			var (
+				testCtx   = suite.testContext()
+				testToken = suite.testToken()
+				as        Authorizers[string]
 			)
 
-			var testToken Token = &testToken{
-				principal: "test",
-			}
-
-			var as Authorizers[string]
 			for _, err := range testCase.results {
 				err := err
 				as.Add(
@@ -117,17 +112,12 @@ func (suite *AuthorizersTestSuite) TestAny() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase.name, func() {
-			testCtx := context.WithValue(
-				context.Background(),
-				struct{}{},
-				"value",
+			var (
+				testCtx   = suite.testContext()
+				testToken = suite.testToken()
+				as        Authorizers[string]
 			)
 
-			var testToken Token = &testToken{
-				principal: "test",
-			}
-
-			var as Authorizers[string]
 			for _, err := range testCase.results {
 				err := err
 				as.Add(
