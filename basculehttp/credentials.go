@@ -18,11 +18,14 @@ func fastIsSpace(b byte) bool {
 
 var defaultCredentialsParser bascule.CredentialsParser = bascule.CredentialsParserFunc(
 	func(raw string) (c bascule.Credentials, err error) {
-		before, after, found := strings.Cut(raw, " ")
-		if found && len(before) > 0 && !fastIsSpace(after[0]) && !fastIsSpace(after[len(after)-1]) {
+		// format is <scheme><single space><credential value>
+		// the code is strict:  it requires no leading or trailing space
+		// and exactly one (1) space as a separator.
+		scheme, value, found := strings.Cut(raw, " ")
+		if found && len(scheme) > 0 && !fastIsSpace(value[0]) && !fastIsSpace(value[len(value)-1]) {
 			c = bascule.Credentials{
-				Scheme: bascule.Scheme(before),
-				Value:  after,
+				Scheme: bascule.Scheme(scheme),
+				Value:  value,
 			}
 		} else {
 			err = &bascule.InvalidCredentialsError{
