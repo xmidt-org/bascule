@@ -9,12 +9,20 @@ import (
 	"github.com/xmidt-org/bascule/v1"
 )
 
+// fastIsSpace tests an ASCII byte to see if it's whitespace.
+// HTTP headers are restricted to US-ASCII, so we don't need
+// the full unicode stack.
+func fastIsSpace(b byte) bool {
+	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\v' || b == '\f'
+}
+
 var defaultCredentialsParser bascule.CredentialsParser = bascule.CredentialsParserFunc(
 	func(raw string) (c bascule.Credentials, err error) {
-		if before, after, found := strings.Cut(raw, " "); found {
+		before, after, found := strings.Cut(raw, " ")
+		if found && len(before) > 0 && !fastIsSpace(after[0]) && !fastIsSpace(after[len(after)-1]) {
 			c = bascule.Credentials{
-				Scheme: bascule.Scheme(strings.TrimSpace(before)),
-				Value:  strings.TrimSpace(after),
+				Scheme: bascule.Scheme(before),
+				Value:  after,
 			}
 		} else {
 			err = &bascule.InvalidCredentialsError{
@@ -27,10 +35,8 @@ var defaultCredentialsParser bascule.CredentialsParser = bascule.CredentialsPars
 )
 
 // DefaultCredentialsParser returns the default strategy for parsing credentials.  This
-// builtin strategy is tolerant of extra whitespace, and does not define any particular
-// format for the value of the credentials.
-//
-// This parser assumes the format specified in https://www.rfc-editor.org/rfc/rfc7235.
+// builtin strategy is very strict on whitespace.  The format must correspond exactly
+// to the format specified in https://www.rfc-editor.org/rfc/rfc7235.
 func DefaultCredentialsParser() bascule.CredentialsParser {
 	return defaultCredentialsParser
 }
