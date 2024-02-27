@@ -8,11 +8,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type ValidatorTestSuite struct {
+type ValidatorsTestSuite struct {
 	suite.Suite
 }
 
-func (suite *ValidatorTestSuite) TestValidators() {
+func (suite *ValidatorsTestSuite) TestValidate() {
 	validateErr := errors.New("expected Validate error")
 
 	testCases := []struct {
@@ -81,6 +81,6 @@ func (suite *ValidatorTestSuite) TestValidators() {
 	}
 }
 
-func TestValidator(t *testing.T) {
-	suite.Run(t, new(ValidatorTestSuite))
+func TestValidators(t *testing.T) {
+	suite.Run(t, new(ValidatorsTestSuite))
 }

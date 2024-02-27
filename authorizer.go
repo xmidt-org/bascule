@@ -21,13 +21,20 @@ type Authorizer[R any] interface {
 	Authorize(ctx context.Context, token Token, resource R) error
 }
 
+// AuthorizerFunc is a closure type that implements Authorizer.
+type AuthorizerFunc[R any] func(context.Context, Token, R) error
+
+func (af AuthorizerFunc[R]) Authorize(ctx context.Context, token Token, resource R) error {
+	return af(ctx, token, resource)
+}
+
 // Authorizers is a collection of Authorizers.
 type Authorizers[R any] []Authorizer[R]
 
 // Add appends authorizers to this aggregate Authorizers.
 func (as *Authorizers[R]) Add(a ...Authorizer[R]) {
 	if *as == nil {
-		*as = make(Authorizers[R], len(a))
+		*as = make(Authorizers[R], 0, len(a))
 	}
 
 	*as = append(*as, a...)
