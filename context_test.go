@@ -90,9 +90,6 @@ func (suite *ContextTestSuite) TestGetCredentialsFrom() {
 	suite.Run("WrongType", suite.testGetCredentialsFromWrongType)
 }
 
-func (suite *ContextTestSuite) testWithCredentialsSuccess() {
-}
-
 func (suite *ContextTestSuite) TestWithCredentials() {
 	ctx := WithCredentials(context.Background(), suite.testCredentials())
 
