@@ -7,6 +7,10 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const (
+	testScheme Scheme = "Test"
+)
+
 type testToken struct {
 	principal string
 }
@@ -30,7 +34,7 @@ func (suite *TestSuite) testContext() context.Context {
 
 func (suite *TestSuite) testCredentials() Credentials {
 	return Credentials{
-		Scheme: Scheme("Test"),
+		Scheme: testScheme,
 		Value:  "test",
 	}
 }
