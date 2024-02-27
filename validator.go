@@ -5,8 +5,6 @@ package bascule
 
 import (
 	"context"
-
-	"go.uber.org/multierr"
 )
 
 // Validator represents a general strategy for validating tokens.  Token validation
@@ -23,24 +21,34 @@ type Validator interface {
 	Validate(context.Context, Token) error
 }
 
+// ValidatorFunc is a closure type that implements Validator.
+type ValidatorFunc func(context.Context, Token) error
+
+func (vf ValidatorFunc) Validate(ctx context.Context, token Token) error {
+	return vf(ctx, token)
+}
+
 // Validators is an aggregate Validator.
 type Validators []Validator
 
 // Add appends validators to this aggregate Validators.
 func (vs *Validators) Add(v ...Validator) {
 	if *vs == nil {
-		*vs = make(Validators, len(v))
+		*vs = make(Validators, 0, len(v))
 	}
 
 	*vs = append(*vs, v...)
 }
 
-// Validate applies each validator in sequence.  All validators are run, and
-// any errors are glued together via multierr.
-func (vs Validators) Validate(ctx context.Context, token Token) (err error) {
+// Validate applies each validator in sequence.  Execution stops at the first validator
+// that returns an error, and that error is returned.  If all validators return nil,
+// this method returns nil, indicating the Token is valid.
+func (vs Validators) Validate(ctx context.Context, token Token) error {
 	for _, v := range vs {
-		err = multierr.Append(err, v.Validate(ctx, token))
+		if err := v.Validate(ctx, token); err != nil {
+			return err
+		}
 	}
 
-	return
+	return nil
 }
