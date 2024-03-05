@@ -1,53 +1,60 @@
 // SPDX-FileCopyrightText: 2020 Comcast Cable Communications Management, LLC
 // SPDX-License-Identifier: Apache-2.0
 
-// package bascule provides a token interface and basic implementation, which
-// can be validated and added and taken from a context.  Some basic checks
-// which can be used to validate are also provided.
 package bascule
 
-// Token is the behavior supplied by all secure tokens
+import (
+	"context"
+)
+
+// Token is a runtime representation of credentials.  This interface will be further
+// customized by infrastructure.
 type Token interface {
-	// Type is the custom token type assigned by plugin code
-	Type() string
-
-	// Principal is the security principal, e.g. the user name or client id
+	// Principal is the security subject of this token, e.g. the user name or other
+	// user identifier.
 	Principal() string
-
-	// Attributes are an arbitrary set of name/value pairs associated with the token.
-	// Typically, these will be filled with information supplied by the user, e.g. the claims of a JWT.
-	Attributes() Attributes
 }
 
-// Attributes is the interface that wraps methods which dictate how to interact
-// with a token's attributes. Getter functions return a boolean as second element
-// which indicates that a value of the requested type exists at the given key path.
-type Attributes interface {
-	Get(key string) (interface{}, bool)
+// TokenParser produces tokens from credentials.
+type TokenParser interface {
+	// Parse turns a Credentials into a token.  This method may validate parts
+	// of the credential's value, but should not perform any authentication itself.
+	//
+	// Some token parsers may interact with external systems, such as databases.  The supplied
+	// context should be passed to any calls that might need to honor cancelation semantics.
+	Parse(context.Context, Credentials) (Token, error)
 }
 
-// simpleToken is a very basic token type that can serve as the Token for many types of secure pipelines
-type simpleToken struct {
-	tokenType  string
-	principal  string
-	attributes Attributes
+// TokenParserFunc is a closure type that implements TokenParser.
+type TokenParserFunc func(context.Context, Credentials) (Token, error)
+
+func (tpf TokenParserFunc) Parse(ctx context.Context, c Credentials) (Token, error) {
+	return tpf(ctx, c)
 }
 
-func (st simpleToken) Type() string {
-	return st.tokenType
+// TokenParsers is a registry of parsers based on credential schemes.
+// The zero value of this type is valid and ready to use.
+type TokenParsers map[Scheme]TokenParser
+
+// Register adds or replaces the parser associated with the given scheme.
+func (tp *TokenParsers) Register(scheme Scheme, p TokenParser) {
+	if *tp == nil {
+		*tp = make(TokenParsers)
+	}
+
+	(*tp)[scheme] = p
 }
 
-func (st simpleToken) Principal() string {
-	return st.principal
-}
+// Parse chooses a TokenParser based on the Scheme and invokes that
+// parser.  If the credential scheme is unsupported, an error is returned.
+func (tp TokenParsers) Parse(ctx context.Context, c Credentials) (t Token, err error) {
+	if p, ok := tp[c.Scheme]; ok {
+		t, err = p.Parse(ctx, c)
+	} else {
+		err = &UnsupportedSchemeError{
+			Scheme: c.Scheme,
+		}
+	}
 
-func (st simpleToken) Attributes() Attributes {
-	return st.attributes
-}
-
-// NewToken creates a Token from basic information.  Many secure pipelines can use the returned value as
-// their token.  Specialized pipelines can create additional interfaces and augment the returned Token
-// as desired.  Alternatively, some pipelines can simply create their own Tokens out of whole cloth.
-func NewToken(tokenType, principal string, attributes Attributes) Token {
-	return simpleToken{tokenType, principal, attributes}
+	return
 }

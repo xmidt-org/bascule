@@ -5,37 +5,59 @@ package bascule
 
 import (
 	"context"
-	"net/url"
 )
 
-// Authorization represents the authorization mechanism performed on the token,
-// e.g. "Basic", "Bearer", etc for HTTP security environments.
-type Authorization string
-
-// Authentication represents the output of a security pipeline.
-type Authentication struct {
-	Authorization Authorization
-	Token         Token
-	Request       Request
+// Contexter is anything that logically holds a context.  For example, *http.Request
+// implements this interface.
+type Contexter interface {
+	Context() context.Context
 }
 
-// Request holds request information that may be useful for validating the
-// token.
-type Request struct {
-	URL    *url.URL
-	Method string
+type credentialsContextKey struct{}
+
+// GetCredentials examines the context and returns the credentials used to
+// build the Token.  If no credentials are in the context, this function
+// returns false.
+func GetCredentials(ctx context.Context) (c Credentials, found bool) {
+	c, found = ctx.Value(credentialsContextKey{}).(Credentials)
+	return
 }
 
-type authenticationKey struct{}
-
-// WithAuthentication adds the auth given to the context given, provided a way
-// for other users of the context to get the authentication.
-func WithAuthentication(ctx context.Context, auth Authentication) context.Context {
-	return context.WithValue(ctx, authenticationKey{}, auth)
+// GetCredentialsFrom uses the context held by src to obtain credentials.
+// As with GetCredentials, if no credentials are found this function returns false.
+func GetCredentialsFrom(src Contexter) (Credentials, bool) {
+	return GetCredentials(src.Context())
 }
 
-// FromContext gets the Authentication from the context provided.
-func FromContext(ctx context.Context) (Authentication, bool) {
-	auth, ok := ctx.Value(authenticationKey{}).(Authentication)
-	return auth, ok
+// WithCredentials constructs a new context with the supplied credentials.
+func WithCredentials(ctx context.Context, c Credentials) context.Context {
+	return context.WithValue(
+		ctx,
+		credentialsContextKey{},
+		c,
+	)
+}
+
+type tokenContextKey struct{}
+
+// GetToken retrieves a Token from a context.  If not token is in the context,
+// this function returns false.
+func GetToken(ctx context.Context) (t Token, found bool) {
+	t, found = ctx.Value(tokenContextKey{}).(Token)
+	return
+}
+
+// GetTokenFrom uses the context held by src to obtain a Token.  As with GetToken,
+// if no token is found this function returns false.
+func GetTokenFrom(src Contexter) (Token, bool) {
+	return GetToken(src.Context())
+}
+
+// WithToken constructs a new context with the supplied token.
+func WithToken(ctx context.Context, t Token) context.Context {
+	return context.WithValue(
+		ctx,
+		tokenContextKey{},
+		t,
+	)
 }

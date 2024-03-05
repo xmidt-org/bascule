@@ -4,5 +4,4 @@
 /*
 Package bascule provides a configurable way to validate an auth token.
 */
-
 package bascule

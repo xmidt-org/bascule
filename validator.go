@@ -1,46 +1,53 @@
 // SPDX-FileCopyrightText: 2020 Comcast Cable Communications Management, LLC
 // SPDX-License-Identifier: Apache-2.0
 
-// Validator provides tools for validating authorization tokens. Validation is
-// done through running the rules provided.  If a token is considered not valid,
-// the validator will return an error.
-
 package bascule
 
-import "context"
+import (
+	"context"
+)
 
-// Validator is the rule type that determines if a Token is valid.  Each rule should do exactly
-// (1) thing, and then be composed by application-layer code.  Validators are invoked for both
-// authentication and authorization.  We may need to have different rule types for those two things,
-// but for now this works.
+// Validator represents a general strategy for validating tokens.  Token validation
+// typically happens during authentication, but it can also happen during parsing
+// if a caller uses NewValidatingTokenParser.
 type Validator interface {
-	Check(context.Context, Token) error
+	// Validate validates a token.  If this validator needs to interact
+	// with external systems, the supplied context can be passed to honor
+	// cancelation semantics.
+	//
+	// This method may be passed a token that it doesn't support, e.g. a Basic
+	// validator can be passed a JWT token.  In that case, this method should
+	// simply return nil.
+	Validate(context.Context, Token) error
 }
 
-// ValidatorFunc is the Check function that a Validator has.
+// ValidatorFunc is a closure type that implements Validator.
 type ValidatorFunc func(context.Context, Token) error
 
-// Check runs the validatorFunc, making a ValidatorFunc also a Validator.
-func (vf ValidatorFunc) Check(ctx context.Context, t Token) error {
-	return vf(ctx, t)
+func (vf ValidatorFunc) Validate(ctx context.Context, token Token) error {
+	return vf(ctx, token)
 }
 
-// Validators are a list of objects that implement the Validator interface.
+// Validators is an aggregate Validator.
 type Validators []Validator
 
-// Check runs through the list of validator Checks and adds any errors returned
-// to the list of errors, which is an Errors type.
-func (v Validators) Check(ctx context.Context, t Token) error {
-	// we want *all* rules to run, so we get a complete picture of the failure
-	var all Errors
-	for _, r := range v {
-		if err := r.Check(ctx, t); err != nil {
-			all = append(all, err)
-		}
+// Add appends validators to this aggregate Validators.
+func (vs *Validators) Add(v ...Validator) {
+	if *vs == nil {
+		*vs = make(Validators, 0, len(v))
 	}
 
-	if len(all) > 0 {
-		return all
+	*vs = append(*vs, v...)
+}
+
+// Validate applies each validator in sequence.  Execution stops at the first validator
+// that returns an error, and that error is returned.  If all validators return nil,
+// this method returns nil, indicating the Token is valid.
+func (vs Validators) Validate(ctx context.Context, token Token) error {
+	for _, v := range vs {
+		if err := v.Validate(ctx, token); err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -4,91 +4,126 @@
 package bascule
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestGet(t *testing.T) {
-	assert := assert.New(t)
-	attributes := attrs
+type testAttributes map[string]any
 
-	val, ok := attributes.Get("testkey")
-	assert.Equal("testval", val)
-	assert.True(ok)
-
-	val, ok = attributes.Get("noval")
-	assert.Empty(val)
-	assert.False(ok)
-
-	emptyAttributes := NewAttributes(map[string]interface{}{})
-	val, ok = emptyAttributes.Get("test")
-	assert.Nil(val)
-	assert.False(ok)
+func (ta testAttributes) Get(key string) (v any, ok bool) {
+	v, ok = ta[key]
+	return
 }
 
-func TestGetNestedAttribute(t *testing.T) {
-	attributes := NewAttributes(map[string]interface{}{
-		"a":         map[string]interface{}{"b": map[string]interface{}{"c": "answer"}},
-		"one level": "yay",
-		"bad":       nil,
-	})
-	tests := []struct {
-		description    string
-		keys           []string
-		expectedResult interface{}
-		expectedOK     bool
+type AttributesTestSuite struct {
+	suite.Suite
+}
+
+func (suite *AttributesTestSuite) testAttributes() Attributes {
+	return testAttributes{
+		"value":      123,
+		"untypedNil": nil,
+		"emptyMap":   map[string]any{},
+		"nestedMap": map[string]any{
+			"value": 123,
+			"nestedMap": map[string]any{
+				"value": 123,
+			},
+			"nestedAttributes": Attributes(testAttributes{
+				"value": 123,
+			}),
+		},
+		"nestedAttributes": Attributes(testAttributes{
+			"value": 123,
+			"nestedMap": map[string]any{
+				"value": 123,
+			},
+			"nestedAttributes": Attributes(testAttributes{
+				"value": 123,
+			}),
+		}),
+	}
+}
+
+func (suite *AttributesTestSuite) TestGetAttribute() {
+	testCases := []struct {
+		keys          []string
+		expectedValue int
+		expectedOK    bool
 	}{
-		// Success test is failing. ): getting nil, false
 		{
-			description:    "Success",
-			keys:           []string{"a", "b", "c"},
-			expectedResult: "answer",
-			expectedOK:     true,
+			keys: nil,
 		},
 		{
-			description:    "Success single key",
-			keys:           []string{"one level"},
-			expectedResult: "yay",
-			expectedOK:     true,
+			keys: []string{"missing"},
 		},
 		{
-			description:    "Success nil",
-			keys:           []string{"bad"},
-			expectedResult: nil,
-			expectedOK:     true,
+			keys: []string{"untypedNil"},
 		},
 		{
-			description: "Nil Keys Error",
-			keys:        nil,
+			keys: []string{"untypedNil", "value"},
 		},
 		{
-			description: "No Keys Error",
-			keys:        []string{},
+			keys:          []string{"value"},
+			expectedValue: 123,
+			expectedOK:    true,
 		},
 		{
-			description: "Non Attribute Value Error",
-			keys:        []string{"one level", "test"},
+			keys: []string{"emptyMap"},
 		},
 		{
-			description: "Nil Attributes Error",
-			keys:        []string{"bad", "more bad"},
+			keys: []string{"emptyMap", "value"},
 		},
 		{
-			description: "Missing Key Error",
-			keys:        []string{"c", "b", "a"},
+			keys: []string{"nestedMap"},
 		},
 		{
-			description: "Wrong Key Case Error",
-			keys:        []string{"A", "B", "C"},
+			keys: []string{"nestedMap", "missing"},
+		},
+		{
+			keys:          []string{"nestedMap", "value"},
+			expectedValue: 123,
+			expectedOK:    true,
+		},
+		{
+			keys: []string{"nestedMap", "nestedMap", "missing"},
+		},
+		{
+			keys:          []string{"nestedMap", "nestedMap", "value"},
+			expectedValue: 123,
+			expectedOK:    true,
+		},
+		{
+			keys:          []string{"nestedMap", "nestedAttributes", "value"},
+			expectedValue: 123,
+			expectedOK:    true,
+		},
+		{
+			keys: []string{"nestedAttributes", "nestedMap", "missing"},
+		},
+		{
+			keys:          []string{"nestedAttributes", "nestedMap", "value"},
+			expectedValue: 123,
+			expectedOK:    true,
+		},
+		{
+			keys:          []string{"nestedAttributes", "nestedAttributes", "value"},
+			expectedValue: 123,
+			expectedOK:    true,
 		},
 	}
-	for _, tc := range tests {
-		t.Run(tc.description, func(t *testing.T) {
-			assert := assert.New(t)
-			val, ok := GetNestedAttribute(attributes, tc.keys...)
-			assert.Equal(tc.expectedResult, val)
-			assert.Equal(tc.expectedOK, ok)
+
+	for _, testCase := range testCases {
+		suite.Run(fmt.Sprintf("%v", testCase.keys), func() {
+			actual, ok := GetAttribute[int](suite.testAttributes(), testCase.keys...)
+			suite.Equal(testCase.expectedValue, actual)
+			suite.Equal(testCase.expectedOK, ok)
 		})
 	}
+}
+
+func TestAttributes(t *testing.T) {
+	suite.Run(t, new(AttributesTestSuite))
 }
