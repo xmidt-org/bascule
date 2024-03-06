@@ -30,9 +30,9 @@ const (
 	// mean that a token's fields are invalid, such as the exp field of a JWT.
 	ErrorTypeInvalidCredentials
 
-	// ErrorTypeUnauthorized indicates that a token did not have sufficient privileges to
+	// ErrorTypeForbidden indicates that a token did not have sufficient privileges to
 	// perform an operation.
-	ErrorTypeUnauthorized
+	ErrorTypeForbidden
 )
 
 // Error is an optional interface that errors may implement to expose security
@@ -40,6 +40,25 @@ const (
 type Error interface {
 	// Type is the ErrorType describing this error.
 	Type() ErrorType
+}
+
+type typedError struct {
+	error
+	et ErrorType
+}
+
+func (te *typedError) Unwrap() error { return te.error }
+
+func (te *typedError) Type() ErrorType { return te.et }
+
+// NewTypedError wraps a given error and associates an ErrorType with it.
+// The returned error will implement the Error interface in this package,
+// and will have an Unwrap method that returns err.
+func NewTypedError(err error, et ErrorType) error {
+	return &typedError{
+		error: err,
+		et:    et,
+	}
 }
 
 // GetErrorType examines err to determine its associated metadata type.  If err

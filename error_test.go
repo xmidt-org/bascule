@@ -29,6 +29,18 @@ func (suite *ErrorSuite) TestBadCredentialsError() {
 	suite.Equal(ErrorTypeBadCredentials, err.Type())
 }
 
+func (suite *ErrorSuite) TestNewTypedError() {
+	original := errors.New("original error")
+	typed := NewTypedError(original, ErrorTypeBadCredentials)
+
+	suite.ErrorIs(typed, original)
+	suite.Require().Implements((*Error)(nil), typed)
+	suite.Equal(
+		ErrorTypeBadCredentials,
+		typed.(Error).Type(),
+	)
+}
+
 func (suite *ErrorSuite) TestGetErrorType() {
 	suite.Run("Unknown", func() {
 		suite.Equal(
