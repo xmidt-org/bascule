@@ -67,7 +67,7 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserFailure() {
 			suite.Require().Error(err)
 			suite.Equal(bascule.Credentials{}, creds)
 
-			var ice *bascule.InvalidCredentialsError
+			var ice *bascule.BadCredentialsError
 			if suite.ErrorAs(err, &ice) {
 				suite.Equal(testCase, ice.Raw)
 			}

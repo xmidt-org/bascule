@@ -3,49 +3,6 @@
 
 package bascule
 
-import "strings"
-
-// InvalidCredentialsError is returned typically by CredentialsParser.Parse
-// to indicate that a raw, serialized credentials were badly formatted.
-type InvalidCredentialsError struct {
-	// Cause represents any lower-level error that occurred, if any.
-	Cause error
-
-	// Raw represents the raw credentials that couldn't be parsed.
-	Raw string
-}
-
-func (err *InvalidCredentialsError) Unwrap() error { return err.Cause }
-
-func (err *InvalidCredentialsError) Error() string {
-	var o strings.Builder
-	o.WriteString(`Invalid credentials "`)
-	o.WriteString(err.Raw)
-	o.WriteString(`"`)
-
-	if err.Cause != nil {
-		o.WriteString(": ")
-		o.WriteString(err.Cause.Error())
-	}
-
-	return o.String()
-}
-
-// UnsupportedSchemeError indicates that a credential scheme was not
-// supported via the particular way bascule was configured.
-type UnsupportedSchemeError struct {
-	// Scheme is the authorization scheme that wasn't supported.
-	Scheme Scheme
-}
-
-func (err *UnsupportedSchemeError) Error() string {
-	var o strings.Builder
-	o.WriteString(`Unsupported credential scheme: "`)
-	o.WriteString(string(err.Scheme))
-	o.WriteString(`"`)
-	return o.String()
-}
-
 // Scheme represents how a security token should be parsed.  For HTTP, examples
 // of a scheme are "Bearer" and "Basic".
 type Scheme string

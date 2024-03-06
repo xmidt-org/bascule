@@ -3,6 +3,11 @@
 
 package bascule
 
+import (
+	"errors"
+	"strings"
+)
+
 // ErrorType is an enumeration type for various types of security errors.
 // This type can be used to determine more detail about the context of an error.
 type ErrorType int
@@ -40,9 +45,46 @@ type Error interface {
 // GetErrorType examines err to determine its associated metadata type.  If err
 // does not implement Error, this function returns ErrorTypeUnknown.
 func GetErrorType(err error) ErrorType {
-	if e, ok := err.(Error); ok {
+	var e Error
+	if errors.As(err, &e) {
 		return e.Type()
 	}
 
 	return ErrorTypeUnknown
+}
+
+// UnsupportedSchemeError indicates that a credentials scheme was not supported
+// by a TokenParser.
+type UnsupportedSchemeError struct {
+	// Scheme is the unsupported credential scheme.
+	Scheme Scheme
+}
+
+// Type tags errors of this type as ErrorTypeBadCredentials.
+func (err *UnsupportedSchemeError) Type() ErrorType { return ErrorTypeBadCredentials }
+
+func (err *UnsupportedSchemeError) Error() string {
+	var o strings.Builder
+	o.WriteString(`Unsupported scheme: "`)
+	o.WriteString(string(err.Scheme))
+	o.WriteRune('"')
+	return o.String()
+}
+
+// BadCredentialsError is a general-purpose error indicating that credentials
+// could not be parsed.
+type BadCredentialsError struct {
+	// Raw is the raw value of the credentials that could not be parsed.
+	Raw string
+}
+
+// Type tags errors of this type as ErrorTypeBadCredentials.
+func (err *BadCredentialsError) Type() ErrorType { return ErrorTypeBadCredentials }
+
+func (err *BadCredentialsError) Error() string {
+	var o strings.Builder
+	o.WriteString(`Bad credentials: "`)
+	o.WriteString(err.Raw)
+	o.WriteRune('"')
+	return o.String()
 }
