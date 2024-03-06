@@ -35,9 +35,12 @@ func (suite *ErrorSuite) TestNewTypedError() {
 
 	suite.ErrorIs(typed, original)
 	suite.Require().Implements((*Error)(nil), typed)
+
+	var e Error
+	suite.Require().ErrorAs(typed, &e)
 	suite.Equal(
 		ErrorTypeBadCredentials,
-		typed.(Error).Type(),
+		e.Type(),
 	)
 }
 
