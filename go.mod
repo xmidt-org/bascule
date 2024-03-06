@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/lestrrat-go/jwx/v2 v2.0.20
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	go.uber.org/multierr v1.11.0
 )
 
