@@ -17,7 +17,7 @@ type CredentialsTestSuite struct {
 func (suite *CredentialsTestSuite) testDefaultCredentialsParserSuccess() {
 	const (
 		expectedScheme bascule.Scheme = "Test"
-		expectedValue                 = "credentialValue"
+		expectedValue  string         = "credentialValue"
 	)
 
 	testCases := []string{
@@ -43,11 +43,6 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserSuccess() {
 }
 
 func (suite *CredentialsTestSuite) testDefaultCredentialsParserFailure() {
-	const (
-		expectedScheme bascule.Scheme = "Test"
-		expectedValue                 = "credentialValue"
-	)
-
 	testCases := []string{
 		"",
 		"  ",
@@ -67,7 +62,7 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserFailure() {
 			suite.Require().Error(err)
 			suite.Equal(bascule.Credentials{}, creds)
 
-			var ice *bascule.InvalidCredentialsError
+			var ice *bascule.BadCredentialsError
 			if suite.ErrorAs(err, &ice) {
 				suite.Equal(testCase, ice.Raw)
 			}

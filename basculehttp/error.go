@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+
+	"github.com/xmidt-org/bascule/v1"
 )
 
 // ErrorStatusCoder is a strategy for determining the HTTP response code for an error.
@@ -18,12 +20,28 @@ import (
 type ErrorStatusCoder func(request *http.Request, defaultCode int, err error) int
 
 // DefaultErrorStatusCoder is the strategy used when no ErrorStatusCoder is supplied.
-// This function examines err to see if it or any wrapped error provides a StatusCode()
-// method.  If found, Status() is used.  Otherwise, this function returns the default code.
+// This function first tries to see if the error implements bascule.Error, in which case
+// the error's type will dictate the response code.  Next, if the wrapper error provides
+// a StatusCode() method, that code is used.  Failing all of that, the defaultCode is
+// returned.
 //
 // This function can also be decorated.  Passing a sentinel value for defaultCode allows
 // a decorator to take further action.
 func DefaultErrorStatusCoder(_ *http.Request, defaultCode int, err error) int {
+	switch bascule.GetErrorType(err) {
+	case bascule.ErrorTypeMissingCredentials:
+		return http.StatusUnauthorized
+
+	case bascule.ErrorTypeBadCredentials:
+		return http.StatusBadRequest
+
+	case bascule.ErrorTypeInvalidCredentials:
+		return http.StatusForbidden
+
+	case bascule.ErrorTypeForbidden:
+		return http.StatusForbidden
+	}
+
 	type statusCoder interface {
 		StatusCode() int
 	}

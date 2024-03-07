@@ -28,7 +28,7 @@ var defaultCredentialsParser bascule.CredentialsParser = bascule.CredentialsPars
 				Value:  value,
 			}
 		} else {
-			err = &bascule.InvalidCredentialsError{
+			err = &bascule.BadCredentialsError{
 				Raw: raw,
 			}
 		}
