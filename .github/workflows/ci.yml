@@ -24,4 +24,5 @@ jobs:
     with:
       go-generate-deps: golang.org/x/tools/cmd/stringer@latest
       release-type:     library
+      yaml-lint-skip:   false
     secrets: inherit
