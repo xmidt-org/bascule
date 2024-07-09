@@ -12,6 +12,10 @@ import (
 	"go.uber.org/multierr"
 )
 
+type CredentialsParser bascule.CredentialsParser[*http.Request]
+type TokenParser bascule.TokenParser[*http.Request]
+type TokenParsers bascule.TokenParsers[*http.Request]
+
 // MiddlewareOption is a functional option for tailoring a Middleware.
 type MiddlewareOption interface {
 	apply(*Middleware) error
@@ -23,23 +27,9 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 	return mof(m)
 }
 
-// WithAccessor configures a credentials Accessor for this Middleware.  If not supplied
-// or if the supplied Accessor is nil, DefaultAccessor() is used.
-func WithAccessor(a Accessor) MiddlewareOption {
-	return middlewareOptionFunc(func(m *Middleware) error {
-		if a != nil {
-			m.accessor = a
-		} else {
-			m.accessor = DefaultAccessor()
-		}
-
-		return nil
-	})
-}
-
 // WithCredentialsParser configures a credentials parser for this Middleware.  If not supplied
 // or if the supplied CredentialsParser is nil, DefaultCredentialsParser() is used.
-func WithCredentialsParser(cp bascule.CredentialsParser) MiddlewareOption {
+func WithCredentialsParser(cp CredentialsParser) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
 		if cp != nil {
 			m.credentialsParser = cp
@@ -55,7 +45,7 @@ func WithCredentialsParser(cp bascule.CredentialsParser) MiddlewareOption {
 // already been registered, the given parser will replace that registration.
 //
 // The parser cannot be nil.
-func WithTokenParser(scheme bascule.Scheme, tp bascule.TokenParser) MiddlewareOption {
+func WithTokenParser(scheme bascule.Scheme, tp TokenParser) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
 		m.tokenParsers.Register(scheme, tp)
 		return nil
@@ -126,9 +116,8 @@ func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 
 // Middleware is an immutable configuration that can decorate multiple handlers.
 type Middleware struct {
-	accessor          Accessor
-	credentialsParser bascule.CredentialsParser
-	tokenParsers      bascule.TokenParsers
+	credentialsParser CredentialsParser
+	tokenParsers      TokenParsers
 	authentication    bascule.Validators
 	authorization     bascule.Authorizers[*http.Request]
 	challenges        Challenges

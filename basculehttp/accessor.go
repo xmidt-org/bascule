@@ -5,49 +5,7 @@ package basculehttp
 
 import (
 	"net/http"
-	"strings"
 )
-
-const (
-	// DefaultAuthorizationHeader is the name of the header used by default to obtain
-	// the raw credentials.
-	DefaultAuthorizationHeader = "Authorization"
-)
-
-// DuplicateHeaderError indicates that an HTTP header had more than one value
-// when only one value was expected.
-type DuplicateHeaderError struct {
-	// Header is the name of the duplicate header.
-	Header string
-}
-
-func (err *DuplicateHeaderError) Error() string {
-	var o strings.Builder
-	o.WriteString(`Duplicate header: "`)
-	o.WriteString(err.Header)
-	o.WriteString(`"`)
-	return o.String()
-}
-
-// MissingHeaderError indicates that an expected HTTP header is missing.
-type MissingHeaderError struct {
-	// Header is the name of the missing header.
-	Header string
-}
-
-func (err *MissingHeaderError) Error() string {
-	var o strings.Builder
-	o.WriteString(`Missing header: "`)
-	o.WriteString(err.Header)
-	o.WriteString(`"`)
-	return o.String()
-}
-
-// StatusCode returns http.StatusUnauthorized, as the request carries
-// no authorization in it.
-func (err *MissingHeaderError) StatusCode() int {
-	return http.StatusUnauthorized
-}
 
 // Accessor is the strategy for obtaining credentials from an HTTP request.
 type Accessor interface {
