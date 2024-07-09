@@ -221,7 +221,7 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 
 	ctx = bascule.WithCredentials(ctx, creds)
 	err = fd.middleware.authenticate(ctx, token)
-	if err == nil {
+	if err != nil {
 		// at this point in the workflow, the request has valid credentials.  we use
 		// StatusForbidden as the default because any failure to authenticate isn't a
 		// case where the caller needs to supply credentials.  Rather, the supplied
@@ -232,7 +232,7 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 
 	ctx = bascule.WithToken(ctx, token)
 	err = fd.middleware.authorize(ctx, token, request)
-	if err == nil {
+	if err != nil {
 		fd.middleware.writeError(response, request, http.StatusForbidden, err)
 		return
 	}

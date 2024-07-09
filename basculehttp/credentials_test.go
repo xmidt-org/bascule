@@ -35,10 +35,10 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserSuccess() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase, func() {
-			dp := DefaultCredentialsParser{}
-			suite.Require().NotNil(dp)
+			dcp := DefaultCredentialsParser{}
+			suite.Require().NotNil(dcp)
 
-			creds, err := dp.Parse(context.Background(), suite.newDefaultSource(testCase))
+			creds, err := dcp.Parse(context.Background(), suite.newDefaultSource(testCase))
 			suite.Require().NoError(err)
 			suite.Equal(
 				bascule.Credentials{
@@ -64,10 +64,10 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserFailure() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase, func() {
-			dp := DefaultCredentialsParser{}
-			suite.Require().NotNil(dp)
+			dcp := DefaultCredentialsParser{}
+			suite.Require().NotNil(dcp)
 
-			creds, err := dp.Parse(context.Background(), suite.newDefaultSource(testCase))
+			creds, err := dcp.Parse(context.Background(), suite.newDefaultSource(testCase))
 			suite.Require().Error(err)
 			suite.Equal(bascule.Credentials{}, creds)
 
@@ -79,9 +79,28 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserFailure() {
 	}
 }
 
+func (suite *CredentialsTestSuite) testDefaultCredentialsParserMissingHeader() {
+	dcp := DefaultCredentialsParser{}
+	suite.Require().NotNil(dcp)
+
+	r := httptest.NewRequest("GET", "/", nil)
+	creds, err := dcp.Parse(context.Background(), r)
+	suite.Require().Error(err)
+	suite.Equal(bascule.Credentials{}, creds)
+
+	type statusCoder interface {
+		StatusCode() int
+	}
+
+	var sc statusCoder
+	suite.Require().ErrorAs(err, &sc)
+	suite.Equal(http.StatusUnauthorized, sc.StatusCode())
+}
+
 func (suite *CredentialsTestSuite) TestDefaultCredentialsParser() {
 	suite.Run("Success", suite.testDefaultCredentialsParserSuccess)
 	suite.Run("Failure", suite.testDefaultCredentialsParserFailure)
+	suite.Run("MissingHeader", suite.testDefaultCredentialsParserMissingHeader)
 }
 
 func TestCredentials(t *testing.T) {

@@ -94,18 +94,20 @@ func (dcp DefaultCredentialsParser) Parse(_ context.Context, source *http.Reques
 		}
 	}
 
-	// format is <scheme><single space><credential value>
-	// the code is strict:  it requires no leading or trailing space
-	// and exactly one (1) space as a separator.
-	scheme, credValue, found := strings.Cut(raw, " ")
-	if found && len(scheme) > 0 && !fastIsSpace(credValue[0]) && !fastIsSpace(credValue[len(credValue)-1]) {
-		c = bascule.Credentials{
-			Scheme: bascule.Scheme(scheme),
-			Value:  credValue,
-		}
-	} else {
-		err = &bascule.BadCredentialsError{
-			Raw: raw,
+	if err == nil {
+		// format is <scheme><single space><credential value>
+		// the code is strict:  it requires no leading or trailing space
+		// and exactly one (1) space as a separator.
+		scheme, credValue, found := strings.Cut(raw, " ")
+		if found && len(scheme) > 0 && !fastIsSpace(credValue[0]) && !fastIsSpace(credValue[len(credValue)-1]) {
+			c = bascule.Credentials{
+				Scheme: bascule.Scheme(scheme),
+				Value:  credValue,
+			}
+		} else {
+			err = &bascule.BadCredentialsError{
+				Raw: raw,
+			}
 		}
 	}
 
