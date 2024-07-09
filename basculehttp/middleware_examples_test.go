@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/xmidt-org/bascule/v1"
 )
 
 // ExampleMiddleware_simple illustrates how to use a basculehttp Middleware with
@@ -20,6 +22,12 @@ func ExampleMiddleware_simple() {
 	// decorate a handler that needs authorization
 	h := m.ThenFunc(
 		func(response http.ResponseWriter, request *http.Request) {
+			t, ok := bascule.GetTokenFrom(request)
+			if !ok {
+				panic("no token found")
+			}
+
+			fmt.Println("principal:", t.Principal())
 		},
 	)
 
@@ -38,5 +46,6 @@ func ExampleMiddleware_simple() {
 
 	// Output:
 	// no authorization response code: 401
+	// principal: joe
 	// with basic auth response code: 200
 }
