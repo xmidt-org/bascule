@@ -4,6 +4,9 @@
 package basculehttp
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -12,6 +15,12 @@ import (
 
 type CredentialsTestSuite struct {
 	suite.Suite
+}
+
+func (suite *CredentialsTestSuite) newDefaultSource(value string) *http.Request {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set(DefaultAuthorizationHeader, value)
+	return r
 }
 
 func (suite *CredentialsTestSuite) testDefaultCredentialsParserSuccess() {
@@ -26,10 +35,10 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserSuccess() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase, func() {
-			dp := DefaultCredentialsParser()
+			dp := DefaultCredentialsParser{}
 			suite.Require().NotNil(dp)
 
-			creds, err := dp.Parse(testCase)
+			creds, err := dp.Parse(context.Background(), suite.newDefaultSource(testCase))
 			suite.Require().NoError(err)
 			suite.Equal(
 				bascule.Credentials{
@@ -55,10 +64,10 @@ func (suite *CredentialsTestSuite) testDefaultCredentialsParserFailure() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase, func() {
-			dp := DefaultCredentialsParser()
+			dp := DefaultCredentialsParser{}
 			suite.Require().NotNil(dp)
 
-			creds, err := dp.Parse(testCase)
+			creds, err := dp.Parse(context.Background(), suite.newDefaultSource(testCase))
 			suite.Require().Error(err)
 			suite.Equal(bascule.Credentials{}, creds)
 

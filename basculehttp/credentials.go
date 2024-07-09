@@ -60,40 +60,54 @@ func fastIsSpace(b byte) bool {
 }
 
 // DefaultCredentialsParser is the default algorithm used to produce HTTP credentials
-// from a request.
+// from a source request.
 type DefaultCredentialsParser struct {
-	// HeaderName is the name of the authorization header.  If unset,
+	// Header is the name of the authorization header.  If unset,
 	// DefaultAuthorizationHeader is used.
-	HeaderName string
+	Header string
+
+	// ErrorOnDuplicate controls whether an error is returned if more
+	// than one Header is found in the request.  By default, this is false.
+	ErrorOnDuplicate bool
 }
 
-func (dcp DefaultCredentialsParser) Parse(_ context.Context, source *http.Request) (bascule.Credentials, error) {
-}
+func (dcp DefaultCredentialsParser) Parse(_ context.Context, source *http.Request) (c bascule.Credentials, err error) {
+	header := dcp.Header
+	if len(header) == 0 {
+		header = DefaultAuthorizationHeader
+	}
 
-var defaultCredentialsParser CredentialsParser = bascule.CredentialsParserFunc[*http.Request](
-	func(ctx context.Context, source *http.Request) (c bascule.Credentials, err error) {
-		// format is <scheme><single space><credential value>
-		// the code is strict:  it requires no leading or trailing space
-		// and exactly one (1) space as a separator.
-		scheme, value, found := strings.Cut(raw, " ")
-		if found && len(scheme) > 0 && !fastIsSpace(value[0]) && !fastIsSpace(value[len(value)-1]) {
-			c = bascule.Credentials{
-				Scheme: bascule.Scheme(scheme),
-				Value:  value,
-			}
-		} else {
-			err = &bascule.BadCredentialsError{
-				Raw: raw,
-			}
+	var raw string
+	values := source.Header.Values(header)
+	switch {
+	case len(values) == 0:
+		err = &MissingHeaderError{
+			Header: header,
 		}
 
-		return
-	},
-)
+	case len(values) == 1 || !dcp.ErrorOnDuplicate:
+		raw = values[0]
 
-// DefaultCredentialsParser returns the default strategy for parsing credentials.  This
-// builtin strategy is very strict on whitespace.  The format must correspond exactly
-// to the format specified in https://www.rfc-editor.org/rfc/rfc7235.
-func DefaultCredentialsParser() bascule.CredentialsParser[*http.Request] {
-	return defaultCredentialsParser
+	default:
+		err = &DuplicateHeaderError{
+			Header: header,
+		}
+	}
+
+	// format is <scheme><single space><credential value>
+	// the code is strict:  it requires no leading or trailing space
+	// and exactly one (1) space as a separator.
+	scheme, credValue, found := strings.Cut(raw, " ")
+	if found && len(scheme) > 0 && !fastIsSpace(credValue[0]) && !fastIsSpace(credValue[len(credValue)-1]) {
+		c = bascule.Credentials{
+			Scheme: bascule.Scheme(scheme),
+			Value:  credValue,
+		}
+	} else {
+		err = &bascule.BadCredentialsError{
+			Raw: raw,
+		}
+	}
+
+	return
 }

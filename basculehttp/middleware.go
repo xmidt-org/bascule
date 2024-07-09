@@ -12,10 +12,6 @@ import (
 	"go.uber.org/multierr"
 )
 
-type CredentialsParser bascule.CredentialsParser[*http.Request]
-type TokenParser bascule.TokenParser[*http.Request]
-type TokenParsers bascule.TokenParsers[*http.Request]
-
 // MiddlewareOption is a functional option for tailoring a Middleware.
 type MiddlewareOption interface {
 	apply(*Middleware) error
@@ -29,12 +25,12 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 
 // WithCredentialsParser configures a credentials parser for this Middleware.  If not supplied
 // or if the supplied CredentialsParser is nil, DefaultCredentialsParser() is used.
-func WithCredentialsParser(cp CredentialsParser) MiddlewareOption {
+func WithCredentialsParser(cp bascule.CredentialsParser[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
 		if cp != nil {
 			m.credentialsParser = cp
 		} else {
-			m.credentialsParser = DefaultCredentialsParser()
+			m.credentialsParser = DefaultCredentialsParser{}
 		}
 
 		return nil
@@ -45,7 +41,7 @@ func WithCredentialsParser(cp CredentialsParser) MiddlewareOption {
 // already been registered, the given parser will replace that registration.
 //
 // The parser cannot be nil.
-func WithTokenParser(scheme bascule.Scheme, tp TokenParser) MiddlewareOption {
+func WithTokenParser(scheme bascule.Scheme, tp bascule.TokenParser[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
 		m.tokenParsers.Register(scheme, tp)
 		return nil
@@ -116,8 +112,8 @@ func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 
 // Middleware is an immutable configuration that can decorate multiple handlers.
 type Middleware struct {
-	credentialsParser CredentialsParser
-	tokenParsers      TokenParsers
+	credentialsParser bascule.CredentialsParser[*http.Request]
+	tokenParsers      bascule.TokenParsers[*http.Request]
 	authentication    bascule.Validators
 	authorization     bascule.Authorizers[*http.Request]
 	challenges        Challenges
@@ -130,8 +126,7 @@ type Middleware struct {
 // No options will result in a Middleware with default behavior.
 func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
 	m = &Middleware{
-		accessor:          DefaultAccessor(),
-		credentialsParser: DefaultCredentialsParser(),
+		credentialsParser: DefaultCredentialsParser{},
 		tokenParsers:      DefaultTokenParsers(),
 		errorStatusCoder:  DefaultErrorStatusCoder,
 		errorMarshaler:    DefaultErrorMarshaler,
@@ -191,14 +186,9 @@ func (m *Middleware) writeError(response http.ResponseWriter, request *http.Requ
 }
 
 func (m *Middleware) getCredentialsAndToken(ctx context.Context, request *http.Request) (c bascule.Credentials, t bascule.Token, err error) {
-	var raw string
-	raw, err = m.accessor.GetCredentials(request)
+	c, err = m.credentialsParser.Parse(request.Context(), request)
 	if err == nil {
-		c, err = m.credentialsParser.Parse(raw)
-	}
-
-	if err == nil {
-		t, err = m.tokenParsers.Parse(ctx, c)
+		t, err = m.tokenParsers.Parse(ctx, request, c)
 	}
 
 	return

@@ -23,27 +23,27 @@ func (suite *TokenParsersSuite) assertUnsupportedScheme(scheme Scheme, err error
 }
 
 func (suite *TokenParsersSuite) testParseEmpty() {
-	var tp TokenParsers
+	var tp TokenParsers[string]
 
 	// legal, but will always fail
-	token, err := tp.Parse(context.Background(), suite.testCredentials())
+	token, err := tp.Parse(context.Background(), "doesnotmatter", suite.testCredentials())
 	suite.Nil(token)
 	suite.assertUnsupportedScheme(testScheme, err)
 }
 
 func (suite *TokenParsersSuite) testParseUnsupported() {
-	var tp TokenParsers
+	var tp TokenParsers[string]
 	tp.Register(
 		Scheme("Supported"),
-		TokenParserFunc(
-			func(context.Context, Credentials) (Token, error) {
+		TokenParserFunc[string](
+			func(context.Context, string, Credentials) (Token, error) {
 				suite.Fail("TokenParser should not have been called")
 				return nil, nil
 			},
 		),
 	)
 
-	token, err := tp.Parse(context.Background(), suite.testCredentials())
+	token, err := tp.Parse(context.Background(), "doesnotmatter", suite.testCredentials())
 	suite.Nil(token)
 	suite.assertUnsupportedScheme(testScheme, err)
 }
@@ -56,11 +56,11 @@ func (suite *TokenParsersSuite) testParseSupported() {
 		testCredentials = suite.testCredentials()
 	)
 
-	var tp TokenParsers
+	var tp TokenParsers[string]
 	tp.Register(
 		testCredentials.Scheme,
-		TokenParserFunc(
-			func(ctx context.Context, c Credentials) (Token, error) {
+		TokenParserFunc[string](
+			func(ctx context.Context, _ string, c Credentials) (Token, error) {
 				suite.Equal(testCtx, ctx)
 				suite.Equal(testCredentials, c)
 				return suite.testToken(), expectedErr
@@ -68,7 +68,7 @@ func (suite *TokenParsersSuite) testParseSupported() {
 		),
 	)
 
-	token, err := tp.Parse(testCtx, testCredentials)
+	token, err := tp.Parse(testCtx, "doesnotmatter", testCredentials)
 	suite.Equal(suite.testToken(), token)
 	suite.Same(expectedErr, err)
 }
