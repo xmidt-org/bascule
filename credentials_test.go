@@ -4,6 +4,7 @@
 package bascule
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -17,7 +18,7 @@ type CredentialsTestSuite struct {
 func (suite *CredentialsTestSuite) TestCredentialsParserFunc() {
 	const expectedRaw = "expected raw credentials"
 	expectedErr := errors.New("expected error")
-	var c CredentialsParser = CredentialsParserFunc(func(raw string) (Credentials, error) {
+	var c CredentialsParser[string] = CredentialsParserFunc[string](func(_ context.Context, raw string) (Credentials, error) {
 		suite.Equal(expectedRaw, raw)
 		return Credentials{
 			Scheme: Scheme("test"),
@@ -25,7 +26,7 @@ func (suite *CredentialsTestSuite) TestCredentialsParserFunc() {
 		}, expectedErr
 	})
 
-	creds, err := c.Parse(expectedRaw)
+	creds, err := c.Parse(context.Background(), expectedRaw)
 	suite.Equal(
 		Credentials{
 			Scheme: Scheme("test"),

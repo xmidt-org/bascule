@@ -15,31 +15,28 @@ type Token interface {
 	Principal() string
 }
 
-// TokenParser produces tokens from credentials.
-type TokenParser interface {
-	// Parse turns a Credentials into a token.  This method may validate parts
-	// of the credential's value, but should not perform any authentication itself.
-	//
-	// Some token parsers may interact with external systems, such as databases.  The supplied
-	// context should be passed to any calls that might need to honor cancelation semantics.
-	Parse(context.Context, Credentials) (Token, error)
+// TokenParser produces tokens from credentials.  The original source S of the credentials
+// are made available to the parser.
+type TokenParser[S any] interface {
+	// Parse extracts a Token from a set of credentials.
+	Parse(ctx context.Context, source S, c Credentials) (Token, error)
 }
 
 // TokenParserFunc is a closure type that implements TokenParser.
-type TokenParserFunc func(context.Context, Credentials) (Token, error)
+type TokenParserFunc[S any] func(context.Context, S, Credentials) (Token, error)
 
-func (tpf TokenParserFunc) Parse(ctx context.Context, c Credentials) (Token, error) {
-	return tpf(ctx, c)
+func (tpf TokenParserFunc[S]) Parse(ctx context.Context, source S, c Credentials) (Token, error) {
+	return tpf(ctx, source, c)
 }
 
 // TokenParsers is a registry of parsers based on credential schemes.
 // The zero value of this type is valid and ready to use.
-type TokenParsers map[Scheme]TokenParser
+type TokenParsers[S any] map[Scheme]TokenParser[S]
 
 // Register adds or replaces the parser associated with the given scheme.
-func (tp *TokenParsers) Register(scheme Scheme, p TokenParser) {
+func (tp *TokenParsers[S]) Register(scheme Scheme, p TokenParser[S]) {
 	if *tp == nil {
-		*tp = make(TokenParsers)
+		*tp = make(TokenParsers[S])
 	}
 
 	(*tp)[scheme] = p
@@ -47,9 +44,9 @@ func (tp *TokenParsers) Register(scheme Scheme, p TokenParser) {
 
 // Parse chooses a TokenParser based on the Scheme and invokes that
 // parser.  If the credential scheme is unsupported, an error is returned.
-func (tp TokenParsers) Parse(ctx context.Context, c Credentials) (t Token, err error) {
+func (tp TokenParsers[S]) Parse(ctx context.Context, source S, c Credentials) (t Token, err error) {
 	if p, ok := tp[c.Scheme]; ok {
-		t, err = p.Parse(ctx, c)
+		t, err = p.Parse(ctx, source, c)
 	} else {
 		err = &UnsupportedSchemeError{
 			Scheme: c.Scheme,

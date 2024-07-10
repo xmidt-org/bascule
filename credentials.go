@@ -3,6 +3,8 @@
 
 package bascule
 
+import "context"
+
 // Scheme represents how a security token should be parsed.  For HTTP, examples
 // of a scheme are "Bearer" and "Basic".
 type Scheme string
@@ -16,16 +18,15 @@ type Credentials struct {
 	Value string
 }
 
-// CredentialsParser produces Credentials from their serialized form.
-type CredentialsParser interface {
-	// Parse parses the raw, marshaled version of credentials and
-	// returns the Credentials object.
-	Parse(raw string) (Credentials, error)
+// CredentialsParser produces Credentials from a data source.
+type CredentialsParser[S any] interface {
+	// Parse extracts Credentials from a Source data object.
+	Parse(ctx context.Context, source S) (Credentials, error)
 }
 
 // CredentialsParserFunc is a function type that implements CredentialsParser.
-type CredentialsParserFunc func(string) (Credentials, error)
+type CredentialsParserFunc[S any] func(context.Context, S) (Credentials, error)
 
-func (cpf CredentialsParserFunc) Parse(raw string) (Credentials, error) {
-	return cpf(raw)
+func (cpf CredentialsParserFunc[S]) Parse(ctx context.Context, source S) (Credentials, error) {
+	return cpf(ctx, source)
 }

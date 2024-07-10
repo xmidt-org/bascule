@@ -58,15 +58,16 @@ func (t *token) Principal() string {
 }
 
 // tokenParser is the canonical parser for bascule that deals with JWTs.
-type tokenParser struct {
+// This parser does not use the source.
+type tokenParser[S any] struct {
 	options []jwt.ParseOption
 }
 
 // NewTokenParser constructs a parser using the supplied set of parse options.
 // The returned parser will produce tokens that implement the Token interface
 // in this package.
-func NewTokenParser(options ...jwt.ParseOption) (bascule.TokenParser, error) {
-	return &tokenParser{
+func NewTokenParser[S any](options ...jwt.ParseOption) (bascule.TokenParser[S], error) {
+	return &tokenParser[S]{
 		options: append(
 			make([]jwt.ParseOption, 0, len(options)),
 			options...,
@@ -74,7 +75,7 @@ func NewTokenParser(options ...jwt.ParseOption) (bascule.TokenParser, error) {
 	}, nil
 }
 
-func (tp *tokenParser) Parse(_ context.Context, c bascule.Credentials) (bascule.Token, error) {
+func (tp *tokenParser[S]) Parse(_ context.Context, _ S, c bascule.Credentials) (bascule.Token, error) {
 	jwtToken, err := jwt.ParseString(c.Value, tp.options...)
 	if err != nil {
 		return nil, err
