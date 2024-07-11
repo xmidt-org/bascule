@@ -77,7 +77,7 @@ func WithChallenges(ch ...Challenge) MiddlewareOption {
 // This is useful for use cases like admin access or alternate capabilities.
 func WithAuthorization(a ...bascule.Authorizer[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		m.authorization.Add(a...)
+		m.authorization = m.authorization.Append(a...)
 		return nil
 	})
 }
@@ -199,7 +199,7 @@ func (m *Middleware) authenticate(ctx context.Context, request *http.Request, to
 }
 
 func (m *Middleware) authorize(ctx context.Context, token bascule.Token, request *http.Request) error {
-	return m.authorization.Authorize(ctx, token, request)
+	return m.authorization.Authorize(ctx, request, token)
 }
 
 // frontDoor is the internal handler implementation that protects a handler

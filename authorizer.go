@@ -18,26 +18,24 @@ type Authorizer[R any] interface {
 	// cancelation semantics.
 	//
 	// If this method doesn't support the given token, it should return nil.
-	Authorize(ctx context.Context, token Token, resource R) error
+	Authorize(ctx context.Context, resource R, token Token) error
 }
 
 // AuthorizerFunc is a closure type that implements Authorizer.
-type AuthorizerFunc[R any] func(context.Context, Token, R) error
+type AuthorizerFunc[R any] func(context.Context, R, Token) error
 
-func (af AuthorizerFunc[R]) Authorize(ctx context.Context, token Token, resource R) error {
-	return af(ctx, token, resource)
+func (af AuthorizerFunc[R]) Authorize(ctx context.Context, resource R, token Token) error {
+	return af(ctx, resource, token)
 }
 
 // Authorizers is a collection of Authorizers.
 type Authorizers[R any] []Authorizer[R]
 
-// Add appends authorizers to this aggregate Authorizers.
-func (as *Authorizers[R]) Add(a ...Authorizer[R]) {
-	if *as == nil {
-		*as = make(Authorizers[R], 0, len(a))
-	}
-
-	*as = append(*as, a...)
+// Append tacks on one or more authorizers to this collection.  The possibly
+// new Authorizers instance is returned.  The semantics of this method are
+// the same as the built-in append.
+func (as Authorizers[R]) Append(a ...Authorizer[R]) Authorizers[R] {
+	return append(as, a...)
 }
 
 // Authorize requires all authorizers in this sequence to allow access.  This
@@ -45,9 +43,9 @@ func (as *Authorizers[R]) Add(a ...Authorizer[R]) {
 //
 // Because authorization can be arbitrarily expensive, execution halts at the first failed
 // authorization attempt.
-func (as Authorizers[R]) Authorize(ctx context.Context, token Token, resource R) error {
+func (as Authorizers[R]) Authorize(ctx context.Context, resource R, token Token) error {
 	for _, a := range as {
-		if err := a.Authorize(ctx, token, resource); err != nil {
+		if err := a.Authorize(ctx, resource, token); err != nil {
 			return err
 		}
 	}
@@ -61,10 +59,10 @@ type requireAny[R any] struct {
 
 // Authorize returns nil at the first authorizer that returns nil, i.e. accepts the access.
 // Otherwise, this method returns an aggregate error of all the authorization errors.
-func (ra requireAny[R]) Authorize(ctx context.Context, token Token, resource R) error {
+func (ra requireAny[R]) Authorize(ctx context.Context, resource R, token Token) error {
 	var err error
 	for _, a := range ra.a {
-		authErr := a.Authorize(ctx, token, resource)
+		authErr := a.Authorize(ctx, resource, token)
 		if authErr == nil {
 			return nil
 		}
