@@ -6,6 +6,7 @@ package basculehttp
 import (
 	"context"
 	"encoding/base64"
+	"net/http"
 	"strings"
 
 	"github.com/xmidt-org/bascule/v1"
@@ -35,7 +36,7 @@ func (err *InvalidBasicAuthError) Error() string {
 
 type basicTokenParser struct{}
 
-func (btp basicTokenParser) Parse(_ context.Context, c bascule.Credentials) (t bascule.Token, err error) {
+func (btp basicTokenParser) Parse(_ context.Context, _ *http.Request, c bascule.Credentials) (t bascule.Token, err error) {
 	var decoded []byte
 	decoded, err = base64.StdEncoding.DecodeString(c.Value)
 	if err != nil {

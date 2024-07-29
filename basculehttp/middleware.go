@@ -23,28 +23,14 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 	return mof(m)
 }
 
-// WithAccessor configures a credentials Accessor for this Middleware.  If not supplied
-// or if the supplied Accessor is nil, DefaultAccessor() is used.
-func WithAccessor(a Accessor) MiddlewareOption {
-	return middlewareOptionFunc(func(m *Middleware) error {
-		if a != nil {
-			m.accessor = a
-		} else {
-			m.accessor = DefaultAccessor()
-		}
-
-		return nil
-	})
-}
-
 // WithCredentialsParser configures a credentials parser for this Middleware.  If not supplied
 // or if the supplied CredentialsParser is nil, DefaultCredentialsParser() is used.
-func WithCredentialsParser(cp bascule.CredentialsParser) MiddlewareOption {
+func WithCredentialsParser(cp bascule.CredentialsParser[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
 		if cp != nil {
 			m.credentialsParser = cp
 		} else {
-			m.credentialsParser = DefaultCredentialsParser()
+			m.credentialsParser = DefaultCredentialsParser{}
 		}
 
 		return nil
@@ -55,7 +41,7 @@ func WithCredentialsParser(cp bascule.CredentialsParser) MiddlewareOption {
 // already been registered, the given parser will replace that registration.
 //
 // The parser cannot be nil.
-func WithTokenParser(scheme bascule.Scheme, tp bascule.TokenParser) MiddlewareOption {
+func WithTokenParser(scheme bascule.Scheme, tp bascule.TokenParser[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
 		m.tokenParsers.Register(scheme, tp)
 		return nil
@@ -126,9 +112,8 @@ func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 
 // Middleware is an immutable configuration that can decorate multiple handlers.
 type Middleware struct {
-	accessor          Accessor
-	credentialsParser bascule.CredentialsParser
-	tokenParsers      bascule.TokenParsers
+	credentialsParser bascule.CredentialsParser[*http.Request]
+	tokenParsers      bascule.TokenParsers[*http.Request]
 	authentication    bascule.Validators
 	authorization     bascule.Authorizers[*http.Request]
 	challenges        Challenges
@@ -141,8 +126,7 @@ type Middleware struct {
 // No options will result in a Middleware with default behavior.
 func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
 	m = &Middleware{
-		accessor:          DefaultAccessor(),
-		credentialsParser: DefaultCredentialsParser(),
+		credentialsParser: DefaultCredentialsParser{},
 		tokenParsers:      DefaultTokenParsers(),
 		errorStatusCoder:  DefaultErrorStatusCoder,
 		errorMarshaler:    DefaultErrorMarshaler,
@@ -202,14 +186,9 @@ func (m *Middleware) writeError(response http.ResponseWriter, request *http.Requ
 }
 
 func (m *Middleware) getCredentialsAndToken(ctx context.Context, request *http.Request) (c bascule.Credentials, t bascule.Token, err error) {
-	var raw string
-	raw, err = m.accessor.GetCredentials(request)
+	c, err = m.credentialsParser.Parse(request.Context(), request)
 	if err == nil {
-		c, err = m.credentialsParser.Parse(raw)
-	}
-
-	if err == nil {
-		t, err = m.tokenParsers.Parse(ctx, c)
+		t, err = m.tokenParsers.Parse(ctx, request, c)
 	}
 
 	return
@@ -242,7 +221,7 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 
 	ctx = bascule.WithCredentials(ctx, creds)
 	err = fd.middleware.authenticate(ctx, token)
-	if err == nil {
+	if err != nil {
 		// at this point in the workflow, the request has valid credentials.  we use
 		// StatusForbidden as the default because any failure to authenticate isn't a
 		// case where the caller needs to supply credentials.  Rather, the supplied
@@ -253,7 +232,7 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 
 	ctx = bascule.WithToken(ctx, token)
 	err = fd.middleware.authorize(ctx, token, request)
-	if err == nil {
+	if err != nil {
 		fd.middleware.writeError(response, request, http.StatusForbidden, err)
 		return
 	}
