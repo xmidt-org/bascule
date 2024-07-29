@@ -84,15 +84,20 @@ type ValidatorFunc[S any] interface {
 // and uncurry a closure.
 type validatorFunc[S any] func(context.Context, S, Token) (Token, error)
 
-func (vf validatorFunc[S]) Validate(ctx context.Context, source S, t Token) (Token, error) {
-	return vf(ctx, source, t)
+func (vf validatorFunc[S]) Validate(ctx context.Context, source S, t Token) (next Token, err error) {
+	next, err = vf(ctx, source, t)
+	if next == nil {
+		next = t
+	}
+
+	return
 }
 
 var (
-	tokenReturnsError             = reflect.TypeOf((func(Token) error)(nil))
-	tokenReturnsTokenError        = reflect.TypeOf((func(Token) (Token, error))(nil))
-	contextTokenReturnsError      = reflect.TypeOf((func(context.Context, Token) error)(nil))
-	contextTokenReturnsTokenError = reflect.TypeOf((func(context.Context, Token) (Token, error))(nil))
+	tokenReturnError             = reflect.TypeOf((func(Token) error)(nil))
+	tokenReturnTokenAndError     = reflect.TypeOf((func(Token) (Token, error))(nil))
+	contextTokenReturnError      = reflect.TypeOf((func(context.Context, Token) error)(nil))
+	contextTokenReturnTokenError = reflect.TypeOf((func(context.Context, Token) (Token, error))(nil))
 )
 
 // asValidatorSimple tries simple conversions on f.  This function will not catch
@@ -102,14 +107,14 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
-				return nil, vf(t)
+				return t, vf(t)
 			},
 		)
 
 	case func(S, Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
-				return nil, vf(source, t)
+				return t, vf(source, t)
 			},
 		)
 
@@ -140,14 +145,14 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(context.Context, Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
-				return nil, vf(ctx, t)
+				return t, vf(ctx, t)
 			},
 		)
 
 	case func(context.Context, S, Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
-				return nil, vf(ctx, source, t)
+				return t, vf(ctx, source, t)
 			},
 		)
 
@@ -171,7 +176,8 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 }
 
 // AsValidator takes a ValidatorFunc closure and returns a Validator instance that
-// executes that closure.
+// executes that closure.  This function can also convert custom types which can
+// be converted to any of the closure signatures.
 func AsValidator[S any, F ValidatorFunc[S]](f F) Validator[S] {
 	// first, try the simple way:
 	if v := asValidatorSimple[S](f); v != nil {
@@ -182,24 +188,24 @@ func AsValidator[S any, F ValidatorFunc[S]](f F) Validator[S] {
 	// require the source type.
 	fVal := reflect.ValueOf(f)
 	switch {
-	case fVal.CanConvert(tokenReturnsError):
+	case fVal.CanConvert(tokenReturnError):
 		return asValidatorSimple[S](
-			fVal.Convert(tokenReturnsError).Interface().(func(Token) error),
+			fVal.Convert(tokenReturnError).Interface().(func(Token) error),
 		)
 
-	case fVal.CanConvert(tokenReturnsTokenError):
+	case fVal.CanConvert(tokenReturnTokenAndError):
 		return asValidatorSimple[S](
-			fVal.Convert(tokenReturnsError).Interface().(func(Token) (Token, error)),
+			fVal.Convert(tokenReturnTokenAndError).Interface().(func(Token) (Token, error)),
 		)
 
-	case fVal.CanConvert(contextTokenReturnsError):
+	case fVal.CanConvert(contextTokenReturnError):
 		return asValidatorSimple[S](
-			fVal.Convert(contextTokenReturnsError).Interface().(func(context.Context, Token) error),
+			fVal.Convert(contextTokenReturnError).Interface().(func(context.Context, Token) error),
 		)
 
-	case fVal.CanConvert(contextTokenReturnsTokenError):
+	case fVal.CanConvert(contextTokenReturnTokenError):
 		return asValidatorSimple[S](
-			fVal.Convert(contextTokenReturnsError).Interface().(func(context.Context, Token) (Token, error)),
+			fVal.Convert(contextTokenReturnTokenError).Interface().(func(context.Context, Token) (Token, error)),
 		)
 	}
 
@@ -219,6 +225,7 @@ func AsValidator[S any, F ValidatorFunc[S]](f F) Validator[S] {
 		)
 	} else {
 		// we know this can be converted to this final type
+		ft := reflect.TypeOf((func(context.Context, S, Token) (Token, error))(nil))
 		return asValidatorSimple[S](
 			fVal.Convert(ft).Interface().(func(context.Context, S, Token) (Token, error)),
 		)

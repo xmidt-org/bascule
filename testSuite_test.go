@@ -14,14 +14,6 @@ const (
 	testScheme Scheme = "Test"
 )
 
-type testToken struct {
-	principal string
-}
-
-func (tt *testToken) Principal() string {
-	return tt.principal
-}
-
 // TestSuite holds generally useful functionality for testing bascule.
 type TestSuite struct {
 	suite.Suite
@@ -43,9 +35,7 @@ func (suite *TestSuite) testCredentials() Credentials {
 }
 
 func (suite *TestSuite) testToken() Token {
-	return &testToken{
-		principal: "test",
-	}
+	return testToken("test")
 }
 
 func (suite *TestSuite) contexter(ctx context.Context) Contexter {

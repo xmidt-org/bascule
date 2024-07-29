@@ -66,7 +66,7 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 				as = as.Append(
 					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
 						suite.Same(testCtx, ctx)
-						suite.Same(testToken, token)
+						suite.Equal(testToken, token)
 						suite.Equal(placeholderResource, resource)
 						return err
 					}),
@@ -126,7 +126,7 @@ func (suite *AuthorizersTestSuite) TestAny() {
 				as = as.Append(
 					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
 						suite.Same(testCtx, ctx)
-						suite.Same(testToken, token)
+						suite.Equal(testToken, token)
 						suite.Equal(placeholderResource, resource)
 						return err
 					}),
