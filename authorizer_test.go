@@ -63,10 +63,10 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 
 			for _, err := range testCase.results {
 				err := err
-				as.Add(
-					AuthorizerFunc[string](func(ctx context.Context, token Token, resource string) error {
+				as = as.Append(
+					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
 						suite.Same(testCtx, ctx)
-						suite.Same(testToken, token)
+						suite.Equal(testToken, token)
 						suite.Equal(placeholderResource, resource)
 						return err
 					}),
@@ -75,7 +75,7 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 
 			suite.Equal(
 				testCase.expectedErr,
-				as.Authorize(testCtx, testToken, placeholderResource),
+				as.Authorize(testCtx, placeholderResource, testToken),
 			)
 		})
 	}
@@ -123,10 +123,10 @@ func (suite *AuthorizersTestSuite) TestAny() {
 
 			for _, err := range testCase.results {
 				err := err
-				as.Add(
-					AuthorizerFunc[string](func(ctx context.Context, token Token, resource string) error {
+				as = as.Append(
+					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
 						suite.Same(testCtx, ctx)
-						suite.Same(testToken, token)
+						suite.Equal(testToken, token)
 						suite.Equal(placeholderResource, resource)
 						return err
 					}),
@@ -136,13 +136,13 @@ func (suite *AuthorizersTestSuite) TestAny() {
 			anyAs := as.Any()
 			suite.Equal(
 				testCase.expectedErr,
-				anyAs.Authorize(testCtx, testToken, placeholderResource),
+				anyAs.Authorize(testCtx, placeholderResource, testToken),
 			)
 
 			if len(as) > 0 {
 				// the any instance should be distinct
 				as[0] = AuthorizerFunc[string](
-					func(context.Context, Token, string) error {
+					func(context.Context, string, Token) error {
 						suite.Fail("should not have been called")
 						return nil
 					},
@@ -150,7 +150,7 @@ func (suite *AuthorizersTestSuite) TestAny() {
 
 				suite.Equal(
 					testCase.expectedErr,
-					anyAs.Authorize(testCtx, testToken, placeholderResource),
+					anyAs.Authorize(testCtx, placeholderResource, testToken),
 				)
 			}
 		})

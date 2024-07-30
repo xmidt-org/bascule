@@ -51,9 +51,9 @@ func WithTokenParser(scheme bascule.Scheme, tp bascule.TokenParser[*http.Request
 // WithAuthentication adds validators used for authentication to this Middleware.  Each
 // invocation of this option is cumulative.  Authentication validators are run in the order
 // supplied by this option.
-func WithAuthentication(v ...bascule.Validator) MiddlewareOption {
+func WithAuthentication(v ...bascule.Validator[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		m.authentication.Add(v...)
+		m.authentication = m.authentication.Append(v...)
 		return nil
 	})
 }
@@ -77,7 +77,7 @@ func WithChallenges(ch ...Challenge) MiddlewareOption {
 // This is useful for use cases like admin access or alternate capabilities.
 func WithAuthorization(a ...bascule.Authorizer[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		m.authorization.Add(a...)
+		m.authorization = m.authorization.Append(a...)
 		return nil
 	})
 }
@@ -114,7 +114,7 @@ func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 type Middleware struct {
 	credentialsParser bascule.CredentialsParser[*http.Request]
 	tokenParsers      bascule.TokenParsers[*http.Request]
-	authentication    bascule.Validators
+	authentication    bascule.Validators[*http.Request]
 	authorization     bascule.Authorizers[*http.Request]
 	challenges        Challenges
 
@@ -194,12 +194,12 @@ func (m *Middleware) getCredentialsAndToken(ctx context.Context, request *http.R
 	return
 }
 
-func (m *Middleware) authenticate(ctx context.Context, token bascule.Token) error {
-	return m.authentication.Validate(ctx, token)
+func (m *Middleware) authenticate(ctx context.Context, request *http.Request, token bascule.Token) (bascule.Token, error) {
+	return m.authentication.Validate(ctx, request, token)
 }
 
 func (m *Middleware) authorize(ctx context.Context, token bascule.Token, request *http.Request) error {
-	return m.authorization.Authorize(ctx, token, request)
+	return m.authorization.Authorize(ctx, request, token)
 }
 
 // frontDoor is the internal handler implementation that protects a handler
@@ -220,7 +220,7 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	}
 
 	ctx = bascule.WithCredentials(ctx, creds)
-	err = fd.middleware.authenticate(ctx, token)
+	token, err = fd.middleware.authenticate(ctx, request, token)
 	if err != nil {
 		// at this point in the workflow, the request has valid credentials.  we use
 		// StatusForbidden as the default because any failure to authenticate isn't a
