@@ -52,13 +52,6 @@ func (err *MissingHeaderError) StatusCode() int {
 	return http.StatusUnauthorized
 }
 
-// fastIsSpace tests an ASCII byte to see if it's whitespace.
-// HTTP headers are restricted to US-ASCII, so we don't need
-// the full unicode stack.
-func fastIsSpace(b byte) bool {
-	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\v' || b == '\f'
-}
-
 // DefaultCredentialsParser is the default algorithm used to produce HTTP credentials
 // from a source request.
 type DefaultCredentialsParser struct {

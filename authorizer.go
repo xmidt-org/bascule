@@ -34,8 +34,8 @@ type Authorizers[R any] []Authorizer[R]
 // Append tacks on one or more authorizers to this collection.  The possibly
 // new Authorizers instance is returned.  The semantics of this method are
 // the same as the built-in append.
-func (as Authorizers[R]) Append(a ...Authorizer[R]) Authorizers[R] {
-	return append(as, a...)
+func (as Authorizers[R]) Append(more ...Authorizer[R]) Authorizers[R] {
+	return append(as, more...)
 }
 
 // Authorize requires all authorizers in this sequence to allow access.  This

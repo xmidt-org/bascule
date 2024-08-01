@@ -10,10 +10,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const (
-	testScheme Scheme = "Test"
-)
-
 // TestSuite holds generally useful functionality for testing bascule.
 type TestSuite struct {
 	suite.Suite
@@ -25,13 +21,6 @@ func (suite *TestSuite) testContext() context.Context {
 		struct{}{},
 		"test value",
 	)
-}
-
-func (suite *TestSuite) testCredentials() Credentials {
-	return Credentials{
-		Scheme: testScheme,
-		Value:  "test",
-	}
 }
 
 func (suite *TestSuite) testToken() Token {

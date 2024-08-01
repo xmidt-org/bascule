@@ -94,10 +94,10 @@ func (vf validatorFunc[S]) Validate(ctx context.Context, source S, t Token) (nex
 }
 
 var (
-	tokenReturnError             = reflect.TypeOf((func(Token) error)(nil))
-	tokenReturnTokenAndError     = reflect.TypeOf((func(Token) (Token, error))(nil))
-	contextTokenReturnError      = reflect.TypeOf((func(context.Context, Token) error)(nil))
-	contextTokenReturnTokenError = reflect.TypeOf((func(context.Context, Token) (Token, error))(nil))
+	validatorTokenReturnError             = reflect.TypeOf((func(Token) error)(nil))
+	validatorTokenReturnTokenAndError     = reflect.TypeOf((func(Token) (Token, error))(nil))
+	validatorContextTokenReturnError      = reflect.TypeOf((func(context.Context, Token) error)(nil))
+	validatorContextTokenReturnTokenError = reflect.TypeOf((func(context.Context, Token) (Token, error))(nil))
 )
 
 // asValidatorSimple tries simple conversions on f.  This function will not catch
@@ -188,24 +188,24 @@ func AsValidator[S any, F ValidatorFunc[S]](f F) Validator[S] {
 	// require the source type.
 	fVal := reflect.ValueOf(f)
 	switch {
-	case fVal.CanConvert(tokenReturnError):
+	case fVal.CanConvert(validatorTokenReturnError):
 		return asValidatorSimple[S](
-			fVal.Convert(tokenReturnError).Interface().(func(Token) error),
+			fVal.Convert(validatorTokenReturnError).Interface().(func(Token) error),
 		)
 
-	case fVal.CanConvert(tokenReturnTokenAndError):
+	case fVal.CanConvert(validatorTokenReturnTokenAndError):
 		return asValidatorSimple[S](
-			fVal.Convert(tokenReturnTokenAndError).Interface().(func(Token) (Token, error)),
+			fVal.Convert(validatorTokenReturnTokenAndError).Interface().(func(Token) (Token, error)),
 		)
 
-	case fVal.CanConvert(contextTokenReturnError):
+	case fVal.CanConvert(validatorContextTokenReturnError):
 		return asValidatorSimple[S](
-			fVal.Convert(contextTokenReturnError).Interface().(func(context.Context, Token) error),
+			fVal.Convert(validatorContextTokenReturnError).Interface().(func(context.Context, Token) error),
 		)
 
-	case fVal.CanConvert(contextTokenReturnTokenError):
+	case fVal.CanConvert(validatorContextTokenReturnTokenError):
 		return asValidatorSimple[S](
-			fVal.Convert(contextTokenReturnTokenError).Interface().(func(context.Context, Token) (Token, error)),
+			fVal.Convert(validatorContextTokenReturnTokenError).Interface().(func(context.Context, Token) (Token, error)),
 		)
 	}
 

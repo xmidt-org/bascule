@@ -34,3 +34,25 @@ func assertValidators[S any](t mock.TestingT, vs ...Validator[S]) (passed bool) 
 
 	return
 }
+
+type mockTokenParser[S any] struct {
+	mock.Mock
+}
+
+func (m *mockTokenParser[S]) Parse(ctx context.Context, source S) (Token, error) {
+	args := m.Called(ctx, source)
+	t, _ := args.Get(0).(Token)
+	return t, args.Error(1)
+}
+
+func (m *mockTokenParser[S]) ExpectParse(ctx context.Context, source S) *mock.Call {
+	return m.On("Parse", ctx, source)
+}
+
+func assertTokenParsers[S any](t mock.TestingT, tps ...TokenParser[S]) (passed bool) {
+	for _, p := range tps {
+		passed = p.(*mockTokenParser[S]).AssertExpectations(t) && passed
+	}
+
+	return
+}
