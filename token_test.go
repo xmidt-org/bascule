@@ -93,7 +93,7 @@ func (suite *TokenParserSuite) appendMissing(tps TokenParsers[int], count int) T
 	for repeat := 0; repeat < count; repeat++ {
 		m := new(mockTokenParser[int])
 		m.ExpectParse(suite.expectedCtx, suite.expectedSource).
-			Return(nil, ErrorMissingCredentials).Once()
+			Return(nil, ErrMissingCredentials).Once()
 		tps = tps.Append(m)
 	}
 
@@ -154,7 +154,7 @@ func (suite *TokenParserSuite) testTokenParsersEmpty() {
 	var tps TokenParsers[int]
 	t, err := tps.Parse(suite.expectedCtx, suite.expectedSource)
 	suite.Nil(t)
-	suite.ErrorIs(err, ErrorNoTokenParsers)
+	suite.ErrorIs(err, ErrNoTokenParsers)
 }
 
 func (suite *TokenParserSuite) testTokenParsersSuccess() {

@@ -10,19 +10,19 @@ import (
 )
 
 var (
-	// ErrorNoTokenParsers is returned by TokenParsers.Parse to indicate an empty array.
+	// ErrNoTokenParsers is returned by TokenParsers.Parse to indicate an empty array.
 	// This distinguishes the absence of a token from a source from the absence of a token
 	// because of configuration, possibly intentionally.
-	ErrorNoTokenParsers = errors.New("no token parsers")
+	ErrNoTokenParsers = errors.New("no token parsers")
 
-	// ErrorMissingCredentials is returned by TokenParser.Parse to indicate that a source
+	// ErrMissingCredentials is returned by TokenParser.Parse to indicate that a source
 	// object did not have any credentials recognized by that parser.
-	ErrorMissingCredentials = errors.New("missing credentials")
+	ErrMissingCredentials = errors.New("missing credentials")
 
-	// ErrorInvalidCredentials is returned by TokenParser.Parse to indicate that a source
+	// ErrInvalidCredentials is returned by TokenParser.Parse to indicate that a source
 	// did contain recognizable credentials, but those credentials could not be parsed,
 	// possibly due to bad formatting.
-	ErrorInvalidCredentials = errors.New("invalid credentials")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 // Token is a runtime representation of credentials.  This interface will be further
@@ -106,7 +106,7 @@ func (tps TokenParsers[S]) Append(more ...TokenParser[S]) TokenParsers[S] {
 
 // Parse executes each TokenParser in turn.
 //
-// If this TokenParsers is empty, this method returns ErrorNoTokenParsers.
+// If this TokenParsers is empty, this method returns ErrNoTokenParsers.
 //
 // If a parser returns MissingCredentials, it is skipped.  If all parsers return
 // MissingCredentials, the last error is returned.
@@ -117,10 +117,10 @@ func (tps TokenParsers[S]) Append(more ...TokenParser[S]) TokenParsers[S] {
 // this aggregate method.
 func (tps TokenParsers[S]) Parse(ctx context.Context, source S) (t Token, err error) {
 	if len(tps) == 0 {
-		err = ErrorNoTokenParsers
+		err = ErrNoTokenParsers
 	}
 
-	for i := 0; i < len(tps) && t == nil && (err == nil || errors.Is(err, ErrorMissingCredentials)); i++ {
+	for i := 0; i < len(tps) && t == nil && (err == nil || errors.Is(err, ErrMissingCredentials)); i++ {
 		t, err = tps[i].Parse(ctx, source)
 	}
 
