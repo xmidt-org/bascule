@@ -14,14 +14,14 @@ type ContextTestSuite struct {
 	TestSuite
 }
 
-func (suite *ContextTestSuite) testGetTokenSuccess() {
+func (suite *ContextTestSuite) testGetSuccess() {
 	ctx := context.WithValue(
 		context.Background(),
 		tokenContextKey{},
 		suite.testToken(),
 	)
 
-	token, ok := GetToken(ctx)
+	token, ok := Get(ctx)
 	suite.Require().True(ok)
 	suite.Equal(
 		suite.testToken(),
@@ -29,26 +29,26 @@ func (suite *ContextTestSuite) testGetTokenSuccess() {
 	)
 }
 
-func (suite *ContextTestSuite) testGetTokenMissing() {
-	token, ok := GetToken(context.Background())
+func (suite *ContextTestSuite) testGetMissing() {
+	token, ok := Get(context.Background())
 	suite.Nil(token)
 	suite.False(ok)
 }
 
-func (suite *ContextTestSuite) testGetTokenWrongType() {
+func (suite *ContextTestSuite) testGetWrongType() {
 	ctx := context.WithValue(context.Background(), tokenContextKey{}, 123)
-	token, ok := GetToken(ctx)
+	token, ok := Get(ctx)
 	suite.Nil(token)
 	suite.False(ok)
 }
 
-func (suite *ContextTestSuite) TestGetToken() {
-	suite.Run("Success", suite.testGetTokenSuccess)
-	suite.Run("Missing", suite.testGetTokenMissing)
-	suite.Run("WrongType", suite.testGetTokenWrongType)
+func (suite *ContextTestSuite) TestGet() {
+	suite.Run("Success", suite.testGetSuccess)
+	suite.Run("Missing", suite.testGetMissing)
+	suite.Run("WrongType", suite.testGetWrongType)
 }
 
-func (suite *ContextTestSuite) testGetTokenFromSuccess() {
+func (suite *ContextTestSuite) testGetFromSuccess() {
 	c := suite.contexter(
 		context.WithValue(
 			context.Background(),
@@ -57,7 +57,7 @@ func (suite *ContextTestSuite) testGetTokenFromSuccess() {
 		),
 	)
 
-	token, ok := GetTokenFrom(c)
+	token, ok := GetFrom(c)
 	suite.Require().True(ok)
 	suite.Equal(
 		suite.testToken(),
@@ -65,8 +65,8 @@ func (suite *ContextTestSuite) testGetTokenFromSuccess() {
 	)
 }
 
-func (suite *ContextTestSuite) testGetTokenFromMissing() {
-	token, ok := GetTokenFrom(
+func (suite *ContextTestSuite) testGetFromMissing() {
+	token, ok := GetFrom(
 		suite.contexter(context.Background()),
 	)
 
@@ -74,20 +74,20 @@ func (suite *ContextTestSuite) testGetTokenFromMissing() {
 	suite.False(ok)
 }
 
-func (suite *ContextTestSuite) testGetTokenFromWrongType() {
+func (suite *ContextTestSuite) testGetFromWrongType() {
 	c := suite.contexter(
 		context.WithValue(context.Background(), tokenContextKey{}, 123),
 	)
 
-	token, ok := GetTokenFrom(c)
+	token, ok := GetFrom(c)
 	suite.Nil(token)
 	suite.False(ok)
 }
 
-func (suite *ContextTestSuite) TestGetTokenFrom() {
-	suite.Run("Success", suite.testGetTokenFromSuccess)
-	suite.Run("Missing", suite.testGetTokenFromMissing)
-	suite.Run("WrongType", suite.testGetTokenFromWrongType)
+func (suite *ContextTestSuite) TestGetFrom() {
+	suite.Run("Success", suite.testGetFromSuccess)
+	suite.Run("Missing", suite.testGetFromMissing)
+	suite.Run("WrongType", suite.testGetFromWrongType)
 }
 
 func (suite *ContextTestSuite) TestWithToken() {

@@ -23,31 +23,6 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 	return mof(m)
 }
 
-// WithCredentialsParser configures a credentials parser for this Middleware.  If not supplied
-// or if the supplied CredentialsParser is nil, DefaultCredentialsParser() is used.
-func WithCredentialsParser(cp bascule.CredentialsParser[*http.Request]) MiddlewareOption {
-	return middlewareOptionFunc(func(m *Middleware) error {
-		if cp != nil {
-			m.credentialsParser = cp
-		} else {
-			m.credentialsParser = DefaultCredentialsParser{}
-		}
-
-		return nil
-	})
-}
-
-// WithTokenParser registers a token parser for the given scheme.  If the scheme has
-// already been registered, the given parser will replace that registration.
-//
-// The parser cannot be nil.
-func WithTokenParser(scheme bascule.Scheme, tp bascule.TokenParser[*http.Request]) MiddlewareOption {
-	return middlewareOptionFunc(func(m *Middleware) error {
-		m.tokenParsers.Register(scheme, tp)
-		return nil
-	})
-}
-
 // WithAuthentication adds validators used for authentication to this Middleware.  Each
 // invocation of this option is cumulative.  Authentication validators are run in the order
 // supplied by this option.
@@ -112,11 +87,10 @@ func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 
 // Middleware is an immutable configuration that can decorate multiple handlers.
 type Middleware struct {
-	credentialsParser bascule.CredentialsParser[*http.Request]
-	tokenParsers      bascule.TokenParsers[*http.Request]
-	authentication    bascule.Validators[*http.Request]
-	authorization     bascule.Authorizers[*http.Request]
-	challenges        Challenges
+	tokenParsers   bascule.TokenParsers[*http.Request]
+	authentication bascule.Validators[*http.Request]
+	authorization  bascule.Authorizers[*http.Request]
+	challenges     Challenges
 
 	errorStatusCoder ErrorStatusCoder
 	errorMarshaler   ErrorMarshaler
