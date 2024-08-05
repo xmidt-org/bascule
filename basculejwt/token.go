@@ -37,16 +37,6 @@ type Claims interface {
 	Subject() string
 }
 
-// Token is the interface implemented by JWT-based tokens supplied by this package.
-// User-defined claims can be accessed through the bascule.Attributes interface.
-//
-// Note that the Princpal method returns the same value as the Subject claim.
-type Token interface {
-	bascule.Token
-	bascule.Attributes
-	Claims
-}
-
 // token is the internal implementation of the JWT Token interface.  It fronts
 // a lestrrat-go Token.
 type token struct {
@@ -59,15 +49,13 @@ func (t *token) Principal() string {
 
 // tokenParser is the canonical parser for bascule that deals with JWTs.
 // This parser does not use the source.
-type tokenParser[S any] struct {
+type tokenParser struct {
 	options []jwt.ParseOption
 }
 
 // NewTokenParser constructs a parser using the supplied set of parse options.
-// The returned parser will produce tokens that implement the Token interface
-// in this package.
-func NewTokenParser[S any](options ...jwt.ParseOption) (bascule.TokenParser[S], error) {
-	return &tokenParser[S]{
+func NewTokenParser(options ...jwt.ParseOption) (bascule.TokenParser[string], error) {
+	return &tokenParser{
 		options: append(
 			make([]jwt.ParseOption, 0, len(options)),
 			options...,
@@ -75,8 +63,10 @@ func NewTokenParser[S any](options ...jwt.ParseOption) (bascule.TokenParser[S], 
 	}, nil
 }
 
-func (tp *tokenParser[S]) Parse(_ context.Context, _ S, c bascule.Credentials) (bascule.Token, error) {
-	jwtToken, err := jwt.ParseString(c.Value, tp.options...)
+// Parse parses the value as a JWT, using the parsing options passed to NewTokenParser.
+// The returned Token will implement the bascule.Attributes and Claims interfaces.
+func (tp *tokenParser) Parse(ctx context.Context, value string) (bascule.Token, error) {
+	jwtToken, err := jwt.ParseString(value, tp.options...)
 	if err != nil {
 		return nil, err
 	}
