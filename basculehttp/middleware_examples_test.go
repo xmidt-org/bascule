@@ -11,10 +11,21 @@ import (
 	"github.com/xmidt-org/bascule/v1"
 )
 
-// ExampleMiddleware_simple illustrates how to use a basculehttp Middleware with
-// just the defaults.
-func ExampleMiddleware_simple() {
-	m, err := NewMiddleware() // all defaults
+// ExampleMiddleware_basicauth illustrates how to use a basculehttp Middleware with
+// just basic auth.
+func ExampleMiddleware_basicauth() {
+	tp, err := NewAuthorizationParser(
+		WithScheme(SchemeBasic, BasicTokenParser{}),
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	m, err := NewMiddleware(
+		WithTokenParsers(tp),
+	)
+
 	if err != nil {
 		panic(err)
 	}

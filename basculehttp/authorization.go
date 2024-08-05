@@ -72,7 +72,8 @@ func WithAuthorizationHeader(header string) AuthorizationParserOption {
 
 func WithScheme(scheme Scheme, parser bascule.TokenParser[string]) AuthorizationParserOption {
 	return authorizationParserOptionFunc(func(ap *AuthorizationParser) error {
-		ap.parsers[scheme] = parser
+		// we want case-insensitive matches, so lowercase everything
+		ap.parsers[scheme.lower()] = parser
 		return nil
 	})
 }
@@ -100,6 +101,28 @@ func NewAuthorizationParser(opts ...AuthorizationParserOption) (*AuthorizationPa
 	return ap, nil
 }
 
-func (ap *AuthorizationParser) Parse(_ context.Context, source *http.Request) (bascule.Token, error) {
-	return nil, nil // TODO
+// Parse extracts the appropriate header, Authorization by default, and parses the
+// scheme and value.  Schemes are case-insensitive, e.g. BASIC and Basic are the same scheme.
+//
+// If a token parser is registered for the given scheme, that token parser is invoked.
+// Otherwise, UnsupportedSchemeError is returned, indicating the scheme in question.
+func (ap *AuthorizationParser) Parse(ctx context.Context, source *http.Request) (bascule.Token, error) {
+	authValue := source.Header.Get(ap.header)
+	if len(authValue) == 0 {
+		return nil, bascule.ErrMissingCredentials
+	}
+
+	scheme, value, err := ParseAuthorization(authValue)
+	if err != nil {
+		return nil, err
+	}
+
+	p, registered := ap.parsers[scheme.lower()]
+	if !registered {
+		return nil, &UnsupportedSchemeError{
+			Scheme: scheme,
+		}
+	}
+
+	return p.Parse(ctx, value)
 }
