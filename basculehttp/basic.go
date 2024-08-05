@@ -5,40 +5,63 @@ package basculehttp
 
 import (
 	"context"
-	"net/http"
+	"encoding/base64"
+	"strings"
 
 	"github.com/xmidt-org/bascule/v1"
 )
 
-// BasicToken is a bascule.Token that results from Basic authorization.
-type BasicToken struct {
-	UserName string
-	Password string
+// BasicToken is the interface that Basic Auth tokens implement.
+type BasicToken interface {
+	UserName() string
+	Password() string
 }
 
-// Principal returns the user name from Basic auth.
-func (bt BasicToken) Principal() string {
-	return bt.UserName
+// basicToken is the internal basic token struct that results from
+// parsing a Basic Authorization header value.
+type basicToken struct {
+	userName string
+	password string
 }
 
-// BasicTokenParser is a bascule.TokenParser expects Basic auth to
-// be present.
+func (bt basicToken) Principal() string {
+	return bt.userName
+}
+
+func (bt basicToken) UserName() string {
+	return bt.userName
+}
+
+func (bt basicToken) Password() string {
+	return bt.password
+}
+
+// BasicTokenParser is a string-based bascule.TokenParser that produces
+// BasicToken instances from strings.
+//
+// An instance of this parser may be passed to WithScheme in order to
+// configure an AuthorizationParser.
 type BasicTokenParser struct{}
 
-// Parse extracts the Basic auth credentials from the source request.
-// The net/http package is used to do this parsing.
-//
-// If no Basic auth credentials could be found, this method returns
-// bascule.MissingCredentials.
-func (btp BasicTokenParser) Parse(_ context.Context, source *http.Request) (t bascule.Token, err error) {
-	if userName, password, ok := source.BasicAuth(); ok {
-		t = BasicToken{
-			UserName: userName,
-			Password: password,
-		}
-	} else {
-		err = bascule.MissingCredentials
+// Parse assumes that value is of the format required by https://datatracker.ietf.org/doc/html/rfc7617.
+// The returned Token will return the basic auth username from its Principal() method.
+// The returned Token will also implement BasicToken.
+func (BasicTokenParser) Parse(_ context.Context, value string) (bascule.Token, error) {
+	// this mimics what the stdlib does at net/http.Request.BasicAuth()
+	raw, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return nil, bascule.ErrInvalidCredentials
 	}
 
-	return
+	var (
+		bt basicToken
+		ok bool
+	)
+
+	bt.userName, bt.password, ok = strings.Cut(string(raw), ":")
+	if ok {
+		return bt, nil
+	}
+
+	return nil, bascule.ErrInvalidCredentials
 }

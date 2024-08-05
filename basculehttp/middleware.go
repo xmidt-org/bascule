@@ -23,6 +23,16 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 	return mof(m)
 }
 
+// WithTokenParsers appends token parsers to the chain used by the middleware.
+// Each invocation of this option is cumulative. Token parsers are run in the
+// order supplied via this option.
+func WithTokenParsers(tps ...bascule.TokenParser[*http.Request]) MiddlewareOption {
+	return middlewareOptionFunc(func(m *Middleware) error {
+		m.tokenParsers = m.tokenParsers.Append(tps...)
+		return nil
+	})
+}
+
 // WithAuthentication adds validators used for authentication to this Middleware.  Each
 // invocation of this option is cumulative.  Authentication validators are run in the order
 // supplied by this option.
@@ -100,10 +110,8 @@ type Middleware struct {
 // No options will result in a Middleware with default behavior.
 func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
 	m = &Middleware{
-		credentialsParser: DefaultCredentialsParser{},
-		tokenParsers:      DefaultTokenParsers(),
-		errorStatusCoder:  DefaultErrorStatusCoder,
-		errorMarshaler:    DefaultErrorMarshaler,
+		errorStatusCoder: DefaultErrorStatusCoder,
+		errorMarshaler:   DefaultErrorMarshaler,
 	}
 
 	for _, o := range opts {
@@ -121,7 +129,7 @@ func (m *Middleware) Then(protected http.Handler) http.Handler {
 	}
 
 	return &frontDoor{
-		middleware: m,
+		Middleware: m,
 		protected:  protected,
 	}
 }
@@ -143,7 +151,11 @@ func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
 // If the error supports JSON or text marshaling, that is used for the response body.  Otherwise, a text/plain
 // response with the Error() method's text is used.
 func (m *Middleware) writeError(response http.ResponseWriter, request *http.Request, defaultCode int, err error) {
-	statusCode := m.errorStatusCoder(request, defaultCode, err)
+	statusCode := m.errorStatusCoder(request, err)
+	if statusCode < 100 {
+		statusCode = defaultCode
+	}
+
 	if statusCode == http.StatusUnauthorized {
 		m.challenges.WriteHeader(response.Header())
 	}
@@ -159,13 +171,8 @@ func (m *Middleware) writeError(response http.ResponseWriter, request *http.Requ
 	}
 }
 
-func (m *Middleware) getCredentialsAndToken(ctx context.Context, request *http.Request) (c bascule.Credentials, t bascule.Token, err error) {
-	c, err = m.credentialsParser.Parse(request.Context(), request)
-	if err == nil {
-		t, err = m.tokenParsers.Parse(ctx, request, c)
-	}
-
-	return
+func (m *Middleware) parseToken(ctx context.Context, request *http.Request) (bascule.Token, error) {
+	return m.tokenParsers.Parse(ctx, request)
 }
 
 func (m *Middleware) authenticate(ctx context.Context, request *http.Request, token bascule.Token) (bascule.Token, error) {
@@ -179,35 +186,34 @@ func (m *Middleware) authorize(ctx context.Context, token bascule.Token, request
 // frontDoor is the internal handler implementation that protects a handler
 // using the bascule workflow.
 type frontDoor struct {
-	middleware *Middleware
-	protected  http.Handler
+	*Middleware
+	protected http.Handler
 }
 
 // ServeHTTP implements the bascule workflow, using the configured middleware.
 func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
-	creds, token, err := fd.middleware.getCredentialsAndToken(ctx, request)
+	token, err := fd.parseToken(ctx, request)
 	if err != nil {
 		// by default, failing to parse a token is a malformed request
-		fd.middleware.writeError(response, request, http.StatusBadRequest, err)
+		fd.writeError(response, request, http.StatusBadRequest, err)
 		return
 	}
 
-	ctx = bascule.WithCredentials(ctx, creds)
-	token, err = fd.middleware.authenticate(ctx, request, token)
+	token, err = fd.authenticate(ctx, request, token)
 	if err != nil {
 		// at this point in the workflow, the request has valid credentials.  we use
 		// StatusForbidden as the default because any failure to authenticate isn't a
 		// case where the caller needs to supply credentials.  Rather, the supplied
 		// credentials aren't adequate enough.
-		fd.middleware.writeError(response, request, http.StatusForbidden, err)
+		fd.writeError(response, request, http.StatusForbidden, err)
 		return
 	}
 
 	ctx = bascule.WithToken(ctx, token)
-	err = fd.middleware.authorize(ctx, token, request)
+	err = fd.authorize(ctx, token, request)
 	if err != nil {
-		fd.middleware.writeError(response, request, http.StatusForbidden, err)
+		fd.writeError(response, request, http.StatusForbidden, err)
 		return
 	}
 

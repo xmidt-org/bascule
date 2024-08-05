@@ -22,7 +22,7 @@ func ExampleMiddleware_simple() {
 	// decorate a handler that needs authorization
 	h := m.ThenFunc(
 		func(response http.ResponseWriter, request *http.Request) {
-			t, ok := bascule.GetTokenFrom(request)
+			t, ok := bascule.GetFrom(request)
 			if !ok {
 				panic("no token found")
 			}
