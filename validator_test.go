@@ -23,13 +23,7 @@ type ValidatorsTestSuite struct {
 }
 
 func (suite *ValidatorsTestSuite) SetupSuite() {
-	type contextKey struct{}
-	suite.expectedCtx = context.WithValue(
-		context.Background(),
-		contextKey{},
-		"value",
-	)
-
+	suite.expectedCtx = suite.testContext()
 	suite.expectedSource = 123
 	suite.inputToken = testToken("input token")
 	suite.outputToken = testToken("output token")

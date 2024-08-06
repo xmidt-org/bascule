@@ -11,10 +11,21 @@ import (
 	"github.com/xmidt-org/bascule/v1"
 )
 
-// ExampleMiddleware_simple illustrates how to use a basculehttp Middleware with
-// just the defaults.
-func ExampleMiddleware_simple() {
-	m, err := NewMiddleware() // all defaults
+// ExampleMiddleware_basicauth illustrates how to use a basculehttp Middleware with
+// just basic auth.
+func ExampleMiddleware_basicauth() {
+	tp, err := NewAuthorizationParser(
+		WithScheme(SchemeBasic, BasicTokenParser{}),
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	m, err := NewMiddleware(
+		WithTokenParsers(tp),
+	)
+
 	if err != nil {
 		panic(err)
 	}
@@ -22,7 +33,7 @@ func ExampleMiddleware_simple() {
 	// decorate a handler that needs authorization
 	h := m.ThenFunc(
 		func(response http.ResponseWriter, request *http.Request) {
-			t, ok := bascule.GetTokenFrom(request)
+			t, ok := bascule.GetFrom(request)
 			if !ok {
 				panic("no token found")
 			}

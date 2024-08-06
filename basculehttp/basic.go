@@ -6,55 +6,62 @@ package basculehttp
 import (
 	"context"
 	"encoding/base64"
-	"net/http"
 	"strings"
 
 	"github.com/xmidt-org/bascule/v1"
 )
 
-// InvalidBasicAuthError indicates that the Basic credentials were improperly
-// encoded, either due to base64 issues or formatting.
-type InvalidBasicAuthError struct {
-	// Cause represents the lower level error that occurred, e.g. a base64
-	// encoding error.
-	Cause error
+// BasicToken is the interface that Basic Auth tokens implement.
+type BasicToken interface {
+	UserName() string
+	Password() string
 }
 
-func (err *InvalidBasicAuthError) Unwrap() error { return err.Cause }
-
-func (err *InvalidBasicAuthError) Error() string {
-	var o strings.Builder
-	o.WriteString("Basic auth string not encoded properly")
-
-	if err.Cause != nil {
-		o.WriteString(": ")
-		o.WriteString(err.Cause.Error())
-	}
-
-	return o.String()
+// basicToken is the internal basic token struct that results from
+// parsing a Basic Authorization header value.
+type basicToken struct {
+	userName string
+	password string
 }
 
-type basicTokenParser struct{}
+func (bt basicToken) Principal() string {
+	return bt.userName
+}
 
-func (btp basicTokenParser) Parse(_ context.Context, _ *http.Request, c bascule.Credentials) (t bascule.Token, err error) {
-	var decoded []byte
-	decoded, err = base64.StdEncoding.DecodeString(c.Value)
+func (bt basicToken) UserName() string {
+	return bt.userName
+}
+
+func (bt basicToken) Password() string {
+	return bt.password
+}
+
+// BasicTokenParser is a string-based bascule.TokenParser that produces
+// BasicToken instances from strings.
+//
+// An instance of this parser may be passed to WithScheme in order to
+// configure an AuthorizationParser.
+type BasicTokenParser struct{}
+
+// Parse assumes that value is of the format required by https://datatracker.ietf.org/doc/html/rfc7617.
+// The returned Token will return the basic auth username from its Principal() method.
+// The returned Token will also implement BasicToken.
+func (BasicTokenParser) Parse(_ context.Context, value string) (bascule.Token, error) {
+	// this mimics what the stdlib does at net/http.Request.BasicAuth()
+	raw, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		err = &InvalidBasicAuthError{
-			Cause: err,
-		}
-
-		return
+		return nil, bascule.ErrInvalidCredentials
 	}
 
-	username, _, found := strings.Cut(string(decoded), ":")
-	if found {
-		t = &Token{
-			principal: username,
-		}
-	} else {
-		err = &InvalidBasicAuthError{}
+	var (
+		bt basicToken
+		ok bool
+	)
+
+	bt.userName, bt.password, ok = strings.Cut(string(raw), ":")
+	if ok {
+		return bt, nil
 	}
 
-	return
+	return nil, bascule.ErrInvalidCredentials
 }

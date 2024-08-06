@@ -14,44 +14,42 @@ import (
 
 // ErrorStatusCoder is a strategy for determining the HTTP response code for an error.
 //
-// The defaultCode is used when this strategy cannot determine the code from the error.
-// This default can be a sentinel for decorators, e.g. zero (0), or can be an actual
-// status code.
-type ErrorStatusCoder func(request *http.Request, defaultCode int, err error) int
+// If this closure returns a value less than 100, which is the smallest valid HTTP
+// response code, the caller should supply a useful default.
+type ErrorStatusCoder func(request *http.Request, err error) int
 
 // DefaultErrorStatusCoder is the strategy used when no ErrorStatusCoder is supplied.
-// This function first tries to see if the error implements bascule.Error, in which case
-// the error's type will dictate the response code.  Next, if the wrapper error provides
-// a StatusCode() method, that code is used.  Failing all of that, the defaultCode is
-// returned.
 //
-// This function can also be decorated.  Passing a sentinel value for defaultCode allows
-// a decorator to take further action.
-func DefaultErrorStatusCoder(_ *http.Request, defaultCode int, err error) int {
-	switch bascule.GetErrorType(err) {
-	case bascule.ErrorTypeMissingCredentials:
-		return http.StatusUnauthorized
-
-	case bascule.ErrorTypeBadCredentials:
-		return http.StatusBadRequest
-
-	case bascule.ErrorTypeInvalidCredentials:
-		return http.StatusForbidden
-
-	case bascule.ErrorTypeForbidden:
-		return http.StatusForbidden
-	}
-
+// If err has bascule.ErrMissingCredentials in its chain, this function returns
+// http.StatusUnauthorized.
+//
+// If err has bascule.ErrInvalidCredentials in its chain, this function returns
+// http.StatusBadRequest.
+//
+// Failing the previous two checks, if the error provides a StatusCode() method,
+// the return value from that method is used.
+//
+// Otherwise, this method returns 0 to indicate that it doesn't know how to
+// produce a status code from the error.
+func DefaultErrorStatusCoder(_ *http.Request, err error) int {
 	type statusCoder interface {
 		StatusCode() int
 	}
 
 	var sc statusCoder
-	if errors.As(err, &sc) {
+
+	switch {
+	case errors.Is(err, bascule.ErrMissingCredentials):
+		return http.StatusUnauthorized
+
+	case errors.Is(err, bascule.ErrInvalidCredentials):
+		return http.StatusBadRequest
+
+	case errors.As(err, &sc):
 		return sc.StatusCode()
 	}
 
-	return defaultCode
+	return 0
 }
 
 // ErrorMarshaler is a strategy for marshaling an error's contents, particularly to

@@ -6,17 +6,9 @@ package basculehttp
 import (
 	"net/http"
 	"strings"
-
-	"github.com/xmidt-org/bascule/v1"
 )
 
 const (
-	// BasicScheme is the name of the basic HTTP authentication scheme.
-	BasicScheme bascule.Scheme = "Basic"
-
-	// BearerScheme is the name of the bearer HTTP authentication scheme.
-	BearerScheme bascule.Scheme = "Bearer"
-
 	// WwwAuthenticateHeaderName is the HTTP header used for StatusUnauthorized challenges.
 	WwwAuthenticateHeaderName = "WWW-Authenticate"
 
@@ -63,7 +55,7 @@ func (chs Challenges) WriteHeader(h http.Header) {
 type BasicChallenge struct {
 	// Scheme is the name of scheme supplied in the challenge.  If this
 	// field is unset, BasicScheme is used.
-	Scheme bascule.Scheme
+	Scheme Scheme
 
 	// Realm is the name of the realm for the challenge.  If this field
 	// is unset, DefaultBasicRealm is used.
@@ -81,7 +73,7 @@ func (bc BasicChallenge) FormatAuthenticate(o strings.Builder) {
 	if len(bc.Scheme) > 0 {
 		o.WriteString(string(bc.Scheme))
 	} else {
-		o.WriteString(string(BasicScheme))
+		o.WriteString(string(SchemeBasic))
 	}
 
 	o.WriteString(` realm="`)
@@ -100,7 +92,7 @@ func (bc BasicChallenge) FormatAuthenticate(o strings.Builder) {
 type BearerChallenge struct {
 	// Scheme is the name of scheme supplied in the challenge.  If this
 	// field is unset, BearerScheme is used.
-	Scheme bascule.Scheme
+	Scheme Scheme
 
 	// Realm is the name of the realm for the challenge.  If this field
 	// is unset, DefaultBearerRealm is used.
@@ -114,7 +106,7 @@ func (bc BearerChallenge) FormatAuthenticate(o strings.Builder) {
 	if len(bc.Scheme) > 0 {
 		o.WriteString(string(bc.Scheme))
 	} else {
-		o.WriteString(string(BasicScheme))
+		o.WriteString(string(SchemeBearer))
 	}
 
 	o.WriteString(` realm="`)
