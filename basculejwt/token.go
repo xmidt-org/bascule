@@ -40,11 +40,39 @@ type Claims interface {
 // token is the internal implementation of the JWT Token interface.  It fronts
 // a lestrrat-go Token.
 type token struct {
-	jwt.Token
+	jwt jwt.Token
 }
 
-func (t *token) Principal() string {
-	return t.Token.Subject()
+func (t token) Audience() []string {
+	return t.jwt.Audience()
+}
+
+func (t token) Expiration() time.Time {
+	return t.jwt.Expiration()
+}
+
+func (t token) IssuedAt() time.Time {
+	return t.jwt.IssuedAt()
+}
+
+func (t token) Issuer() string {
+	return t.jwt.Issuer()
+}
+
+func (t token) JwtID() string {
+	return t.jwt.JwtID()
+}
+
+func (t token) NotBefore() time.Time {
+	return t.jwt.NotBefore()
+}
+
+func (t token) Subject() string {
+	return t.jwt.Subject()
+}
+
+func (t token) Principal() string {
+	return t.jwt.Subject()
 }
 
 // tokenParser is the canonical parser for bascule that deals with JWTs.
@@ -72,6 +100,6 @@ func (tp *tokenParser) Parse(ctx context.Context, value string) (bascule.Token, 
 	}
 
 	return &token{
-		Token: jwtToken,
+		jwt: jwtToken,
 	}, nil
 }
