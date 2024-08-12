@@ -4,45 +4,45 @@ Upstream-Contact: Weston Schmidt <weston_scmidt@alumni.purdue.edu>
 Source: https://github.com/xmidt-org/bascule
 
 Files: CONTRIBUTING.md
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: .golangci.yaml
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: go.mod
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: go.sum
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: .gitignore
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: NOTICE
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: CHANGELOG.md
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: MAINTAINERS.md
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: README.md
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: .whitesource
-Copyright: SPDX-FileCopyrightText: 2020 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
 Files: eventType_string.go
-Copyright: SPDX-FileCopyrightText: 2020 Comcast Cable Communications Management, LLC
+Copyright: SPDX-FileCopyrightText: 2024 Comcast Cable Communications Management, LLC
 License: Apache-2.0
