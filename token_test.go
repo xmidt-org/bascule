@@ -24,7 +24,7 @@ type TokenParserSuite struct {
 func (suite *TokenParserSuite) SetupSuite() {
 	suite.expectedCtx = suite.testContext()
 	suite.expectedSource = 123
-	suite.expectedToken = testToken("expected token")
+	suite.expectedToken = stubToken("expected token")
 	suite.expectedErr = errors.New("expected token parser error")
 }
 

@@ -9,9 +9,35 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type testToken string
+type stubToken string
 
-func (tt testToken) Principal() string { return string(tt) }
+func (t stubToken) Principal() string { return string(t) }
+
+type mockToken struct {
+	mock.Mock
+}
+
+func (m *mockToken) Principal() string {
+	return m.Called().String(0)
+}
+
+func (m *mockToken) ExpectPrincipal(v string) *mock.Call {
+	return m.On("Principal").Return(v)
+}
+
+type mockTokenWithCapabilities struct {
+	mockToken
+}
+
+func (m *mockTokenWithCapabilities) Capabilities() []string {
+	args := m.Called()
+	caps, _ := args.Get(0).([]string)
+	return caps
+}
+
+func (m *mockTokenWithCapabilities) ExpectCapabilities(caps ...string) *mock.Call {
+	return m.On("Capabilities").Return(caps)
+}
 
 type mockValidator[S any] struct {
 	mock.Mock
