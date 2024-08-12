@@ -103,38 +103,3 @@ func (ls Listeners[S]) OnEvent(e Event[S]) {
 		l.OnEvent(e)
 	}
 }
-
-// filteredListener is the internal type returned by FilterEvents.
-type filteredListener[S any] struct {
-	next  Listener[S]
-	types map[EventType]bool
-}
-
-func (fl filteredListener[S]) OnEvent(e Event[S]) {
-	if fl.types[e.Type] {
-		fl.next.OnEvent(e)
-	}
-}
-
-// FilterEvents decorates a given Listener so that it only receives events of
-// certain types.  The decorated Listener is returned.  This method simplifies
-// client code by removing the need for if/else or switch/case blocks to check
-// the event's Type field in certain situations.
-//
-// If types is empty, the Listener is returned as is.
-func FilterEvents[S any](l Listener[S], types ...EventType) Listener[S] {
-	if len(types) == 0 {
-		return l
-	}
-
-	fl := filteredListener[S]{
-		next:  l,
-		types: make(map[EventType]bool, len(types)),
-	}
-
-	for _, t := range types {
-		fl.types[t] = true
-	}
-
-	return fl
-}
