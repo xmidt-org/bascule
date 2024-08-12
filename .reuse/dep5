@@ -39,38 +39,10 @@ Files: README.md
 Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
-Files: basculehttp/README.md
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
-License: Apache-2.0
-
-Files: basculehttp/notfoundbehavior_string.go
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
-License: Apache-2.0
-
 Files: .whitesource
 Copyright: SPDX-FileCopyrightText: 2020 Comcast Cable Communications Management, LLC
 License: Apache-2.0
 
-Files: examples/acquirer/go.mod
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
-License: Apache-2.0
-
-Files: examples/acquirer/go.sum
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
-License: Apache-2.0
-
-Files: examples/basculehttp/go.mod
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
-License: Apache-2.0
-
-Files: examples/basculehttp/go.sum
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
-License: Apache-2.0
-
-Files: v2/go.mod
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
-License: Apache-2.0
-
-Files: v2/go.sum
-Copyright: SPDX-FileCopyrightText: 2019 Comcast Cable Communications Management, LLC
+Files: eventType_string.go
+Copyright: SPDX-FileCopyrightText: 2020 Comcast Cable Communications Management, LLC
 License: Apache-2.0
