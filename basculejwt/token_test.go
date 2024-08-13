@@ -130,6 +130,11 @@ func (suite *TokenTestSuite) TestTokenParser() {
 		suite.Equal(suite.capabilities, caps)
 		suite.True(ok)
 
+		suite.Require().Implements((*bascule.AttributesAccessor)(nil), token)
+		v, ok := bascule.GetAttribute[string](token.(bascule.AttributesAccessor), "version")
+		suite.True(ok)
+		suite.Equal(suite.version, v)
+
 		suite.Require().Implements((*Claims)(nil), token)
 		claims := token.(Claims)
 		suite.Equal(suite.audience, claims.Audience())

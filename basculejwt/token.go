@@ -86,6 +86,10 @@ func (t token) Capabilities() (caps []string) {
 	return
 }
 
+func (t token) Get(key string) (any, bool) {
+	return t.jwt.Get(key)
+}
+
 // tokenParser is the canonical parser for bascule that deals with JWTs.
 // This parser does not use the source.
 type tokenParser struct {
