@@ -12,6 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/suite"
+	"github.com/xmidt-org/bascule/v1"
 )
 
 type TokenTestSuite struct {
@@ -125,6 +126,9 @@ func (suite *TokenTestSuite) TestTokenParser() {
 		suite.Require().NotNil(token)
 
 		suite.Equal(suite.subject, token.Principal())
+		caps, ok := bascule.GetCapabilities(token)
+		suite.Equal(suite.capabilities, caps)
+		suite.True(ok)
 
 		suite.Require().Implements((*Claims)(nil), token)
 		claims := token.(Claims)

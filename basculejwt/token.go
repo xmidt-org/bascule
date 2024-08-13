@@ -11,6 +11,9 @@ import (
 	"github.com/xmidt-org/bascule/v1"
 )
 
+// CapabilitiesKey is the JWT claims key where capabilities are expected.
+const CapabilitiesKey = "capabilities"
+
 // Claims exposes standard JWT claims from a Token.
 type Claims interface {
 	// Audience returns the aud field of the JWT.
@@ -75,6 +78,14 @@ func (t token) Principal() string {
 	return t.jwt.Subject()
 }
 
+func (t token) Capabilities() (caps []string) {
+	if v, ok := t.jwt.Get(CapabilitiesKey); ok {
+		caps, _ = bascule.GetCapabilities(v)
+	}
+
+	return
+}
+
 // tokenParser is the canonical parser for bascule that deals with JWTs.
 // This parser does not use the source.
 type tokenParser struct {
@@ -92,7 +103,7 @@ func NewTokenParser(options ...jwt.ParseOption) (bascule.TokenParser[string], er
 }
 
 // Parse parses the value as a JWT, using the parsing options passed to NewTokenParser.
-// The returned Token will implement the bascule.Attributes and Claims interfaces.
+// The returned Token will implement the bascule.Attributes, bascule.Capabilities, and Claims interfaces.
 func (tp *tokenParser) Parse(ctx context.Context, value string) (bascule.Token, error) {
 	jwtToken, err := jwt.ParseString(value, tp.options...)
 	if err != nil {
