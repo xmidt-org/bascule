@@ -21,7 +21,7 @@ type AttributesTestSuite struct {
 	suite.Suite
 }
 
-func (suite *AttributesTestSuite) testAttributes() Attributes {
+func (suite *AttributesTestSuite) testAttributesAccessor() AttributesAccessor {
 	return testAttributes{
 		"value":      123,
 		"untypedNil": nil,
@@ -31,16 +31,16 @@ func (suite *AttributesTestSuite) testAttributes() Attributes {
 			"nestedMap": map[string]any{
 				"value": 123,
 			},
-			"nestedAttributes": Attributes(testAttributes{
+			"nestedAttributes": AttributesAccessor(testAttributes{
 				"value": 123,
 			}),
 		},
-		"nestedAttributes": Attributes(testAttributes{
+		"nestedAttributes": AttributesAccessor(testAttributes{
 			"value": 123,
 			"nestedMap": map[string]any{
 				"value": 123,
 			},
-			"nestedAttributes": Attributes(testAttributes{
+			"nestedAttributes": AttributesAccessor(testAttributes{
 				"value": 123,
 			}),
 		}),
@@ -117,7 +117,7 @@ func (suite *AttributesTestSuite) TestGetAttribute() {
 
 	for _, testCase := range testCases {
 		suite.Run(fmt.Sprintf("%v", testCase.keys), func() {
-			actual, ok := GetAttribute[int](suite.testAttributes(), testCase.keys...)
+			actual, ok := GetAttribute[int](suite.testAttributesAccessor(), testCase.keys...)
 			suite.Equal(testCase.expectedValue, actual)
 			suite.Equal(testCase.expectedOK, ok)
 		})

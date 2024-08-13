@@ -3,9 +3,9 @@
 
 package bascule
 
-// Attributes is an optional interface that a Token may implement
+// AttributesAccessor is an optional interface that a Token may implement
 // that provides access to arbitrary key/value pairs.
-type Attributes interface {
+type AttributesAccessor interface {
 	// Get returns the value of an attribute, if it exists.
 	Get(key string) (any, bool)
 }
@@ -19,7 +19,7 @@ type Attributes interface {
 // type map[string]any or Attributes, this function will return false.
 //
 // If no keys are supplied, this function returns the zero value for T and false.
-func GetAttribute[T any](a Attributes, keys ...string) (v T, ok bool) {
+func GetAttribute[T any](a AttributesAccessor, keys ...string) (v T, ok bool) {
 	if len(keys) == 0 {
 		return
 	}
@@ -33,8 +33,8 @@ func GetAttribute[T any](a Attributes, keys ...string) (v T, ok bool) {
 			continue
 		}
 
-		var a Attributes
-		if a, ok = raw.(Attributes); ok {
+		var a AttributesAccessor
+		if a, ok = raw.(AttributesAccessor); ok {
 			raw, ok = a.Get(keys[i])
 		}
 	}
