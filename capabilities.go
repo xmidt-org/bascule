@@ -11,7 +11,7 @@ type CapabilitiesAccessor interface {
 	Capabilities() []string
 }
 
-// GetCapabilities attempts to convert a value v into a slice of cababilities.
+// GetCapabilities attempts to convert a value v into a slice of capabilities.
 //
 // This function provide very flexible values to be used as capabilities.  This is
 // particularly useful when unmarshalling values, since those values may not be strings
