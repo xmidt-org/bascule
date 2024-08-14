@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type AuthorizersTestSuite struct {
+type ApproversTestSuite struct {
 	TestSuite
 }
 
-func (suite *AuthorizersTestSuite) TestAuthorize() {
+func (suite *ApproversTestSuite) TestAuthorize() {
 	const placeholderResource = "placeholder resource"
-	authorizeErr := errors.New("expected Authorize error")
+	approveErr := errors.New("expected Authorize error")
 
 	testCases := []struct {
 		name        string
@@ -25,7 +25,7 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 		expectedErr error
 	}{
 		{
-			name:    "EmptyAuthorizers",
+			name:    "EmptyApprovers",
 			results: nil,
 		},
 		{
@@ -34,18 +34,18 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 		},
 		{
 			name:        "OneFailure",
-			results:     []error{authorizeErr},
-			expectedErr: authorizeErr,
+			results:     []error{approveErr},
+			expectedErr: approveErr,
 		},
 		{
 			name:        "FirstFailure",
-			results:     []error{authorizeErr, errors.New("should not be called")},
-			expectedErr: authorizeErr,
+			results:     []error{approveErr, errors.New("should not be called")},
+			expectedErr: approveErr,
 		},
 		{
 			name:        "MiddleFailure",
-			results:     []error{nil, authorizeErr, errors.New("should not be called")},
-			expectedErr: authorizeErr,
+			results:     []error{nil, approveErr, errors.New("should not be called")},
+			expectedErr: approveErr,
 		},
 		{
 			name:    "AllSuccess",
@@ -58,13 +58,13 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 			var (
 				testCtx   = suite.testContext()
 				testToken = suite.testToken()
-				as        Authorizers[string]
+				as        Approvers[string]
 			)
 
 			for _, err := range testCase.results {
 				err := err
 				as = as.Append(
-					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
+					ApproverFunc[string](func(ctx context.Context, resource string, token Token) error {
 						suite.Same(testCtx, ctx)
 						suite.Equal(testToken, token)
 						suite.Equal(placeholderResource, resource)
@@ -75,15 +75,15 @@ func (suite *AuthorizersTestSuite) TestAuthorize() {
 
 			suite.Equal(
 				testCase.expectedErr,
-				as.Authorize(testCtx, placeholderResource, testToken),
+				as.Approve(testCtx, placeholderResource, testToken),
 			)
 		})
 	}
 }
 
-func (suite *AuthorizersTestSuite) TestAny() {
+func (suite *ApproversTestSuite) TestAny() {
 	const placeholderResource = "placeholder resource"
-	authorizeErr := errors.New("expected Authorize error")
+	approveErr := errors.New("expected Authorize error")
 
 	testCases := []struct {
 		name        string
@@ -91,7 +91,7 @@ func (suite *AuthorizersTestSuite) TestAny() {
 		expectedErr error
 	}{
 		{
-			name:    "EmptyAuthorizers",
+			name:    "EmptyApprovers",
 			results: nil,
 		},
 		{
@@ -100,16 +100,16 @@ func (suite *AuthorizersTestSuite) TestAny() {
 		},
 		{
 			name:        "OnlyFailure",
-			results:     []error{authorizeErr},
-			expectedErr: authorizeErr,
+			results:     []error{approveErr},
+			expectedErr: approveErr,
 		},
 		{
 			name:    "FirstFailure",
-			results: []error{authorizeErr, nil},
+			results: []error{approveErr, nil},
 		},
 		{
 			name:    "LastSuccess",
-			results: []error{authorizeErr, authorizeErr, nil},
+			results: []error{approveErr, approveErr, nil},
 		},
 	}
 
@@ -118,13 +118,13 @@ func (suite *AuthorizersTestSuite) TestAny() {
 			var (
 				testCtx   = suite.testContext()
 				testToken = suite.testToken()
-				as        Authorizers[string]
+				as        Approvers[string]
 			)
 
 			for _, err := range testCase.results {
 				err := err
 				as = as.Append(
-					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
+					ApproverFunc[string](func(ctx context.Context, resource string, token Token) error {
 						suite.Same(testCtx, ctx)
 						suite.Equal(testToken, token)
 						suite.Equal(placeholderResource, resource)
@@ -136,12 +136,12 @@ func (suite *AuthorizersTestSuite) TestAny() {
 			anyAs := as.Any()
 			suite.Equal(
 				testCase.expectedErr,
-				anyAs.Authorize(testCtx, placeholderResource, testToken),
+				anyAs.Approve(testCtx, placeholderResource, testToken),
 			)
 
 			if len(as) > 0 {
 				// the any instance should be distinct
-				as[0] = AuthorizerFunc[string](
+				as[0] = ApproverFunc[string](
 					func(context.Context, string, Token) error {
 						suite.Fail("should not have been called")
 						return nil
@@ -150,13 +150,13 @@ func (suite *AuthorizersTestSuite) TestAny() {
 
 				suite.Equal(
 					testCase.expectedErr,
-					anyAs.Authorize(testCtx, placeholderResource, testToken),
+					anyAs.Approve(testCtx, placeholderResource, testToken),
 				)
 			}
 		})
 	}
 }
 
-func TestAuthorizers(t *testing.T) {
-	suite.Run(t, new(AuthorizersTestSuite))
+func TestApprovers(t *testing.T) {
+	suite.Run(t, new(ApproversTestSuite))
 }
