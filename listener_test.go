@@ -11,87 +11,42 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// testEvent is the event type used for testing below.
+// the listeners behave the same regardless of the event type,
+// so testing with just (1) type is all that's needed.
+type testEvent NoCredentialsEvent[int]
+
 type ListenerTestSuite struct {
 	suite.Suite
 }
 
-func (suite *ListenerTestSuite) TestEvent() {
-	suite.Run("Success", func() {
-		testCases := []struct {
-			name     string
-			event    Event[int]
-			expected bool
-		}{
-			{
-				name: "type success",
-				event: Event[int]{
-					Type: EventTypeSuccess,
-				},
-				expected: true,
-			},
-			{
-				name: "type missing credentials",
-				event: Event[int]{
-					Type: EventTypeMissingCredentials,
-				},
-				expected: false,
-			},
-		}
-
-		for _, testCase := range testCases {
-			suite.Run(testCase.name, func() {
-				suite.Equal(
-					testCase.expected,
-					testCase.event.Success(),
-				)
-			})
-		}
-	})
-
-	// just check that strings are unique
-	suite.Run("String", func() {
-		var (
-			eventTypes = []EventType{
-				EventTypeSuccess,
-				EventTypeMissingCredentials,
-				EventTypeInvalidCredentials,
-				EventTypeFailedAuthentication,
-				EventTypeFailedAuthorization,
-				EventType(256), // random weird value should still work
-			}
-
-			strings = make(map[string]bool)
-		)
-
-		for _, et := range eventTypes {
-			strings[et.String()] = true
-		}
-
-		suite.Equal(len(eventTypes), len(strings))
-	})
+func (suite *ListenerTestSuite) newTestEvent() testEvent {
+	return testEvent{
+		Source: 239471231,
+		Err:    errors.New("expected"),
+	}
 }
 
 func (suite *ListenerTestSuite) TestListenerFunc() {
 	var (
 		called bool
 
-		l Listener[int] = ListenerFunc[int](func(e Event[int]) {
-			suite.Equal(EventTypeMissingCredentials, e.Type)
+		expectedEvent = suite.newTestEvent()
+
+		l Listener[testEvent] = ListenerFunc[testEvent](func(actualEvent testEvent) {
+			suite.Equal(expectedEvent, actualEvent)
 			called = true
 		})
 	)
 
-	l.OnEvent(Event[int]{
-		Type: EventTypeMissingCredentials,
-	})
-
+	l.OnEvent(expectedEvent)
 	suite.True(called)
 }
 
 func (suite *ListenerTestSuite) TestListeners() {
 	suite.Run("Empty", func() {
-		var ls Listeners[int]
-		ls.OnEvent(Event[int]{}) // should be fine
+		var ls Listeners[testEvent]
+		ls.OnEvent(suite.newTestEvent()) // should be fine
 	})
 
 	suite.Run("Append", func() {
@@ -99,18 +54,13 @@ func (suite *ListenerTestSuite) TestListeners() {
 			suite.Run(fmt.Sprintf("count=%d", count), func() {
 				var (
 					called        int
-					expectedEvent = Event[int]{
-						Type:   EventTypeInvalidCredentials,
-						Source: 1234,
-						Err:    errors.New("expected"),
-					}
-
-					ls Listeners[int]
+					expectedEvent = suite.newTestEvent()
+					ls            Listeners[testEvent]
 				)
 
 				for i := 0; i < count; i++ {
-					var l Listener[int] = ListenerFunc[int](func(e Event[int]) {
-						suite.Equal(expectedEvent, e)
+					var l Listener[testEvent] = ListenerFunc[testEvent](func(actualEvent testEvent) {
+						suite.Equal(expectedEvent, actualEvent)
 						called++
 					})
 
@@ -128,18 +78,14 @@ func (suite *ListenerTestSuite) TestListeners() {
 			suite.Run(fmt.Sprintf("count=%d", count), func() {
 				var (
 					called        int
-					expectedEvent = Event[int]{
-						Type:   EventTypeInvalidCredentials,
-						Source: 1234,
-						Err:    errors.New("expected"),
-					}
+					expectedEvent = suite.newTestEvent()
 
-					ls Listeners[int]
+					ls Listeners[testEvent]
 				)
 
 				for i := 0; i < count; i++ {
-					ls = ls.AppendFunc(func(e Event[int]) {
-						suite.Equal(expectedEvent, e)
+					ls = ls.AppendFunc(func(actualEvent testEvent) {
+						suite.Equal(expectedEvent, actualEvent)
 						called++
 					})
 				}
