@@ -20,10 +20,41 @@ type AuthorizeEvent[R any] struct {
 	Err error
 }
 
+// AuthorizerOption is a configurable option for an Authorizer.
+type AuthorizerOption[S any] interface {
+	apply(*Authorizer[S]) error
+}
+
+type authorizerOptionFunc[S any] func(*Authorizer[S]) error
+
+func (aof authorizerOptionFunc[S]) apply(a *Authorizer[S]) error { return aof(a) }
+
+// WithAuthorizeListeners adds listeners to the Authorizer being built.
+// Multiple calls for this option are cumulative.
+func WithAuthorizeListeners[R any](more ...Listener[AuthorizeEvent[R]]) AuthorizerOption[R] {
+	return authorizerOptionFunc[R](
+		func(a *Authorizer[R]) error {
+			a.listeners = a.listeners.Append(more...)
+			return nil
+		},
+	)
+}
+
+// WithApprovers adds approvers to the Authorizer being built.
+// Multiple calls for this option are cumulative.
+func WithApprovers[R any](more ...Approver[R]) AuthorizerOption[R] {
+	return authorizerOptionFunc[R](
+		func(a *Authorizer[R]) error {
+			a.approvers = a.approvers.Append(more...)
+			return nil
+		},
+	)
+}
+
 // Authorizer represents the full bascule authorizer workflow.  An authenticated
 // token is required as the starting point for authorization.
 type Authorizer[R any] struct {
-	listeners Listener[AuthorizeEvent[R]]
+	listeners Listeners[AuthorizeEvent[R]]
 	approvers Approvers[R]
 }
 
