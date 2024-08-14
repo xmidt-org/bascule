@@ -11,18 +11,14 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// testEvent is the event type used for testing below.
-// the listeners behave the same regardless of the event type,
-// so testing with just (1) type is all that's needed.
-type testEvent NoCredentialsEvent[int]
-
 type ListenerTestSuite struct {
 	suite.Suite
 }
 
-func (suite *ListenerTestSuite) newTestEvent() testEvent {
-	return testEvent{
-		Source: 239471231,
+func (suite *ListenerTestSuite) newTestEvent() AuthenticateEvent[int] {
+	return AuthenticateEvent[int]{
+		Source: 2349732,
+		Token:  stubToken("test token"),
 		Err:    errors.New("expected"),
 	}
 }
@@ -33,10 +29,12 @@ func (suite *ListenerTestSuite) TestListenerFunc() {
 
 		expectedEvent = suite.newTestEvent()
 
-		l Listener[testEvent] = ListenerFunc[testEvent](func(actualEvent testEvent) {
-			suite.Equal(expectedEvent, actualEvent)
-			called = true
-		})
+		l Listener[AuthenticateEvent[int]] = ListenerFunc[AuthenticateEvent[int]](
+			func(actualEvent AuthenticateEvent[int]) {
+				suite.Equal(expectedEvent, actualEvent)
+				called = true
+			},
+		)
 	)
 
 	l.OnEvent(expectedEvent)
@@ -45,8 +43,8 @@ func (suite *ListenerTestSuite) TestListenerFunc() {
 
 func (suite *ListenerTestSuite) TestListeners() {
 	suite.Run("Empty", func() {
-		var ls Listeners[testEvent]
-		ls.OnEvent(suite.newTestEvent()) // should be fine
+		var ls Listeners[AuthenticateEvent[int]]
+		ls.OnEvent(AuthenticateEvent[int]{}) // should be fine
 	})
 
 	suite.Run("Append", func() {
@@ -55,14 +53,17 @@ func (suite *ListenerTestSuite) TestListeners() {
 				var (
 					called        int
 					expectedEvent = suite.newTestEvent()
-					ls            Listeners[testEvent]
+
+					ls Listeners[AuthenticateEvent[int]]
 				)
 
 				for i := 0; i < count; i++ {
-					var l Listener[testEvent] = ListenerFunc[testEvent](func(actualEvent testEvent) {
-						suite.Equal(expectedEvent, actualEvent)
-						called++
-					})
+					var l Listener[AuthenticateEvent[int]] = ListenerFunc[AuthenticateEvent[int]](
+						func(actualEvent AuthenticateEvent[int]) {
+							suite.Equal(expectedEvent, actualEvent)
+							called++
+						},
+					)
 
 					ls = ls.Append(l)
 				}
@@ -80,12 +81,12 @@ func (suite *ListenerTestSuite) TestListeners() {
 					called        int
 					expectedEvent = suite.newTestEvent()
 
-					ls Listeners[testEvent]
+					ls Listeners[AuthenticateEvent[int]]
 				)
 
 				for i := 0; i < count; i++ {
-					ls = ls.AppendFunc(func(actualEvent testEvent) {
-						suite.Equal(expectedEvent, actualEvent)
+					ls = ls.AppendFunc(func(e AuthenticateEvent[int]) {
+						suite.Equal(expectedEvent, e)
 						called++
 					})
 				}

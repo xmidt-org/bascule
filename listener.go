@@ -3,42 +3,44 @@
 
 package bascule
 
-// Listener is a consumer of bascule events.
+// Listener is a sink for bascule events.
 type Listener[E any] interface {
-	// OnEvent accepts an event from the bascule workflow.
-	// This method must not block or panic.
+	// OnEvent receives a bascule event.  This method must not block or panic.
 	OnEvent(E)
 }
 
 // ListenerFunc is a closure that can act as a Listener.
 type ListenerFunc[E any] func(E)
 
-func (lf ListenerFunc[E]) OnEvent(event E) { lf(event) }
+// OnEvent satisfies the Listener interface.
+func (lf ListenerFunc[E]) OnEvent(e E) { lf(e) }
 
-// Listeners is an aggregate bascule Listener that dispatches
-// events to each of its component listeners in order.
+// Listeners is an aggregate Listener.
 type Listeners[E any] []Listener[E]
 
-// Append adds several listeners to this aggregate.  The semantics of
-// this method are the same as the built-in append.
+// Append adds more listeners to this aggregate.  The (possibly new)
+// aggregate Listeners is returned.  This method has the same
+// semantics as the built-in append.
 func (ls Listeners[E]) Append(more ...Listener[E]) Listeners[E] {
 	return append(ls, more...)
 }
 
-// AppendFunc is like Append, but is more convenient when closures
-// are being used as listeners.
+// AppendFunc is a more convenient version of Append when using
+// closures as listeners.
 func (ls Listeners[E]) AppendFunc(more ...ListenerFunc[E]) Listeners[E] {
-	for _, m := range more {
-		ls = append(ls, m)
+	for _, lf := range more {
+		if lf != nil { // handle the nil interface case
+			ls = ls.Append(lf)
+		}
 	}
 
 	return ls
 }
 
-// OnEvent dispatches the given event to each listener contained
-// by this collection.
-func (ls Listeners[E]) OnEvent(event E) {
+// OnEvent dispatches the given event to all listeners
+// contained by this aggregate.
+func (ls Listeners[E]) OnEvent(e E) {
 	for _, l := range ls {
-		l.OnEvent(event)
+		l.OnEvent(e)
 	}
 }
