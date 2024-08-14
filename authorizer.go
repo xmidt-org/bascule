@@ -40,6 +40,16 @@ func WithAuthorizeListeners[R any](more ...Listener[AuthorizeEvent[R]]) Authoriz
 	)
 }
 
+// WithAuthorizeListenerFuncs is a closure variant of WithAuthorizeListeners.
+func WithAuthorizeListenerFuncs[R any](more ...ListenerFunc[AuthorizeEvent[R]]) AuthorizerOption[R] {
+	return authorizerOptionFunc[R](
+		func(a *Authorizer[R]) error {
+			a.listeners = a.listeners.AppendFunc(more...)
+			return nil
+		},
+	)
+}
+
 // WithApprovers adds approvers to the Authorizer being built.
 // Multiple calls for this option are cumulative.
 func WithApprovers[R any](more ...Approver[R]) AuthorizerOption[R] {

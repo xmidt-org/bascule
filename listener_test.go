@@ -18,7 +18,7 @@ type ListenerTestSuite struct {
 func (suite *ListenerTestSuite) newTestEvent() AuthenticateEvent[int] {
 	return AuthenticateEvent[int]{
 		Source: 2349732,
-		Token:  stubToken("test token"),
+		Token:  StubToken("test token"),
 		Err:    errors.New("expected"),
 	}
 }

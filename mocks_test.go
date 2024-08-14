@@ -9,10 +9,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type stubToken string
-
-func (t stubToken) Principal() string { return string(t) }
-
 type mockToken struct {
 	mock.Mock
 }
@@ -81,4 +77,16 @@ func assertTokenParsers[S any](t mock.TestingT, tps ...TokenParser[S]) (passed b
 	}
 
 	return
+}
+
+type mockAuthenticateListener[S any] struct {
+	mock.Mock
+}
+
+func (m *mockAuthenticateListener[S]) OnEvent(e AuthenticateEvent[S]) {
+	m.Called(e)
+}
+
+func (m *mockAuthenticateListener[S]) ExpectOnEvent(expected AuthenticateEvent[S]) *mock.Call {
+	return m.On("OnEvent", expected)
 }

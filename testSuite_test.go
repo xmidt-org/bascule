@@ -24,7 +24,7 @@ func (suite *TestSuite) testContext() context.Context {
 }
 
 func (suite *TestSuite) testToken() Token {
-	return stubToken("test")
+	return StubToken("test")
 }
 
 func (suite *TestSuite) contexter(ctx context.Context) Contexter {

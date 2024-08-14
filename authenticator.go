@@ -40,6 +40,16 @@ func WithAuthenticateListeners[S any](more ...Listener[AuthenticateEvent[S]]) Au
 	)
 }
 
+// WithAuthenticateListenerFuncs is a closure variant of WithAuthenticateListeners.
+func WithAuthenticateListenerFuncs[S any](more ...ListenerFunc[AuthenticateEvent[S]]) AuthenticatorOption[S] {
+	return authenticatorOptionFunc[S](
+		func(a *Authenticator[S]) error {
+			a.listeners = a.listeners.AppendFunc(more...)
+			return nil
+		},
+	)
+}
+
 // WithTokenParsers adds token parsers to the Authenticator being built.
 // Multiple calls for this option are cumulative.
 func WithTokenParsers[S any](more ...TokenParser[S]) AuthenticatorOption[S] {
@@ -64,12 +74,16 @@ func WithValidators[S any](more ...Validator[S]) AuthenticatorOption[S] {
 
 // NewAuthenticator constructs an Authenticator workflow using the supplied options.
 //
-// An empty set of options results in an Authenticator that returns nil Tokens,
-// but no authentication errors.
+// At least (1) token parser must be supplied in the options, or this
+// function returns ErrNoTokenParsers.
 func NewAuthenticator[S any](opts ...AuthenticatorOption[S]) (a *Authenticator[S], err error) {
 	a = new(Authenticator[S])
 	for i := 0; err == nil && i < len(opts); i++ {
 		err = opts[i].apply(a)
+	}
+
+	if a.parsers.Len() == 0 {
+		return nil, ErrNoTokenParsers
 	}
 
 	return

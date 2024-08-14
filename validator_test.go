@@ -25,8 +25,8 @@ type ValidatorsTestSuite struct {
 func (suite *ValidatorsTestSuite) SetupSuite() {
 	suite.expectedCtx = suite.testContext()
 	suite.expectedSource = 123
-	suite.inputToken = stubToken("input token")
-	suite.outputToken = stubToken("output token")
+	suite.inputToken = StubToken("input token")
+	suite.outputToken = StubToken("output token")
 	suite.expectedErr = errors.New("expected validator error")
 }
 
