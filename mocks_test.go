@@ -79,14 +79,38 @@ func assertTokenParsers[S any](t mock.TestingT, tps ...TokenParser[S]) (passed b
 	return
 }
 
-type mockAuthenticateListener[S any] struct {
+type mockApprover[R any] struct {
 	mock.Mock
 }
 
-func (m *mockAuthenticateListener[S]) OnEvent(e AuthenticateEvent[S]) {
+func (m *mockApprover[R]) Approve(ctx context.Context, resource R, token Token) error {
+	return m.Called(ctx, resource, token).Error(0)
+}
+
+func (m *mockApprover[R]) ExpectApprove(ctx context.Context, resource R, token Token) *mock.Call {
+	return m.On("Approve", ctx, resource, token)
+}
+
+type mockAuthenticateListener[E any] struct {
+	mock.Mock
+}
+
+func (m *mockAuthenticateListener[E]) OnEvent(e AuthenticateEvent[E]) {
 	m.Called(e)
 }
 
-func (m *mockAuthenticateListener[S]) ExpectOnEvent(expected AuthenticateEvent[S]) *mock.Call {
+func (m *mockAuthenticateListener[E]) ExpectOnEvent(expected AuthenticateEvent[E]) *mock.Call {
+	return m.On("OnEvent", expected)
+}
+
+type mockAuthorizeListener[E any] struct {
+	mock.Mock
+}
+
+func (m *mockAuthorizeListener[E]) OnEvent(e AuthorizeEvent[E]) {
+	m.Called(e)
+}
+
+func (m *mockAuthorizeListener[E]) ExpectOnEvent(expected AuthorizeEvent[E]) *mock.Call {
 	return m.On("OnEvent", expected)
 }

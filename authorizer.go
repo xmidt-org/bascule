@@ -61,6 +61,19 @@ func WithApprovers[R any](more ...Approver[R]) AuthorizerOption[R] {
 	)
 }
 
+// NewAuthorizer constructs an Authorizer workflow using the supplied options.
+//
+// If no options are supplied, the returned Authorizer will authorize all tokens
+// to access any resources.
+func NewAuthorizer[R any](opts ...AuthorizerOption[R]) (a *Authorizer[R], err error) {
+	a = new(Authorizer[R])
+	for i := 0; err == nil && i < len(opts); i++ {
+		err = opts[i].apply(a)
+	}
+
+	return
+}
+
 // Authorizer represents the full bascule authorizer workflow.  An authenticated
 // token is required as the starting point for authorization.
 type Authorizer[R any] struct {
