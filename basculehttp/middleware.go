@@ -4,7 +4,6 @@
 package basculehttp
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -23,22 +22,23 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 	return mof(m)
 }
 
-// WithTokenParsers appends token parsers to the chain used by the middleware.
-// Each invocation of this option is cumulative. Token parsers are run in the
-// order supplied via this option.
-func WithTokenParsers(tps ...bascule.TokenParser[*http.Request]) MiddlewareOption {
+// WithAuthenticator supplies the Authenticator workflow for the middleware.
+//
+// If no authenticator is supplied, NewMiddeware returns an error.
+func WithAuthenticator(authenticator *bascule.Authenticator[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		m.tokenParsers = m.tokenParsers.Append(tps...)
+		m.authenticator = authenticator
 		return nil
 	})
 }
 
-// WithAuthentication adds validators used for authentication to this Middleware.  Each
-// invocation of this option is cumulative.  Authentication validators are run in the order
-// supplied by this option.
-func WithAuthentication(v ...bascule.Validator[*http.Request]) MiddlewareOption {
+// WithAuthorizer supplies the Authorizer workflow for the middleware.
+//
+// The Authorizer is optional.  If no authorizer is supplied, then no authorization
+// takes place and no authorization events are fired.
+func WithAuthorizer(authorizer *bascule.Authorizer[*http.Request]) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		m.authentication = m.authentication.Append(v...)
+		m.authorizer = authorizer
 		return nil
 	})
 }
@@ -49,20 +49,6 @@ func WithAuthentication(v ...bascule.Validator[*http.Request]) MiddlewareOption 
 func WithChallenges(ch ...Challenge) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
 		m.challenges.Add(ch...)
-		return nil
-	})
-}
-
-// WithAuthorization adds authorizers to this Middleware.  Each invocation of this option
-// is cumulative.  Authorizers are executed for each request in the order supplied
-// via this option.
-//
-// A Middleware requires all its options to pass in order to allow access.  Callers can
-// use Authorizers.Any to create authorizers that require only (1) authorizer to pass.
-// This is useful for use cases like admin access or alternate capabilities.
-func WithAuthorization(a ...bascule.Authorizer[*http.Request]) MiddlewareOption {
-	return middlewareOptionFunc(func(m *Middleware) error {
-		m.authorization = m.authorization.Append(a...)
 		return nil
 	})
 }
@@ -97,10 +83,9 @@ func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 
 // Middleware is an immutable configuration that can decorate multiple handlers.
 type Middleware struct {
-	tokenParsers   bascule.TokenParsers[*http.Request]
-	authentication bascule.Validators[*http.Request]
-	authorization  bascule.Authorizers[*http.Request]
-	challenges     Challenges
+	authenticator *bascule.Authenticator[*http.Request]
+	authorizer    *bascule.Authorizer[*http.Request]
+	challenges    Challenges
 
 	errorStatusCoder ErrorStatusCoder
 	errorMarshaler   ErrorMarshaler
@@ -171,18 +156,6 @@ func (m *Middleware) writeError(response http.ResponseWriter, request *http.Requ
 	}
 }
 
-func (m *Middleware) parseToken(ctx context.Context, request *http.Request) (bascule.Token, error) {
-	return m.tokenParsers.Parse(ctx, request)
-}
-
-func (m *Middleware) authenticate(ctx context.Context, request *http.Request, token bascule.Token) (bascule.Token, error) {
-	return m.authentication.Validate(ctx, request, token)
-}
-
-func (m *Middleware) authorize(ctx context.Context, token bascule.Token, request *http.Request) error {
-	return m.authorization.Authorize(ctx, request, token)
-}
-
 // frontDoor is the internal handler implementation that protects a handler
 // using the bascule workflow.
 type frontDoor struct {
@@ -193,28 +166,22 @@ type frontDoor struct {
 // ServeHTTP implements the bascule workflow, using the configured middleware.
 func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
-	token, err := fd.parseToken(ctx, request)
+	token, err := fd.authenticator.Authenticate(ctx, request)
 	if err != nil {
 		// by default, failing to parse a token is a malformed request
 		fd.writeError(response, request, http.StatusBadRequest, err)
 		return
 	}
 
-	token, err = fd.authenticate(ctx, request, token)
-	if err != nil {
-		// at this point in the workflow, the request has valid credentials.  we use
-		// StatusForbidden as the default because any failure to authenticate isn't a
-		// case where the caller needs to supply credentials.  Rather, the supplied
-		// credentials aren't adequate enough.
-		fd.writeError(response, request, http.StatusForbidden, err)
-		return
-	}
-
 	ctx = bascule.WithToken(ctx, token)
-	err = fd.authorize(ctx, token, request)
-	if err != nil {
-		fd.writeError(response, request, http.StatusForbidden, err)
-		return
+
+	// the authorizer is optional
+	if fd.authorizer != nil {
+		err = fd.authorizer.Authorize(ctx, request, token)
+		if err != nil {
+			fd.writeError(response, request, http.StatusForbidden, err)
+			return
+		}
 	}
 
 	fd.protected.ServeHTTP(response, request.WithContext(ctx))

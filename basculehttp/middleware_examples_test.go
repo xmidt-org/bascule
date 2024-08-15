@@ -14,16 +14,16 @@ import (
 // ExampleMiddleware_basicauth illustrates how to use a basculehttp Middleware with
 // just basic auth.
 func ExampleMiddleware_basicauth() {
-	tp, err := NewAuthorizationParser(
+	tp, _ := NewAuthorizationParser(
 		WithScheme(SchemeBasic, BasicTokenParser{}),
 	)
 
-	if err != nil {
-		panic(err)
-	}
+	a, _ := bascule.NewAuthenticator(
+		bascule.WithTokenParsers(tp),
+	)
 
 	m, err := NewMiddleware(
-		WithTokenParsers(tp),
+		WithAuthenticator(a),
 	)
 
 	if err != nil {
