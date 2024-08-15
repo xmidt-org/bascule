@@ -24,9 +24,22 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 
 // WithAuthenticator supplies the Authenticator workflow for the middleware.
 //
-// If no authenticator is supplied, NewMiddeware returns an error.
+// Note: If no authenticator is supplied, NewMiddeware returns an error.
 func WithAuthenticator(authenticator *bascule.Authenticator[*http.Request]) MiddlewareOption {
+	return UseAuthenticator(authenticator, nil)
+}
+
+// UseAuthenticator is a variant of WithAuthenticator that allows a caller to
+// nest function calls a little easier.  The output of NewAuthenticator
+// can be passed directly to this option.
+//
+// Note: If no authenticator is supplied, NewMiddeware returns an error.
+func UseAuthenticator(authenticator *bascule.Authenticator[*http.Request], err error) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
+		if err != nil {
+			return err
+		}
+
 		m.authenticator = authenticator
 		return nil
 	})
@@ -37,7 +50,18 @@ func WithAuthenticator(authenticator *bascule.Authenticator[*http.Request]) Midd
 // The Authorizer is optional.  If no authorizer is supplied, then no authorization
 // takes place and no authorization events are fired.
 func WithAuthorizer(authorizer *bascule.Authorizer[*http.Request]) MiddlewareOption {
+	return UseAuthorizer(authorizer, nil)
+}
+
+// UseAuthorizer is a variant of WithAuthorizer that allows a caller to
+// nest function calls a little easier.  The output of NewAuthorizer
+// can be passed directly to this option.
+func UseAuthorizer(authorizer *bascule.Authorizer[*http.Request], err error) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
+		if err != nil {
+			return err
+		}
+
 		m.authorizer = authorizer
 		return nil
 	})

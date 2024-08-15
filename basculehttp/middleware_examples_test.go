@@ -18,27 +18,22 @@ func ExampleMiddleware_basicauth() {
 		WithScheme(SchemeBasic, BasicTokenParser{}),
 	)
 
-	a, _ := bascule.NewAuthenticator(
-		bascule.WithTokenParsers(tp),
+	m, _ := NewMiddleware(
+		UseAuthenticator(
+			NewAuthenticator(
+				bascule.WithTokenParsers(tp),
+			),
+		),
 	)
-
-	m, err := NewMiddleware(
-		WithAuthenticator(a),
-	)
-
-	if err != nil {
-		panic(err)
-	}
 
 	// decorate a handler that needs authorization
 	h := m.ThenFunc(
 		func(response http.ResponseWriter, request *http.Request) {
-			t, ok := bascule.GetFrom(request)
-			if !ok {
-				panic("no token found")
+			if t, ok := bascule.GetFrom(request); ok {
+				fmt.Println("principal:", t.Principal())
+			} else {
+				fmt.Println("no token found")
 			}
-
-			fmt.Println("principal:", t.Principal())
 		},
 	)
 
