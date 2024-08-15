@@ -11,152 +11,165 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type AuthorizersTestSuite struct {
-	TestSuite
+type AuthorizerTestSuite struct {
+	suite.Suite
 }
 
-func (suite *AuthorizersTestSuite) TestAuthorize() {
-	const placeholderResource = "placeholder resource"
-	authorizeErr := errors.New("expected Authorize error")
-
-	testCases := []struct {
-		name        string
-		results     []error
-		expectedErr error
-	}{
-		{
-			name:    "EmptyAuthorizers",
-			results: nil,
-		},
-		{
-			name:    "OneSuccess",
-			results: []error{nil},
-		},
-		{
-			name:        "OneFailure",
-			results:     []error{authorizeErr},
-			expectedErr: authorizeErr,
-		},
-		{
-			name:        "FirstFailure",
-			results:     []error{authorizeErr, errors.New("should not be called")},
-			expectedErr: authorizeErr,
-		},
-		{
-			name:        "MiddleFailure",
-			results:     []error{nil, authorizeErr, errors.New("should not be called")},
-			expectedErr: authorizeErr,
-		},
-		{
-			name:    "AllSuccess",
-			results: []error{nil, nil, nil},
-		},
-	}
-
-	for _, testCase := range testCases {
-		suite.Run(testCase.name, func() {
-			var (
-				testCtx   = suite.testContext()
-				testToken = suite.testToken()
-				as        Authorizers[string]
-			)
-
-			for _, err := range testCase.results {
-				err := err
-				as = as.Append(
-					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
-						suite.Same(testCtx, ctx)
-						suite.Equal(testToken, token)
-						suite.Equal(placeholderResource, resource)
-						return err
-					}),
-				)
-			}
-
-			suite.Equal(
-				testCase.expectedErr,
-				as.Authorize(testCtx, placeholderResource, testToken),
-			)
-		})
-	}
+// newAuthorizer creates an Authorizer under test, asserting
+// that no errors occurred.
+func (suite *AuthorizerTestSuite) newAuthorizer(opts ...AuthorizerOption[string]) *Authorizer[string] {
+	a, err := NewAuthorizer(opts...)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(a)
+	return a
 }
 
-func (suite *AuthorizersTestSuite) TestAny() {
-	const placeholderResource = "placeholder resource"
-	authorizeErr := errors.New("expected Authorize error")
-
-	testCases := []struct {
-		name        string
-		results     []error
-		expectedErr error
-	}{
-		{
-			name:    "EmptyAuthorizers",
-			results: nil,
-		},
-		{
-			name:    "OneSuccess",
-			results: []error{nil, errors.New("should not be called")},
-		},
-		{
-			name:        "OnlyFailure",
-			results:     []error{authorizeErr},
-			expectedErr: authorizeErr,
-		},
-		{
-			name:    "FirstFailure",
-			results: []error{authorizeErr, nil},
-		},
-		{
-			name:    "LastSuccess",
-			results: []error{authorizeErr, authorizeErr, nil},
-		},
-	}
-
-	for _, testCase := range testCases {
-		suite.Run(testCase.name, func() {
-			var (
-				testCtx   = suite.testContext()
-				testToken = suite.testToken()
-				as        Authorizers[string]
-			)
-
-			for _, err := range testCase.results {
-				err := err
-				as = as.Append(
-					AuthorizerFunc[string](func(ctx context.Context, resource string, token Token) error {
-						suite.Same(testCtx, ctx)
-						suite.Equal(testToken, token)
-						suite.Equal(placeholderResource, resource)
-						return err
-					}),
-				)
-			}
-
-			anyAs := as.Any()
-			suite.Equal(
-				testCase.expectedErr,
-				anyAs.Authorize(testCtx, placeholderResource, testToken),
-			)
-
-			if len(as) > 0 {
-				// the any instance should be distinct
-				as[0] = AuthorizerFunc[string](
-					func(context.Context, string, Token) error {
-						suite.Fail("should not have been called")
-						return nil
-					},
-				)
-
-				suite.Equal(
-					testCase.expectedErr,
-					anyAs.Authorize(testCtx, placeholderResource, testToken),
-				)
-			}
-		})
-	}
+func (suite *AuthorizerTestSuite) newToken() Token {
+	return StubToken("test")
 }
 
-func TestAuthorizers(t *testing.T) {
-	suite.Run(t, new(AuthorizersTestSuite))
+func (suite *AuthorizerTestSuite) newCtx() context.Context {
+	type testContextKey struct{}
+	return context.WithValue(
+		context.Background(),
+		testContextKey{},
+		"test value",
+	)
+}
+
+func (suite *AuthorizerTestSuite) newResource() string {
+	return "test resource"
+}
+
+func (suite *AuthorizerTestSuite) TestNoOptions() {
+	a := suite.newAuthorizer()
+
+	err := a.Authorize(
+		suite.newCtx(),
+		suite.newResource(),
+		suite.newToken(),
+	)
+
+	suite.NoError(err)
+}
+
+func (suite *AuthorizerTestSuite) TestFullSuccess() {
+	var (
+		expectedCtx      = suite.newCtx()
+		expectedResource = suite.newResource()
+		expectedToken    = suite.newToken()
+
+		approver1 = new(mockApprover[string])
+		approver2 = new(mockApprover[string])
+
+		listener1 = new(mockAuthorizeListener[string])
+		listener2 = new(mockAuthorizeListener[string])
+
+		a = suite.newAuthorizer(
+			WithApprovers(approver1, approver2),
+			WithAuthorizeListeners(listener1),
+			WithAuthorizeListenerFuncs(listener2.OnEvent),
+		)
+	)
+
+	approver1.ExpectApprove(expectedCtx, expectedResource, expectedToken).
+		Return(nil).Once()
+	approver2.ExpectApprove(expectedCtx, expectedResource, expectedToken).
+		Return(nil).Once()
+
+	listener1.ExpectOnEvent(AuthorizeEvent[string]{
+		Resource: expectedResource,
+		Token:    expectedToken,
+		Err:      nil,
+	})
+
+	listener2.ExpectOnEvent(AuthorizeEvent[string]{
+		Resource: expectedResource,
+		Token:    expectedToken,
+		Err:      nil,
+	})
+
+	err := a.Authorize(expectedCtx, expectedResource, expectedToken)
+	suite.NoError(err)
+
+	listener1.AssertExpectations(suite.T())
+	listener2.AssertExpectations(suite.T())
+	approver1.AssertExpectations(suite.T())
+	approver2.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizerTestSuite) TestFullFirstApproverFail() {
+	var (
+		expectedCtx      = suite.newCtx()
+		expectedResource = suite.newResource()
+		expectedToken    = suite.newToken()
+		expectedErr      = errors.New("expected")
+
+		approver1 = new(mockApprover[string])
+		approver2 = new(mockApprover[string])
+
+		listener = new(mockAuthorizeListener[string])
+
+		a = suite.newAuthorizer(
+			WithApprovers(approver1, approver2),
+			WithAuthorizeListeners(listener),
+		)
+	)
+
+	approver1.ExpectApprove(expectedCtx, expectedResource, expectedToken).
+		Return(expectedErr).Once()
+
+	listener.ExpectOnEvent(AuthorizeEvent[string]{
+		Resource: expectedResource,
+		Token:    expectedToken,
+		Err:      expectedErr,
+	})
+
+	err := a.Authorize(expectedCtx, expectedResource, expectedToken)
+	suite.ErrorIs(err, expectedErr)
+
+	listener.AssertExpectations(suite.T())
+	approver1.AssertExpectations(suite.T())
+	approver2.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizerTestSuite) TestFullSecondApproverFail() {
+	var (
+		expectedCtx      = suite.newCtx()
+		expectedResource = suite.newResource()
+		expectedToken    = suite.newToken()
+		expectedErr      = errors.New("expected")
+
+		approver1 = new(mockApprover[string])
+		approver2 = new(mockApprover[string])
+
+		listener = new(mockAuthorizeListener[string])
+
+		a = suite.newAuthorizer(
+			WithApprovers(approver1, approver2),
+			WithAuthorizeListeners(listener),
+		)
+	)
+
+	approver1.ExpectApprove(expectedCtx, expectedResource, expectedToken).
+		Return(nil).Once()
+	approver2.ExpectApprove(expectedCtx, expectedResource, expectedToken).
+		Return(expectedErr).Once()
+
+	listener.ExpectOnEvent(AuthorizeEvent[string]{
+		Resource: expectedResource,
+		Token:    expectedToken,
+		Err:      expectedErr,
+	})
+
+	err := a.Authorize(expectedCtx, expectedResource, expectedToken)
+	suite.ErrorIs(err, expectedErr)
+
+	listener.AssertExpectations(suite.T())
+	approver1.AssertExpectations(suite.T())
+	approver2.AssertExpectations(suite.T())
+}
+
+func TestAuthorizer(t *testing.T) {
+	suite.Run(t, new(AuthorizerTestSuite))
 }

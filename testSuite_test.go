@@ -16,15 +16,16 @@ type TestSuite struct {
 }
 
 func (suite *TestSuite) testContext() context.Context {
+	type testContextKey struct{}
 	return context.WithValue(
 		context.Background(),
-		struct{}{},
+		testContextKey{},
 		"test value",
 	)
 }
 
 func (suite *TestSuite) testToken() Token {
-	return stubToken("test")
+	return StubToken("test")
 }
 
 func (suite *TestSuite) contexter(ctx context.Context) Contexter {

@@ -98,6 +98,11 @@ func AsTokenParser[S any, F TokenParserFunc[S]](f F) TokenParser[S] {
 // a given type of source.
 type TokenParsers[S any] []TokenParser[S]
 
+// Len returns the number of parsers in this aggregate.
+func (tps TokenParsers[S]) Len() int {
+	return len(tps)
+}
+
 // Append adds one or more parsers to this aggregate TokenParsers.  The semantics
 // of this method are the same as the built-in append.
 func (tps TokenParsers[S]) Append(more ...TokenParser[S]) TokenParsers[S] {
@@ -126,3 +131,21 @@ func (tps TokenParsers[S]) Parse(ctx context.Context, source S) (t Token, err er
 
 	return
 }
+
+// StubToken is a dummy token useful to configure a stubbed out workflow.  Useful
+// in testing and in development.
+type StubToken string
+
+// Principal just returns this token's string value.
+func (st StubToken) Principal() string { return string(st) }
+
+// StubTokenParser is a parser that returns the same Token for all
+// calls.  Useful in testing and in development.
+type StubTokenParser[S any] struct {
+	// Token is the constant token to return.  This could be a StubToken,
+	// or any desired type.
+	Token Token
+}
+
+// Parse always returns the configured Token and a nil error.
+func (stp StubTokenParser[S]) Parse(context.Context, S) (Token, error) { return stp.Token, nil }

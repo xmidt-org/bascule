@@ -3,88 +3,99 @@
 
 package bascule
 
-import (
-	"context"
+import "context"
 
-	"go.uber.org/multierr"
-)
+// AuthorizeEvent represents the result of bascule's authorize workflow.
+type AuthorizeEvent[R any] struct {
+	// Resource is the thing the token wants to access.  This
+	// field is always set.
+	Resource R
 
-// Authorizer is a strategy for determining if a given token represents
-// adequate permissions to access a resource.
-type Authorizer[R any] interface {
-	// Authorize tests if a given token holds the correct permissions to
-	// access a given resource.  If this method needs to access external
-	// systems, it should pass the supplied context to honor context
-	// cancelation semantics.
-	//
-	// If this method doesn't support the given token, it should return nil.
-	Authorize(ctx context.Context, resource R, token Token) error
+	// Token is the token that either was or was not authorized.
+	// This field is always set.
+	Token Token
+
+	// Err is the error that resulted from authorization.  This field will be
+	// nil for a successful authorization..
+	Err error
 }
 
-// AuthorizerFunc is a closure type that implements Authorizer.
-type AuthorizerFunc[R any] func(context.Context, R, Token) error
-
-func (af AuthorizerFunc[R]) Authorize(ctx context.Context, resource R, token Token) error {
-	return af(ctx, resource, token)
+// AuthorizerOption is a configurable option for an Authorizer.
+type AuthorizerOption[S any] interface {
+	apply(*Authorizer[S]) error
 }
 
-// Authorizers is a collection of Authorizers.
-type Authorizers[R any] []Authorizer[R]
+type authorizerOptionFunc[S any] func(*Authorizer[S]) error
 
-// Append tacks on one or more authorizers to this collection.  The possibly
-// new Authorizers instance is returned.  The semantics of this method are
-// the same as the built-in append.
-func (as Authorizers[R]) Append(more ...Authorizer[R]) Authorizers[R] {
-	return append(as, more...)
-}
+//nolint:unused
+func (aof authorizerOptionFunc[S]) apply(a *Authorizer[S]) error { return aof(a) }
 
-// Authorize requires all authorizers in this sequence to allow access.  This
-// method supplies a logical AND.
-//
-// Because authorization can be arbitrarily expensive, execution halts at the first failed
-// authorization attempt.
-func (as Authorizers[R]) Authorize(ctx context.Context, resource R, token Token) error {
-	for _, a := range as {
-		if err := a.Authorize(ctx, resource, token); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-type requireAny[R any] struct {
-	a Authorizers[R]
-}
-
-// Authorize returns nil at the first authorizer that returns nil, i.e. accepts the access.
-// Otherwise, this method returns an aggregate error of all the authorization errors.
-func (ra requireAny[R]) Authorize(ctx context.Context, resource R, token Token) error {
-	var err error
-	for _, a := range ra.a {
-		authErr := a.Authorize(ctx, resource, token)
-		if authErr == nil {
+// WithAuthorizeListeners adds listeners to the Authorizer being built.
+// Multiple calls for this option are cumulative.
+func WithAuthorizeListeners[R any](more ...Listener[AuthorizeEvent[R]]) AuthorizerOption[R] {
+	return authorizerOptionFunc[R](
+		func(a *Authorizer[R]) error {
+			a.listeners = a.listeners.Append(more...)
 			return nil
-		}
-
-		err = multierr.Append(err, authErr)
-	}
-
-	return err
+		},
+	)
 }
 
-// Any returns an Authorizer which is a logical OR:  each authorizer is executed in
-// order, and any authorizer that allows access results in an immediate return.  The
-// returned Authorizer's state is distinct and is unaffected by subsequent changes
-// to the Authorizers set.
+// WithAuthorizeListenerFuncs is a closure variant of WithAuthorizeListeners.
+func WithAuthorizeListenerFuncs[R any](more ...ListenerFunc[AuthorizeEvent[R]]) AuthorizerOption[R] {
+	return authorizerOptionFunc[R](
+		func(a *Authorizer[R]) error {
+			a.listeners = a.listeners.AppendFunc(more...)
+			return nil
+		},
+	)
+}
+
+// WithApprovers adds approvers to the Authorizer being built.
+// Multiple calls for this option are cumulative.
+func WithApprovers[R any](more ...Approver[R]) AuthorizerOption[R] {
+	return authorizerOptionFunc[R](
+		func(a *Authorizer[R]) error {
+			a.approvers = a.approvers.Append(more...)
+			return nil
+		},
+	)
+}
+
+// NewAuthorizer constructs an Authorizer workflow using the supplied options.
 //
-// Any error returns from the returned Authorizer will be an aggregate of all the errors
-// returned from each element.
-func (as Authorizers[R]) Any() Authorizer[R] {
-	return requireAny[R]{
-		a: append(
-			make(Authorizers[R], 0, len(as)),
-			as...,
-		),
+// If no options are supplied, the returned Authorizer will authorize all tokens
+// to access any resources.
+func NewAuthorizer[R any](opts ...AuthorizerOption[R]) (a *Authorizer[R], err error) {
+	a = new(Authorizer[R])
+	for i := 0; err == nil && i < len(opts); i++ {
+		err = opts[i].apply(a)
 	}
+
+	return
+}
+
+// Authorizer represents the full bascule authorizer workflow.  An authenticated
+// token is required as the starting point for authorization.
+type Authorizer[R any] struct {
+	listeners Listeners[AuthorizeEvent[R]]
+	approvers Approvers[R]
+}
+
+// Authorize implements the bascule authorization workflow for a particular type of
+// resource.  The following steps are performed:
+//
+// (1) Each approver is invoked, and all approvers must approve access
+// (2) An AuthorizeEvent is dispatched to any listeners with the result
+//
+// Any error that occurred during authorization is returned.
+func (a *Authorizer[R]) Authorize(ctx context.Context, resource R, token Token) (err error) {
+	err = a.approvers.Approve(ctx, resource, token)
+	a.listeners.OnEvent(AuthorizeEvent[R]{
+		Resource: resource,
+		Token:    token,
+		Err:      err,
+	})
+
+	return
 }
