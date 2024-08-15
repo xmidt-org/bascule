@@ -27,6 +27,7 @@ type AuthorizerOption[S any] interface {
 
 type authorizerOptionFunc[S any] func(*Authorizer[S]) error
 
+//nolint:unused
 func (aof authorizerOptionFunc[S]) apply(a *Authorizer[S]) error { return aof(a) }
 
 // WithAuthorizeListeners adds listeners to the Authorizer being built.
