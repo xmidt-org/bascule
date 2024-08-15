@@ -16,9 +16,10 @@ type TestSuite struct {
 }
 
 func (suite *TestSuite) testContext() context.Context {
+	type testContextKey struct{}
 	return context.WithValue(
 		context.Background(),
-		struct{}{},
+		testContextKey{},
 		"test value",
 	)
 }
