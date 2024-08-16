@@ -28,13 +28,6 @@ var (
 	ErrMissingAuthorization = errors.New("missing authorization")
 )
 
-// fastIsSpace tests an ASCII byte to see if it's whitespace.
-// HTTP headers are restricted to US-ASCII, so we don't need
-// the full unicode stack.
-func fastIsSpace(b byte) bool {
-	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\v' || b == '\f'
-}
-
 // ParseAuthorization parses an authorization value typically passed in
 // the Authorization HTTP header.
 //

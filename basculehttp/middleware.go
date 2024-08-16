@@ -72,7 +72,7 @@ func UseAuthorizer(authorizer *bascule.Authorizer[*http.Request], err error) Mid
 // in a separate WWW-Authenticate header, in the order specified by this option.
 func WithChallenges(ch ...Challenge) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		m.challenges.Add(ch...)
+		m.challenges = m.challenges.Append(ch...)
 		return nil
 	})
 }
@@ -152,31 +152,51 @@ func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
 	return m.Then(protected)
 }
 
-// writeError handles writing error information to an HTTP response.  This will include any WWW-Authenticate
-// challenges that are configured if a 401 status is detected.
+// writeRawError is a fallback to write an error that came from this package.
+// The response is always a text/plain representation of the error.
+func (m *Middleware) writeRawError(response http.ResponseWriter, err error) {
+	response.WriteHeader(http.StatusInternalServerError)
+	response.Header().Set("Content-Type", "text/plain")
+
+	errBody := []byte(err.Error())
+	response.Header().Set("Content-Length", strconv.Itoa(len(errBody)))
+	response.Write(errBody)
+}
+
+// writeWorkflowError handles writing an error that came from the bascule workflow to an HTTP request.
+// This will include writing any HTTP challenges if a 401 status is detected.
 //
 // The defaultCode is used as the response status code if the given error does not supply a StatusCode method.
 //
 // If the error supports JSON or text marshaling, that is used for the response body.  Otherwise, a text/plain
 // response with the Error() method's text is used.
-func (m *Middleware) writeError(response http.ResponseWriter, request *http.Request, defaultCode int, err error) {
+func (m *Middleware) writeWorkflowError(response http.ResponseWriter, request *http.Request, defaultCode int, err error) {
 	statusCode := m.errorStatusCoder(request, err)
 	if statusCode < 100 {
 		statusCode = defaultCode
 	}
 
+	var (
+		contentType string
+		content     []byte
+		writeErr    error
+	)
+
 	if statusCode == http.StatusUnauthorized {
-		m.challenges.WriteHeader(response.Header())
+		writeErr = m.challenges.WriteHeader("", response.Header())
 	}
 
-	contentType, content, marshalErr := m.errorMarshaler(request, err)
+	if writeErr == nil {
+		contentType, content, writeErr = m.errorMarshaler(request, err)
+	}
 
-	// TODO: what if marshalErr != nil ?
-	if marshalErr == nil {
+	if writeErr != nil {
+		m.writeRawError(response, writeErr)
+	} else {
 		response.Header().Set("Content-Type", contentType)
 		response.Header().Set("Content-Length", strconv.Itoa(len(content)))
 		response.WriteHeader(statusCode)
-		response.Write(content) // TODO: handle errors here somehow
+		response.Write(content)
 	}
 }
 
@@ -193,7 +213,7 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	token, err := fd.authenticator.Authenticate(ctx, request)
 	if err != nil {
 		// by default, failing to parse a token is a malformed request
-		fd.writeError(response, request, http.StatusBadRequest, err)
+		fd.writeWorkflowError(response, request, http.StatusBadRequest, err)
 		return
 	}
 
@@ -203,7 +223,7 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	if fd.authorizer != nil {
 		err = fd.authorizer.Authorize(ctx, request, token)
 		if err != nil {
-			fd.writeError(response, request, http.StatusForbidden, err)
+			fd.writeWorkflowError(response, request, http.StatusForbidden, err)
 			return
 		}
 	}
