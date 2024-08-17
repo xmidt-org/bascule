@@ -15,7 +15,7 @@ import (
 // just basic auth.
 func ExampleMiddleware_basicauth() {
 	tp, _ := NewAuthorizationParser(
-		WithScheme(SchemeBasic, BasicTokenParser{}),
+		WithBasic(),
 	)
 
 	m, _ := NewMiddleware(

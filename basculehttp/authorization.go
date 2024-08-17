@@ -56,6 +56,8 @@ type authorizationParserOptionFunc func(*AuthorizationParser) error
 
 func (apof authorizationParserOptionFunc) apply(ap *AuthorizationParser) error { return apof(ap) }
 
+// WithAuthorizationHeader changes the name of the header holding the token.  By default,
+// the header used is DefaultAuthorizationHeader.
 func WithAuthorizationHeader(header string) AuthorizationParserOption {
 	return authorizationParserOptionFunc(func(ap *AuthorizationParser) error {
 		ap.header = header
@@ -63,6 +65,9 @@ func WithAuthorizationHeader(header string) AuthorizationParserOption {
 	})
 }
 
+// WithScheme registers a string-based token parser that handles a
+// specific authorization scheme.  Invocations to this option are cumulative
+// and will overwrite any existing registration.
 func WithScheme(scheme Scheme, parser bascule.TokenParser[string]) AuthorizationParserOption {
 	return authorizationParserOptionFunc(func(ap *AuthorizationParser) error {
 		// we want case-insensitive matches, so lowercase everything
@@ -71,11 +76,20 @@ func WithScheme(scheme Scheme, parser bascule.TokenParser[string]) Authorization
 	})
 }
 
+// WithBasic is a shorthand for WithScheme that registers basic token parsing using
+// the default scheme.
+func WithBasic() AuthorizationParserOption {
+	return WithScheme(SchemeBasic, BasicTokenParser{})
+}
+
+// AuthorizationParsers is a bascule.TokenParser that handles the Authorization header.
 type AuthorizationParser struct {
 	header  string
 	parsers map[Scheme]bascule.TokenParser[string]
 }
 
+// NewAuthorizationParser constructs an Authorization parser from a set
+// of configuration options.
 func NewAuthorizationParser(opts ...AuthorizationParserOption) (*AuthorizationParser, error) {
 	ap := &AuthorizationParser{
 		parsers: make(map[Scheme]bascule.TokenParser[string]),
