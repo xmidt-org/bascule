@@ -62,6 +62,17 @@ func WithApprovers[R any](more ...Approver[R]) AuthorizerOption[R] {
 	)
 }
 
+// WithApproverFuncs is a closure variant of WithApprovers that eases the
+// syntactical pain of dealing with approvers that are functions.
+func WithApproverFuncs[R any](more ...ApproverFunc[R]) AuthorizerOption[R] {
+	return authorizerOptionFunc[R](
+		func(a *Authorizer[R]) error {
+			a.approvers = a.approvers.AppendFunc(more...)
+			return nil
+		},
+	)
+}
+
 // NewAuthorizer constructs an Authorizer workflow using the supplied options.
 //
 // If no options are supplied, the returned Authorizer will authorize all tokens

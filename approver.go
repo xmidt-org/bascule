@@ -39,6 +39,16 @@ func (as Approvers[R]) Append(more ...Approver[R]) Approvers[R] {
 	return append(as, more...)
 }
 
+// AppendFunc is a closure variant of Append that makes working with
+// approvers that are functions a little easier.
+func (as Approvers[R]) AppendFunc(more ...ApproverFunc[R]) Approvers[R] {
+	for _, m := range more {
+		as = append(as, m)
+	}
+
+	return as
+}
+
 // Approve requires all approvers in this sequence to allow access.  This
 // method supplies a logical AND.
 //

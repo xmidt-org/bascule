@@ -38,9 +38,6 @@ func (bt basicToken) Password() string {
 
 // BasicTokenParser is a string-based bascule.TokenParser that produces
 // BasicToken instances from strings.
-//
-// An instance of this parser may be passed to WithScheme in order to
-// configure an AuthorizationParser.
 type BasicTokenParser struct{}
 
 // Parse assumes that value is of the format required by https://datatracker.ietf.org/doc/html/rfc7617.

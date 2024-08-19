@@ -4,8 +4,6 @@
 package basculehttp
 
 import (
-	"encoding"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -39,14 +37,16 @@ func DefaultErrorStatusCoder(_ *http.Request, err error) int {
 	var sc statusCoder
 
 	switch {
+	// check if it's a status coder first, so that we can
+	// override status codes for built-in errors.
+	case errors.As(err, &sc):
+		return sc.StatusCode()
+
 	case errors.Is(err, bascule.ErrMissingCredentials):
 		return http.StatusUnauthorized
 
 	case errors.Is(err, bascule.ErrInvalidCredentials):
 		return http.StatusBadRequest
-
-	case errors.As(err, &sc):
-		return sc.StatusCode()
 	}
 
 	return 0
@@ -56,46 +56,20 @@ func DefaultErrorStatusCoder(_ *http.Request, err error) int {
 // be used in an HTTP response body.
 type ErrorMarshaler func(request *http.Request, err error) (contentType string, content []byte, marshalErr error)
 
-// DefaultErrorMarshaler examines the error for several standard marshalers.  The supported marshalers
-// together with the returned content types are as follows, in order:
-//
-//   - json.Marshaler                 "application/json"
-//   - encoding.TextMarshaler         "text/plain; charset=utf-8"
-//   - encoding.BinaryMarshaler       "application/octet-stream"
-//
-// If the error or any of its wrapped errors does not implement a supported marshaler interface,
-// the error's Error() text is used with a content type of "text/plain; charset=utf-8".
+// DefaultErrorMarshaler returns a plaintext representation of the error.
 func DefaultErrorMarshaler(_ *http.Request, err error) (contentType string, content []byte, marshalErr error) {
-	// walk the wrapped errors manually, since that's way more efficient
-	// that walking the error tree once for each desired type
-	for wrapped := err; wrapped != nil && len(content) == 0 && marshalErr == nil; wrapped = errors.Unwrap(wrapped) {
-		switch m := wrapped.(type) { //nolint: errorlint
-		case json.Marshaler:
-			contentType = "application/json"
-			content, marshalErr = m.MarshalJSON()
-
-		case encoding.TextMarshaler:
-			contentType = "text/plain; charset=utf-8"
-			content, marshalErr = m.MarshalText()
-
-		case encoding.BinaryMarshaler:
-			contentType = "application/octet-stream"
-			content, marshalErr = m.MarshalBinary()
-		}
-	}
-
-	if len(content) == 0 && marshalErr == nil {
-		// fallback
-		contentType = "text/plain; charset=utf-8"
-		content = []byte(err.Error())
-	}
-
+	contentType = "text/plain; charset=utf-8"
+	content = []byte(err.Error())
 	return
 }
 
 type statusCodeError struct {
 	error
 	statusCode int
+}
+
+func (err *statusCodeError) Unwrap() error {
+	return err.error
 }
 
 func (err *statusCodeError) StatusCode() int {

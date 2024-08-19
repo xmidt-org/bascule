@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	// WWWAuthenticateHeaderName is the HTTP header used for StatusUnauthorized challenges
+	// WWWAuthenticateHeader is the HTTP header used for StatusUnauthorized challenges
 	// when encountered by the Middleware.
 	//
 	// This value is used by default when no header is supplied to Challenges.WriteHeader.
-	WWWAuthenticateHeaderName = "WWW-Authenticate"
+	WWWAuthenticateHeader = "WWW-Authenticate"
 )
 
 var (
@@ -216,7 +216,7 @@ func (chs Challenges) Append(ch ...Challenge) Challenges {
 // halted and that error is returned.
 func (chs Challenges) WriteHeader(name string, h http.Header) error {
 	if len(name) == 0 {
-		name = WWWAuthenticateHeaderName
+		name = WWWAuthenticateHeader
 	}
 
 	var o strings.Builder

@@ -53,32 +53,63 @@ func (suite *ApproversTestSuite) TestAuthorize() {
 		},
 	}
 
-	for _, testCase := range testCases {
-		suite.Run(testCase.name, func() {
-			var (
-				testCtx   = suite.testContext()
-				testToken = suite.testToken()
-				as        Approvers[string]
-			)
-
-			for _, err := range testCase.results {
-				err := err
-				as = as.Append(
-					ApproverFunc[string](func(ctx context.Context, resource string, token Token) error {
-						suite.Same(testCtx, ctx)
-						suite.Equal(testToken, token)
-						suite.Equal(placeholderResource, resource)
-						return err
-					}),
+	suite.Run("Append", func() {
+		for _, testCase := range testCases {
+			suite.Run(testCase.name, func() {
+				var (
+					testCtx   = suite.testContext()
+					testToken = suite.testToken()
+					as        Approvers[string]
 				)
-			}
 
-			suite.Equal(
-				testCase.expectedErr,
-				as.Approve(testCtx, placeholderResource, testToken),
-			)
-		})
-	}
+				for _, err := range testCase.results {
+					err := err
+					as = as.Append(
+						ApproverFunc[string](func(ctx context.Context, resource string, token Token) error {
+							suite.Same(testCtx, ctx)
+							suite.Equal(testToken, token)
+							suite.Equal(placeholderResource, resource)
+							return err
+						}),
+					)
+				}
+
+				suite.Equal(
+					testCase.expectedErr,
+					as.Approve(testCtx, placeholderResource, testToken),
+				)
+			})
+		}
+	})
+
+	suite.Run("AppendFunc", func() {
+		for _, testCase := range testCases {
+			suite.Run(testCase.name, func() {
+				var (
+					testCtx   = suite.testContext()
+					testToken = suite.testToken()
+					as        Approvers[string]
+				)
+
+				for _, err := range testCase.results {
+					err := err
+					as = as.AppendFunc(
+						func(ctx context.Context, resource string, token Token) error {
+							suite.Same(testCtx, ctx)
+							suite.Equal(testToken, token)
+							suite.Equal(placeholderResource, resource)
+							return err
+						},
+					)
+				}
+
+				suite.Equal(
+					testCase.expectedErr,
+					as.Approve(testCtx, placeholderResource, testToken),
+				)
+			})
+		}
+	})
 }
 
 func (suite *ApproversTestSuite) TestAny() {

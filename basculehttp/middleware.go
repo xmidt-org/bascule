@@ -4,11 +4,18 @@
 package basculehttp
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/xmidt-org/bascule/v1"
 	"go.uber.org/multierr"
+)
+
+var (
+	// ErrNoAuthenticator is returned by NewMiddleware to indicate that an Authorizer
+	// was configured without an Authenticator.
+	ErrNoAuthenticator = errors.New("An Authenticator is required if an Authorizer is configured")
 )
 
 // MiddlewareOption is a functional option for tailoring a Middleware.
@@ -23,8 +30,6 @@ func (mof middlewareOptionFunc) apply(m *Middleware) error {
 }
 
 // WithAuthenticator supplies the Authenticator workflow for the middleware.
-//
-// Note: If no authenticator is supplied, NewMiddeware returns an error.
 func WithAuthenticator(authenticator *bascule.Authenticator[*http.Request]) MiddlewareOption {
 	return UseAuthenticator(authenticator, nil)
 }
@@ -81,12 +86,7 @@ func WithChallenges(ch ...Challenge) MiddlewareOption {
 // option is omitted or if esc is nil, DefaultErrorStatusCoder is used.
 func WithErrorStatusCoder(esc ErrorStatusCoder) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		if esc != nil {
-			m.errorStatusCoder = esc
-		} else {
-			m.errorStatusCoder = DefaultErrorStatusCoder
-		}
-
+		m.errorStatusCoder = esc
 		return nil
 	})
 }
@@ -95,17 +95,33 @@ func WithErrorStatusCoder(esc ErrorStatusCoder) MiddlewareOption {
 // option is omitted or if esc is nil, DefaultErrorMarshaler is used.
 func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		if em != nil {
-			m.errorMarshaler = em
-		} else {
-			m.errorMarshaler = DefaultErrorMarshaler
-		}
-
+		m.errorMarshaler = em
 		return nil
 	})
 }
 
-// Middleware is an immutable configuration that can decorate multiple handlers.
+// Middleware is an immutable HTTP workflow that can decorate multiple handlers.
+//
+// A Middleware can have either or both of an Authenticator, which creates
+// tokens from HTTP requests, and an Authorizer, which approves access to
+// the resource identified by the request.  The behavior of a Middleware
+// depends mostly on these two components.
+//
+// If both an authenticator and an authorizer are supplied, the full bascule
+// workflow, including events, is implemented.
+//
+// If an authenticator is supplied without an authorizer, only token creation
+// is implemented.  Without an authorizer, it is assumed that all tokens have
+// access to all requests.
+//
+// If no authenticator is supplied, but an authorizer IS supplied, then
+// NewMiddleware returns an error.  An authenticator is required in order to
+// create tokens.
+//
+// Finally, if neither an authenticator or an authorizer is supplied,
+// then this Middleware is a noop.  Any attempt to decorate handlers will
+// result in those handlers being returned as is.  This allows a Middleware
+// to be turned off via configuration.
 type Middleware struct {
 	authenticator *bascule.Authenticator[*http.Request]
 	authorizer    *bascule.Authorizer[*http.Request]
@@ -117,14 +133,35 @@ type Middleware struct {
 
 // NewMiddleware creates an immutable Middleware instance from a supplied set of options.
 // No options will result in a Middleware with default behavior.
+//
+// If no authenticator is configured, but an authorizer is, this function returns
+// ErrNoAuthenticator.
+//
+// Note that if no workflow components are configured, i.e. neither an authenticator nor
+// an authorizer are supplied, then the returned Middleware is a noop.
 func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
-	m = &Middleware{
-		errorStatusCoder: DefaultErrorStatusCoder,
-		errorMarshaler:   DefaultErrorMarshaler,
-	}
-
+	m = new(Middleware)
 	for _, o := range opts {
 		err = multierr.Append(err, o.apply(m))
+	}
+
+	switch {
+	case err != nil:
+		m = nil
+
+	case m.authenticator == nil && m.authorizer != nil:
+		err = multierr.Append(err, ErrNoAuthenticator)
+		m = nil
+
+	default:
+		// cleanup after the options run
+		if m.errorStatusCoder == nil {
+			m.errorStatusCoder = DefaultErrorStatusCoder
+		}
+
+		if m.errorMarshaler == nil {
+			m.errorMarshaler = DefaultErrorMarshaler
+		}
 	}
 
 	return
@@ -135,6 +172,12 @@ func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
 func (m *Middleware) Then(protected http.Handler) http.Handler {
 	if protected == nil {
 		protected = http.DefaultServeMux
+	}
+
+	// no point in decorating if there's no workflow
+	// this also allows a Middleware to be turned off via configuration
+	if m.authenticator == nil && m.authorizer == nil {
+		return protected
 	}
 
 	return &frontDoor{
@@ -156,7 +199,7 @@ func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
 // The response is always a text/plain representation of the error.
 func (m *Middleware) writeRawError(response http.ResponseWriter, err error) {
 	response.WriteHeader(http.StatusInternalServerError)
-	response.Header().Set("Content-Type", "text/plain")
+	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 	errBody := []byte(err.Error())
 	response.Header().Set("Content-Length", strconv.Itoa(len(errBody)))
@@ -210,6 +253,9 @@ type frontDoor struct {
 // ServeHTTP implements the bascule workflow, using the configured middleware.
 func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
+
+	// an authenticator is is required if we are decorating
+	// if the authenticator was nil, a frontDoor won't get created
 	token, err := fd.authenticator.Authenticate(ctx, request)
 	if err != nil {
 		// by default, failing to parse a token is a malformed request

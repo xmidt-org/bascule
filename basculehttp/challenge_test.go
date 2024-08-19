@@ -192,7 +192,7 @@ func (suite *ChallengeTestSuite) testChallengesValid() {
 			suite.Run("DefaultHeader", func() {
 				header := make(http.Header)
 				suite.NoError(testCase.challenges.WriteHeader("", header))
-				suite.ElementsMatch(testCase.expected, header.Values(WWWAuthenticateHeaderName))
+				suite.ElementsMatch(testCase.expected, header.Values(WWWAuthenticateHeader))
 			})
 
 			suite.Run("CustomHeader", func() {

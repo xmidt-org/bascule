@@ -61,12 +61,14 @@ func (suite *AuthorizerTestSuite) TestFullSuccess() {
 
 		approver1 = new(mockApprover[string])
 		approver2 = new(mockApprover[string])
+		approver3 = new(mockApprover[string])
 
 		listener1 = new(mockAuthorizeListener[string])
 		listener2 = new(mockAuthorizeListener[string])
 
 		a = suite.newAuthorizer(
 			WithApprovers(approver1, approver2),
+			WithApproverFuncs(approver3.Approve),
 			WithAuthorizeListeners(listener1),
 			WithAuthorizeListenerFuncs(listener2.OnEvent),
 		)
@@ -75,6 +77,8 @@ func (suite *AuthorizerTestSuite) TestFullSuccess() {
 	approver1.ExpectApprove(expectedCtx, expectedResource, expectedToken).
 		Return(nil).Once()
 	approver2.ExpectApprove(expectedCtx, expectedResource, expectedToken).
+		Return(nil).Once()
+	approver3.ExpectApprove(expectedCtx, expectedResource, expectedToken).
 		Return(nil).Once()
 
 	listener1.ExpectOnEvent(AuthorizeEvent[string]{
@@ -96,6 +100,7 @@ func (suite *AuthorizerTestSuite) TestFullSuccess() {
 	listener2.AssertExpectations(suite.T())
 	approver1.AssertExpectations(suite.T())
 	approver2.AssertExpectations(suite.T())
+	approver3.AssertExpectations(suite.T())
 }
 
 func (suite *AuthorizerTestSuite) TestFullFirstApproverFail() {
