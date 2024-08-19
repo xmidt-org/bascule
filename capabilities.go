@@ -8,6 +8,8 @@ package bascule
 // Capabilities do not make sense for all tokens, e.g. simple basic auth tokens.
 type CapabilitiesAccessor interface {
 	// Capabilities returns the set of capabilities associated with this token.
+	// The exact format and application of capabilities is left up to specific
+	// implementations.
 	Capabilities() []string
 }
 
