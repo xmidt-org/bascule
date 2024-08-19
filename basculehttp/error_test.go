@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 type ErrorTestSuite struct {

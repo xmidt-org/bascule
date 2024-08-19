@@ -6,7 +6,7 @@ package basculehttp
 import (
 	"net/http"
 
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 // NewAuthenticator is a convenient wrapper around bascule.NewAuthenticator.

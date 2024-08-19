@@ -7,7 +7,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 // ErrorStatusCoder is a strategy for determining the HTTP response code for an error.

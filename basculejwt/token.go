@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwt"
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 // CapabilitiesKey is the JWT claims key where capabilities are expected.
