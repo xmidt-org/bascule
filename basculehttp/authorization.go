@@ -21,11 +21,7 @@ const (
 var (
 	// ErrInvalidAuthorization indicates an authorization header value did not
 	// correspond to the standard.
-	ErrInvalidAuthorization = errors.New("invalidation authorization")
-
-	// ErrMissingAuthorization indicates that no authorization header was
-	// present in the source HTTP request.
-	ErrMissingAuthorization = errors.New("missing authorization")
+	ErrInvalidAuthorization = errors.New("invalid authorization")
 )
 
 // ParseAuthorization parses an authorization value typically passed in
@@ -48,6 +44,7 @@ func ParseAuthorization(raw string) (s Scheme, v string, err error) {
 	return
 }
 
+// AuthorizationParserOption is a configurable option for an AuthorizationParser.
 type AuthorizationParserOption interface {
 	apply(*AuthorizationParser) error
 }
@@ -83,6 +80,9 @@ func WithBasic() AuthorizationParserOption {
 }
 
 // AuthorizationParsers is a bascule.TokenParser that handles the Authorization header.
+//
+// By default, this parser will use the standard Authorization header, which can be
+// changed via with WithAuthorizationHeader option.
 type AuthorizationParser struct {
 	header  string
 	parsers map[Scheme]bascule.TokenParser[string]
@@ -111,6 +111,8 @@ func NewAuthorizationParser(opts ...AuthorizationParserOption) (*AuthorizationPa
 // Parse extracts the appropriate header, Authorization by default, and parses the
 // scheme and value.  Schemes are case-insensitive, e.g. BASIC and Basic are the same scheme.
 //
+// If no authorization header is found in the request, this method returns ErrMissingCredentials.
+//
 // If a token parser is registered for the given scheme, that token parser is invoked.
 // Otherwise, UnsupportedSchemeError is returned, indicating the scheme in question.
 func (ap *AuthorizationParser) Parse(ctx context.Context, source *http.Request) (bascule.Token, error) {
@@ -121,7 +123,7 @@ func (ap *AuthorizationParser) Parse(ctx context.Context, source *http.Request) 
 
 	scheme, value, err := ParseAuthorization(authValue)
 	if err != nil {
-		return nil, err
+		return nil, bascule.ErrInvalidCredentials
 	}
 
 	p, registered := ap.parsers[scheme.lower()]
