@@ -1,6 +1,6 @@
 # bascule
 
-The library for authorization: both acquiring and validating.
+A library for authentication and authorization workflows.
 
 [![Build Status](https://github.com/xmidt-org/bascule/actions/workflows/ci.yml/badge.svg)](https://github.com/xmidt-org/bascule/actions/workflows/ci.yml)
 [![codecov.io](http://codecov.io/github/xmidt-org/bascule/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/bascule?branch=main)
@@ -11,16 +11,11 @@ The library for authorization: both acquiring and validating.
 
 ## Summary
 
-This library provides validation of Tokens used for authorization as well as a 
-way to acquire Authorization header values.  Tokens can be parsed and validated 
-from http requests. Bascule provides a generic framework that can be configured, 
-but currently can support basic and jwt authorization.
+Bascule provides authentication and authorization workflows, particularly focused on the needs of an HTTP server.
 
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
-- [Acquiring Authorization](#acquiring-authorization)
-- [Validating Authorization](#validating-authorization)
 - [Install](#install)
 - [Contributing](#contributing)
 
@@ -29,25 +24,8 @@ but currently can support basic and jwt authorization.
 This project and everyone participating in it are governed by the [XMiDT Code Of Conduct](https://xmidt.io/code_of_conduct/). 
 By participating, you agree to this Code.
 
-## Acquiring Authorization
-
-The `acquire` subpackage handles getting the value for an Authorization header of
-an http request.  The JWT acquirer gets a JWT from a configurable endpoint, 
-caches it, and will get a new JWT at a configurable time before the current JWT 
-expires.
-
-## Validating Authorization
-
-Validation of Tokens happens once an authorization value has been parsed into 
-something that implements the [Token interface](https://godoc.org/github.com/xmidt-org/bascule#Token).  
-The `basculehttp` subpackage provides http decorators/middleware that will parse an http 
-request into a Token and validate it with configurable rules.
-
-Read more about the `basculehttp` subpackage in its [README](basculehttp/README.md).
-
 ## Install
-This repo is a library of packages used for the authorization.  There is no 
-installation.
+This repo is a library of packages used for authentication and authorization.
 
 ## Contributing
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md).
