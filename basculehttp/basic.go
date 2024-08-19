@@ -9,7 +9,7 @@ import (
 	"encoding/base64"
 	"strings"
 
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 // BasicToken is the interface that Basic Auth tokens implement.

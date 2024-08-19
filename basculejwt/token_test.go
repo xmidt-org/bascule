@@ -12,7 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/suite"
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 type TokenTestSuite struct {

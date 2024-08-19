@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 // withAuthorizationParserOptionErr is an option that returns an error.

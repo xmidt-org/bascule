@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/xmidt-org/bascule/v1"
+	"github.com/xmidt-org/bascule"
 )
 
 const (
