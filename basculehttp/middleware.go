@@ -86,12 +86,7 @@ func WithChallenges(ch ...Challenge) MiddlewareOption {
 // option is omitted or if esc is nil, DefaultErrorStatusCoder is used.
 func WithErrorStatusCoder(esc ErrorStatusCoder) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		if esc != nil {
-			m.errorStatusCoder = esc
-		} else {
-			m.errorStatusCoder = DefaultErrorStatusCoder
-		}
-
+		m.errorStatusCoder = esc
 		return nil
 	})
 }
@@ -100,12 +95,7 @@ func WithErrorStatusCoder(esc ErrorStatusCoder) MiddlewareOption {
 // option is omitted or if esc is nil, DefaultErrorMarshaler is used.
 func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 	return middlewareOptionFunc(func(m *Middleware) error {
-		if em != nil {
-			m.errorMarshaler = em
-		} else {
-			m.errorMarshaler = DefaultErrorMarshaler
-		}
-
+		m.errorMarshaler = em
 		return nil
 	})
 }
@@ -155,12 +145,15 @@ func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
 		err = multierr.Append(err, o.apply(m))
 	}
 
-	if m.authenticator == nil && m.authorizer == nil {
+	switch {
+	case err != nil:
 		m = nil
-		err = multierr.Append(err, ErrNoAuthenticator)
-	}
 
-	if m != nil {
+	case m.authenticator == nil && m.authorizer != nil:
+		err = multierr.Append(err, ErrNoAuthenticator)
+		m = nil
+
+	default:
 		// cleanup after the options run
 		if m.errorStatusCoder == nil {
 			m.errorStatusCoder = DefaultErrorStatusCoder
@@ -206,7 +199,7 @@ func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
 // The response is always a text/plain representation of the error.
 func (m *Middleware) writeRawError(response http.ResponseWriter, err error) {
 	response.WriteHeader(http.StatusInternalServerError)
-	response.Header().Set("Content-Type", "text/plain")
+	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 	errBody := []byte(err.Error())
 	response.Header().Set("Content-Length", strconv.Itoa(len(errBody)))

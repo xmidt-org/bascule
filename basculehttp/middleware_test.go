@@ -5,6 +5,8 @@ package basculehttp
 
 import (
 	"context"
+	"errors"
+	"mime"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,6 +17,47 @@ import (
 
 type MiddlewareTestSuite struct {
 	suite.Suite
+
+	expectedPrincipal string
+	expectedPassword  string
+	expectedToken     bascule.Token
+}
+
+func (suite *MiddlewareTestSuite) SetupSuite() {
+	suite.expectedPrincipal = "testPrincipal"
+	suite.expectedPassword = "test_password"
+	suite.expectedToken = basicToken{
+		userName: suite.expectedPrincipal,
+		password: suite.expectedPassword,
+	}
+}
+
+// newRequest creates a standardized test request, devoid of any authorization.
+func (suite *MiddlewareTestSuite) newRequest() *http.Request {
+	return httptest.NewRequest("GET", "/test", nil)
+}
+
+// newBasicAuthRequest creates a new test request configured with valid basic auth.
+func (suite *MiddlewareTestSuite) newBasicAuthRequest() *http.Request {
+	request := suite.newRequest()
+	request.SetBasicAuth(suite.expectedPrincipal, suite.expectedPassword)
+	return request
+}
+
+// assertBasicAuthRequest asserts that the given request matches this suite's expectations.
+func (suite *MiddlewareTestSuite) assertBasicAuthRequest(request *http.Request) {
+	suite.Require().NotNil(request)
+	suite.Equal("GET", request.Method)
+	suite.Equal("/test", request.URL.String())
+}
+
+// assertBasicAuthToken asserts that the token matches this suite's expectations.
+func (suite *MiddlewareTestSuite) assertBasicAuthToken(token bascule.Token) {
+	suite.Require().NotNil(token)
+	suite.Equal(suite.expectedPrincipal, token.Principal())
+	suite.Require().Implements((*BasicToken)(nil), token)
+	suite.Equal(suite.expectedPrincipal, token.(BasicToken).UserName())
+	suite.Equal(suite.expectedPassword, token.(BasicToken).Password())
 }
 
 // newAuthorizationParser creates an AuthorizationParser that is expected to be valid.
@@ -53,17 +96,210 @@ func (suite *MiddlewareTestSuite) newMiddleware(opts ...MiddlewareOption) *Middl
 	return m
 }
 
+// serveHTTPFunc is a standard, non-error handler function that sets the normalResponseCode.
+func (suite *MiddlewareTestSuite) serveHTTPFunc(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "application/octet-stream")
+	response.WriteHeader(299)
+	response.Write([]byte("normal response"))
+}
+
+// assertNormalResponse asserts that the Middleware allowed the response from serveHTTPFunc.
+func (suite *MiddlewareTestSuite) assertNormalResponse(response *httptest.ResponseRecorder) {
+	suite.Equal(299, response.Code)
+	suite.Equal("application/octet-stream", response.HeaderMap.Get("Content-Type"))
+	suite.Equal("normal response", response.Body.String())
+}
+
+// serveHTTPNoCall is a handler function that should be blocked by the Middleware.
+func (suite *MiddlewareTestSuite) serveHTTPNoCall(http.ResponseWriter, *http.Request) {
+	suite.Fail("The handler should not have been called")
+}
+
 func (suite *MiddlewareTestSuite) assertChallenge(c Challenge, err error) Challenge {
 	suite.Require().NoError(err)
 	return c
 }
 
-func (suite *MiddlewareTestSuite) testBasicAuthSuccess() {
-	const (
-		expectedPrincipal = "test"
-		expectedPassword  = "test"
+func (suite *MiddlewareTestSuite) TestUseAuthenticatorError() {
+	m, err := NewMiddleware(
+		UseAuthenticator(
+			bascule.NewAuthenticator[*http.Request](), // no token parsers
+		),
 	)
 
+	suite.ErrorIs(err, bascule.ErrNoTokenParsers)
+	suite.Nil(m)
+}
+
+func (suite *MiddlewareTestSuite) TestUseAuthorizerError() {
+	expectedErr := errors.New("expected")
+	m, err := NewMiddleware(
+		UseAuthenticator(
+			NewAuthenticator(
+				bascule.WithTokenParsers(
+					suite.newAuthorizationParser(WithBasic()),
+				),
+			),
+		),
+		UseAuthorizer(nil, expectedErr),
+	)
+
+	suite.ErrorIs(err, expectedErr)
+	suite.Nil(m)
+}
+
+func (suite *MiddlewareTestSuite) TestNoAuthenticatorWithAuthorizer() {
+	m, err := NewMiddleware(
+		WithAuthorizer(
+			suite.newAuthorizer(),
+		),
+	)
+
+	suite.Nil(m)
+	suite.ErrorIs(err, ErrNoAuthenticator)
+}
+
+func (suite *MiddlewareTestSuite) TestThen() {
+	suite.Run("NilHandler", func() {
+		var (
+			m = suite.newMiddleware(
+				WithAuthenticator(
+					suite.newAuthenticator(
+						bascule.WithTokenParsers(
+							suite.newAuthorizationParser(WithBasic()),
+						),
+					),
+				),
+			)
+
+			h = m.Then(nil)
+
+			response = httptest.NewRecorder()
+			request  = suite.newBasicAuthRequest()
+		)
+
+		h.ServeHTTP(response, request)
+		suite.Equal(http.StatusNotFound, response.Code) // use the unconfigured http.DefaultServeMux
+	})
+
+	suite.Run("NoDecoration", func() {
+		var (
+			m = suite.newMiddleware()
+			h = m.Then(http.HandlerFunc(
+				suite.serveHTTPFunc,
+			))
+
+			response = httptest.NewRecorder()
+			request  = suite.newRequest()
+		)
+
+		h.ServeHTTP(response, request)
+		suite.assertNormalResponse(response)
+	})
+}
+
+func (suite *MiddlewareTestSuite) TestThenFunc() {
+	suite.Run("NilHandlerFunc", func() {
+		var (
+			m = suite.newMiddleware(
+				WithAuthenticator(
+					suite.newAuthenticator(
+						bascule.WithTokenParsers(
+							suite.newAuthorizationParser(WithBasic()),
+						),
+					),
+				),
+			)
+
+			h = m.ThenFunc(nil)
+
+			response = httptest.NewRecorder()
+			request  = suite.newBasicAuthRequest()
+		)
+
+		h.ServeHTTP(response, request)
+		suite.Equal(http.StatusNotFound, response.Code) // use the unconfigured http.DefaultServeMux
+	})
+}
+
+func (suite *MiddlewareTestSuite) TestCustomErrorRendering() {
+	var (
+		m = suite.newMiddleware(
+			WithAuthenticator(
+				suite.newAuthenticator(
+					bascule.WithTokenParsers(
+						suite.newAuthorizationParser(WithBasic()),
+					),
+				),
+			),
+			WithErrorStatusCoder(
+				func(request *http.Request, err error) int {
+					suite.Equal(request.URL.String(), "/test")
+					return 567
+				},
+			),
+			WithErrorMarshaler(
+				func(request *http.Request, err error) (contentType string, content []byte, marshalErr error) {
+					contentType = "text/xml"
+					content = []byte("<something/>")
+					return
+				},
+			),
+		)
+
+		response = httptest.NewRecorder()
+		request  = suite.newRequest()
+
+		h = m.ThenFunc(suite.serveHTTPNoCall)
+	)
+
+	h.ServeHTTP(response, request)
+	suite.Equal(567, response.Code)
+	suite.Equal("text/xml", response.HeaderMap.Get("Content-Type"))
+	suite.Equal("<something/>", response.Body.String())
+}
+
+func (suite *MiddlewareTestSuite) TestMarshalError() {
+	var (
+		marshalErr = errors.New("expected marshal error")
+
+		m = suite.newMiddleware(
+			WithAuthenticator(
+				suite.newAuthenticator(
+					bascule.WithTokenParsers(
+						suite.newAuthorizationParser(WithBasic()),
+					),
+				),
+			),
+			WithErrorStatusCoder(
+				func(request *http.Request, err error) int {
+					suite.Equal(request.URL.String(), "/test")
+					return 567
+				},
+			),
+			WithErrorMarshaler(
+				func(request *http.Request, err error) (string, []byte, error) {
+					return "", nil, marshalErr
+				},
+			),
+		)
+
+		response = httptest.NewRecorder()
+		request  = suite.newRequest()
+
+		h = m.ThenFunc(suite.serveHTTPNoCall)
+	)
+
+	h.ServeHTTP(response, request)
+	suite.Equal(http.StatusInternalServerError, response.Code)
+
+	mediaType, _, err := mime.ParseMediaType(response.HeaderMap.Get("Content-Type"))
+	suite.Require().NoError(err)
+	suite.Equal("text/plain", mediaType)
+	suite.Equal(marshalErr.Error(), response.Body.String())
+}
+
+func (suite *MiddlewareTestSuite) testBasicAuthSuccess() {
 	var (
 		authenticateEvent = false
 		authorizeEvent    = false
@@ -88,19 +324,15 @@ func (suite *MiddlewareTestSuite) testBasicAuthSuccess() {
 				suite.newAuthorizer(
 					bascule.WithApproverFuncs(
 						func(_ context.Context, request *http.Request, token bascule.Token) error {
-							suite.Equal("/test", request.URL.String())
-							suite.Equal(expectedPrincipal, token.Principal())
-							suite.Require().Implements((*BasicToken)(nil), token)
-							suite.Equal(expectedPrincipal, token.(BasicToken).UserName())
-							suite.Equal(expectedPassword, token.(BasicToken).Password())
+							suite.assertBasicAuthRequest(request)
+							suite.assertBasicAuthToken(token)
 							return nil
 						},
 					),
 					bascule.WithAuthorizeListenerFuncs(
 						func(e bascule.AuthorizeEvent[*http.Request]) {
-							suite.Equal("/test", e.Resource.URL.String())
-							suite.Require().NotNil(e.Token)
-							suite.NoError(e.Err)
+							suite.assertBasicAuthRequest(e.Resource)
+							suite.assertBasicAuthToken(e.Token)
 							authorizeEvent = true
 						},
 					),
@@ -109,17 +341,13 @@ func (suite *MiddlewareTestSuite) testBasicAuthSuccess() {
 		)
 
 		response = httptest.NewRecorder()
-		request  = httptest.NewRequest("GET", "/test", nil)
+		request  = suite.newBasicAuthRequest()
 
-		h = m.ThenFunc(func(response http.ResponseWriter, request *http.Request) {
-			suite.Equal("/test", request.URL.String())
-			response.WriteHeader(299)
-		})
+		h = m.ThenFunc(suite.serveHTTPFunc)
 	)
 
-	request.SetBasicAuth(expectedPrincipal, expectedPassword)
 	h.ServeHTTP(response, request)
-	suite.Equal(299, response.Code)
+	suite.assertNormalResponse(response)
 	suite.True(authenticateEvent)
 	suite.True(authorizeEvent)
 }
@@ -136,7 +364,7 @@ func (suite *MiddlewareTestSuite) testBasicAuthChallenge() {
 					),
 					bascule.WithAuthenticateListenerFuncs(
 						func(e bascule.AuthenticateEvent[*http.Request]) {
-							suite.Equal("/test", e.Source.URL.String())
+							suite.assertBasicAuthRequest(e.Source)
 							suite.ErrorIs(bascule.ErrMissingCredentials, e.Err)
 							suite.Nil(e.Token)
 							authenticateEvent = true
@@ -150,12 +378,9 @@ func (suite *MiddlewareTestSuite) testBasicAuthChallenge() {
 		)
 
 		response = httptest.NewRecorder()
-		request  = httptest.NewRequest("GET", "/test", nil)
+		request  = suite.newRequest()
 
-		h = m.ThenFunc(func(response http.ResponseWriter, request *http.Request) {
-			suite.Equal("/test", request.URL.String())
-			response.WriteHeader(299)
-		})
+		h = m.ThenFunc(suite.serveHTTPNoCall)
 	)
 
 	h.ServeHTTP(response, request)
@@ -169,9 +394,70 @@ func (suite *MiddlewareTestSuite) testBasicAuthChallenge() {
 	suite.True(authenticateEvent)
 }
 
+func (suite *MiddlewareTestSuite) testBasicAuthInvalid() {
+	var (
+		m = suite.newMiddleware(
+			WithAuthenticator(
+				suite.newAuthenticator(
+					bascule.WithTokenParsers(
+						suite.newAuthorizationParser(WithBasic()),
+					),
+				),
+			),
+		)
+
+		response = httptest.NewRecorder()
+		request  = suite.newRequest()
+
+		h = m.ThenFunc(suite.serveHTTPNoCall)
+	)
+
+	request.Header.Set("Authorization", "Basic this is most definitely not a valid basic auth string")
+	h.ServeHTTP(response, request)
+	suite.Equal(http.StatusBadRequest, response.Code)
+}
+
+func (suite *MiddlewareTestSuite) testBasicAuthAuthorizerError() {
+	var (
+		expectedErr = errors.New("expected error")
+
+		m = suite.newMiddleware(
+			WithAuthenticator(
+				suite.newAuthenticator(
+					bascule.WithTokenParsers(
+						suite.newAuthorizationParser(WithBasic()),
+					),
+				),
+			),
+			WithAuthorizer(
+				suite.newAuthorizer(
+					bascule.WithApproverFuncs(
+						func(_ context.Context, resource *http.Request, token bascule.Token) error {
+							suite.assertBasicAuthRequest(resource)
+							suite.assertBasicAuthToken(token)
+							return expectedErr
+						},
+					),
+				),
+			),
+		)
+
+		response = httptest.NewRecorder()
+		request  = suite.newBasicAuthRequest()
+
+		h = m.ThenFunc(suite.serveHTTPNoCall)
+	)
+
+	h.ServeHTTP(response, request)
+	suite.Equal(http.StatusForbidden, response.Code)
+	suite.Equal(expectedErr.Error(), response.Body.String())
+}
+
 func (suite *MiddlewareTestSuite) TestBasicAuth() {
 	suite.Run("Success", suite.testBasicAuthSuccess)
 	suite.Run("Challenge", suite.testBasicAuthChallenge)
+	suite.Run("Invalid", suite.testBasicAuthInvalid)
+	suite.Run("AuthorizerError", suite.testBasicAuthAuthorizerError)
 }
 
 func TestMiddleware(t *testing.T) {
