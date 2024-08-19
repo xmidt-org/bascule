@@ -16,57 +16,7 @@ import (
 )
 
 type MiddlewareTestSuite struct {
-	suite.Suite
-
-	expectedPrincipal string
-	expectedPassword  string
-	expectedToken     bascule.Token
-}
-
-func (suite *MiddlewareTestSuite) SetupSuite() {
-	suite.expectedPrincipal = "testPrincipal"
-	suite.expectedPassword = "test_password"
-	suite.expectedToken = basicToken{
-		userName: suite.expectedPrincipal,
-		password: suite.expectedPassword,
-	}
-}
-
-// newRequest creates a standardized test request, devoid of any authorization.
-func (suite *MiddlewareTestSuite) newRequest() *http.Request {
-	return httptest.NewRequest("GET", "/test", nil)
-}
-
-// newBasicAuthRequest creates a new test request configured with valid basic auth.
-func (suite *MiddlewareTestSuite) newBasicAuthRequest() *http.Request {
-	request := suite.newRequest()
-	request.SetBasicAuth(suite.expectedPrincipal, suite.expectedPassword)
-	return request
-}
-
-// assertBasicAuthRequest asserts that the given request matches this suite's expectations.
-func (suite *MiddlewareTestSuite) assertBasicAuthRequest(request *http.Request) {
-	suite.Require().NotNil(request)
-	suite.Equal("GET", request.Method)
-	suite.Equal("/test", request.URL.String())
-}
-
-// assertBasicAuthToken asserts that the token matches this suite's expectations.
-func (suite *MiddlewareTestSuite) assertBasicAuthToken(token bascule.Token) {
-	suite.Require().NotNil(token)
-	suite.Equal(suite.expectedPrincipal, token.Principal())
-	suite.Require().Implements((*BasicToken)(nil), token)
-	suite.Equal(suite.expectedPrincipal, token.(BasicToken).UserName())
-	suite.Equal(suite.expectedPassword, token.(BasicToken).Password())
-}
-
-// newAuthorizationParser creates an AuthorizationParser that is expected to be valid.
-// Assertions as to validity are made prior to returning.
-func (suite *MiddlewareTestSuite) newAuthorizationParser(opts ...AuthorizationParserOption) *AuthorizationParser {
-	ap, err := NewAuthorizationParser(opts...)
-	suite.Require().NoError(err)
-	suite.Require().NotNil(ap)
-	return ap
+	TestSuite
 }
 
 // newAuthenticator creates a bascule.Authenticator that is expected to be valid.
@@ -325,14 +275,14 @@ func (suite *MiddlewareTestSuite) testBasicAuthSuccess() {
 					bascule.WithApproverFuncs(
 						func(_ context.Context, request *http.Request, token bascule.Token) error {
 							suite.assertBasicAuthRequest(request)
-							suite.assertBasicAuthToken(token)
+							suite.assertBasicToken(token)
 							return nil
 						},
 					),
 					bascule.WithAuthorizeListenerFuncs(
 						func(e bascule.AuthorizeEvent[*http.Request]) {
 							suite.assertBasicAuthRequest(e.Resource)
-							suite.assertBasicAuthToken(e.Token)
+							suite.assertBasicToken(e.Token)
 							authorizeEvent = true
 						},
 					),
@@ -434,7 +384,7 @@ func (suite *MiddlewareTestSuite) testBasicAuthAuthorizerError() {
 					bascule.WithApproverFuncs(
 						func(_ context.Context, resource *http.Request, token bascule.Token) error {
 							suite.assertBasicAuthRequest(resource)
-							suite.assertBasicAuthToken(token)
+							suite.assertBasicToken(token)
 							return expectedErr
 						},
 					),
