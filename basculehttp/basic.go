@@ -4,6 +4,7 @@
 package basculehttp
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"strings"
@@ -61,4 +62,14 @@ func (BasicTokenParser) Parse(_ context.Context, value string) (bascule.Token, e
 	}
 
 	return nil, bascule.ErrInvalidCredentials
+}
+
+// BasicAuth produces the basic authorization string described by RFC 2617.
+func BasicAuth(userName, password string) string {
+	var b bytes.Buffer
+	b.WriteString(userName)
+	b.WriteRune(':')
+	b.WriteString(password)
+
+	return base64.StdEncoding.EncodeToString(b.Bytes())
 }
