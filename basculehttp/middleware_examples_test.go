@@ -4,6 +4,7 @@
 package basculehttp
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -54,4 +55,112 @@ func ExampleMiddleware_basicauth() {
 	// no authorization response code: 401
 	// principal: joe
 	// with basic auth response code: 200
+}
+
+// ExampleMiddleware_authentication shows how to authenticate a token.
+func ExampleMiddleware_authentication() {
+	tp, _ := NewAuthorizationParser(
+		WithBasic(),
+	)
+
+	m, _ := NewMiddleware(
+		UseAuthenticator(
+			NewAuthenticator(
+				bascule.WithTokenParsers(tp),
+				bascule.WithValidators(
+					AsValidator(
+						// the signature of validator closures is very flexible
+						// see bascule.AsValidator
+						func(token bascule.Token) error {
+							if basic, ok := token.(BasicToken); ok && basic.Password() == "correct_password" {
+								return nil
+							}
+
+							return bascule.ErrBadCredentials
+						},
+					),
+				),
+			),
+		),
+	)
+
+	h := m.ThenFunc(
+		func(response http.ResponseWriter, request *http.Request) {
+			t, _ := bascule.GetFrom(request)
+			fmt.Println("principal:", t.Principal())
+		},
+	)
+
+	requestForJoe := httptest.NewRequest("GET", "/", nil)
+	requestForJoe.SetBasicAuth("joe", "correct_password")
+	response := httptest.NewRecorder()
+	h.ServeHTTP(response, requestForJoe)
+	fmt.Println("we let joe in with the code:", response.Code)
+
+	requestForCurly := httptest.NewRequest("GET", "/", nil)
+	requestForCurly.SetBasicAuth("joe", "bad_password")
+	response = httptest.NewRecorder()
+	h.ServeHTTP(response, requestForCurly)
+	fmt.Println("this isn't joe:", response.Code)
+
+	// Output:
+	// principal: joe
+	// we let joe in with the code: 200
+	// this isn't joe: 401
+}
+
+// ExampleMiddleware_authorization shows how to set up custom
+// authorization for tokens.
+func ExampleMiddleware_authorization() {
+	tp, _ := NewAuthorizationParser(
+		WithBasic(),
+	)
+
+	m, _ := NewMiddleware(
+		UseAuthenticator(
+			NewAuthenticator(
+				bascule.WithTokenParsers(tp),
+			),
+		),
+		UseAuthorizer(
+			NewAuthorizer(
+				bascule.WithApproverFuncs(
+					// this can also be a type that implements the bascule.Approver interface,
+					// when used with bascule.WithApprovers
+					func(_ context.Context, resource *http.Request, token bascule.Token) error {
+						if token.Principal() != "joe" {
+							// only joe can access this resource
+							return bascule.ErrUnauthorized
+						}
+
+						return nil // approved
+					},
+				),
+			),
+		),
+	)
+
+	h := m.ThenFunc(
+		func(response http.ResponseWriter, request *http.Request) {
+			t, _ := bascule.GetFrom(request)
+			fmt.Println("principal:", t.Principal())
+		},
+	)
+
+	requestForJoe := httptest.NewRequest("GET", "/", nil)
+	requestForJoe.SetBasicAuth("joe", "password")
+	response := httptest.NewRecorder()
+	h.ServeHTTP(response, requestForJoe)
+	fmt.Println("we let joe in with the code:", response.Code)
+
+	requestForCurly := httptest.NewRequest("GET", "/", nil)
+	requestForCurly.SetBasicAuth("curly", "another_password")
+	response = httptest.NewRecorder()
+	h.ServeHTTP(response, requestForCurly)
+	fmt.Println("we didn't authorize curly:", response.Code)
+
+	// Output:
+	// principal: joe
+	// we let joe in with the code: 200
+	// we didn't authorize curly: 403
 }

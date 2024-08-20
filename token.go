@@ -15,13 +15,17 @@ var (
 	// because of configuration, possibly intentionally.
 	ErrNoTokenParsers = errors.New("no token parsers")
 
-	// ErrMissingCredentials is returned by TokenParser.Parse to indicate that a source
-	// object did not have any credentials recognized by that parser.
+	// ErrMissingCredentials indicates that a source object did not have any credentials
+	// recognized by that parser.
 	ErrMissingCredentials = errors.New("missing credentials")
 
-	// ErrInvalidCredentials is returned by TokenParser.Parse to indicate that a source
-	// did contain recognizable credentials, but those credentials could not be parsed,
-	// possibly due to bad formatting.
+	// ErrBadCredentials indicates that parseable credentials were present in the source,
+	// but that the credentials did not match what the application expects.  For example,
+	// a password mismatch should return this error.
+	ErrBadCredentials = errors.New("bad credentials")
+
+	// ErrInvalidCredentials indicates that a source did contain recognizable credentials,
+	// but those credentials could not be parsed, possibly due to bad formatting.
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
