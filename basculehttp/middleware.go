@@ -198,11 +198,11 @@ func (m *Middleware) ThenFunc(protected http.HandlerFunc) http.Handler {
 // writeRawError is a fallback to write an error that came from this package.
 // The response is always a text/plain representation of the error.
 func (m *Middleware) writeRawError(response http.ResponseWriter, err error) {
-	response.WriteHeader(http.StatusInternalServerError)
 	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 	errBody := []byte(err.Error())
 	response.Header().Set("Content-Length", strconv.Itoa(len(errBody)))
+	response.WriteHeader(http.StatusInternalServerError)
 	response.Write(errBody)
 }
 
