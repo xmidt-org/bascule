@@ -31,6 +31,13 @@ func (suite *ErrorTestSuite) TestDefaultErrorStatusCoder() {
 		)
 	})
 
+	suite.Run("ErrBadCredentials", func() {
+		suite.Equal(
+			http.StatusUnauthorized,
+			DefaultErrorStatusCoder(nil, bascule.ErrBadCredentials),
+		)
+	})
+
 	suite.Run("ErrUnauthorized", func() {
 		suite.Equal(
 			http.StatusForbidden,

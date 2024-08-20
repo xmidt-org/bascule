@@ -27,6 +27,9 @@ type ErrorStatusCoder func(request *http.Request, err error) int
 // (3) If err has bascule.ErrMissingCredentials in its chain, this function returns
 // http.StatusUnauthorized.
 //
+// (3) If err has bascule.ErrBadCredentials in its chain, this function returns
+// http.StatusUnauthorized.
+//
 // (4) If err has bascule.ErrUnauthorized in its chain, this function returns
 // http.StatusForbidden.
 //
@@ -50,6 +53,9 @@ func DefaultErrorStatusCoder(_ *http.Request, err error) int {
 		return sc.StatusCode()
 
 	case errors.Is(err, bascule.ErrMissingCredentials):
+		return http.StatusUnauthorized
+
+	case errors.Is(err, bascule.ErrBadCredentials):
 		return http.StatusUnauthorized
 
 	case errors.Is(err, bascule.ErrUnauthorized):
