@@ -20,14 +20,6 @@ const (
 	DefaultAllMethod = "all"
 )
 
-var (
-	// ErrMissingCapabilities indicates that a token had no capabilities
-	// and thus is unauthorized.
-	ErrMissingCapabilities = &UnauthorizedError{
-		Err: errors.New("no capabilities in token"),
-	}
-)
-
 // urlPathNormalization ensures that the given URL has a leading slash.
 func urlPathNormalization(url string) string {
 	if url[0] == '/' {
@@ -35,48 +27,6 @@ func urlPathNormalization(url string) string {
 	}
 
 	return "/" + url
-}
-
-// UnauthorizedError indicates that a given capability was rejected and
-// that the token is unauthorized.
-type UnauthorizedError struct {
-	// Match is the regular expression that matched the capability.
-	// This will be unset if no match occurred, i.e. if there were
-	// no capabilities in the token.
-	Match string
-
-	// Capability is the capability string from the token that was rejected.
-	// This will be unset if there were no capabilities in the token.
-	Capability string
-
-	// Err is any error that occurred.  This is NOT returned by Unwrap.
-	Err error
-}
-
-// Unwrap always returns bascule.ErrUnauthorized, even if the Err field is set.
-func (ue *UnauthorizedError) Unwrap() error {
-	return bascule.ErrUnauthorized
-}
-
-// StatusCode always returns http.StatusForbidden.
-func (*UnauthorizedError) StatusCode() int {
-	return http.StatusForbidden
-}
-
-func (ue *UnauthorizedError) Error() string {
-	var o strings.Builder
-	o.WriteString(`Capability [`)
-	o.WriteString(ue.Capability)
-	o.WriteString(`] was rejected due to [`)
-	o.WriteString(ue.Match)
-	o.WriteRune(']')
-
-	if ue.Err != nil {
-		o.WriteString(`: `)
-		o.WriteString(ue.Err.Error())
-	}
-
-	return o.String()
 }
 
 // ApproverOption is a configurable option used to create an Approver.
@@ -88,9 +38,8 @@ type approverOptionFunc func(*Approver) error
 
 func (aof approverOptionFunc) apply(a *Approver) error { return aof(a) }
 
-// WithPrefixes adds several prefixes used to match capabilities, e.g. x1:webpa:foo:.  Only
-// the first prefix found during matching is considered for authorization.  If no prefixes
-// are set via this option, the resulting approver will not authorize any requests.
+// WithPrefixes adds several prefixes used to match capabilities, e.g. x1:webpa:foo:.
+// If no prefixes are set via this option, the approver rejects all tokens.
 //
 // Note that a prefix can itself be a regular expression, but may not have any subexpressions.
 func WithPrefixes(prefixes ...string) ApproverOption {
@@ -166,16 +115,11 @@ func NewApprover(opts ...ApproverOption) (a *Approver, err error) {
 // the URL regexp and method in the capability must match the resource.  URLs are normalized
 // with a leading '/'.
 //
-// This method returns success (i.e. a nil error) when the first matching capability is found.
-//
-// This method always returns either bascule.ErrUnauthorized or an *UnauthorizedError, which wraps
-// bascule.ErrUnauthorized.
+// This method returns success (i.e. a nil error) when the first matching capability is found.  If
+// the token provided no capabilities, or if none of the token's capabilities authorized the request,
+// this method returns bascule.ErrUnauthorized.
 func (a *Approver) Approve(_ context.Context, resource *http.Request, token bascule.Token) error {
-	capabilities, ok := bascule.GetCapabilities(token)
-	if len(capabilities) == 0 || !ok {
-		return ErrMissingCapabilities
-	}
-
+	capabilities, _ := bascule.GetCapabilities(token)
 	for _, matcher := range a.matchers {
 		for _, capability := range capabilities {
 			substrings := matcher.FindStringSubmatch(capability)
@@ -191,20 +135,13 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 				err = a.approveMethod(resource, substrings[2])
 			}
 
-			if err != nil {
-				err = &UnauthorizedError{
-					Match:      matcher.String(),
-					Capability: capability,
-					Err:        err,
-				}
+			if err == nil {
+				// success!
+				return nil
 			}
-
-			// stop at the first match, regardless of result
-			return err
 		}
 	}
 
-	// none of the matchers matched any capability, OR there were no matchers configured
 	return bascule.ErrUnauthorized
 }
 

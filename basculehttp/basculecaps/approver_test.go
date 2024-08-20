@@ -85,7 +85,7 @@ func (suite *ApproverTestSuite) TestInvalidAllMethod() {
 func (suite *ApproverTestSuite) testApproveMissingCapabilities() {
 	ca := suite.newApprover() // don't need any options for this case
 	err := ca.Approve(context.Background(), suite.newRequest("GET", "/test"), new(testToken))
-	suite.ErrorIs(err, ErrMissingCapabilities)
+	suite.ErrorIs(err, bascule.ErrUnauthorized)
 }
 
 func (suite *ApproverTestSuite) testApproveSuccess() {
@@ -111,6 +111,18 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 		{
 			capabilities: []string{"x1:webpa:api:/test/.*:put"},
 			request:      suite.newRequest("PUT", "/test/foo"),
+			options: []ApproverOption{
+				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+			},
+		},
+		{
+			capabilities: []string{
+				"x1:xmidt:api:/device/.*/config:all",
+				"x1:webpa:api:/something/else:get",
+				"x1:doesnot:apply:.*:all",
+				"x1:webpa:api:/test/.*:put", // this should match
+			},
+			request: suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
 				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
 			},
