@@ -1,6 +1,6 @@
 module github.com/xmidt-org/bascule
 
-go 1.21
+go 1.23
 
 require (
 	github.com/lestrrat-go/jwx/v2 v2.1.1
