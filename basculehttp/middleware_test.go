@@ -19,24 +19,6 @@ type MiddlewareTestSuite struct {
 	TestSuite
 }
 
-// newAuthenticator creates a bascule.Authenticator that is expected to be valid.
-// Assertions as to validity are made prior to returning.
-func (suite *MiddlewareTestSuite) newAuthenticator(opts ...bascule.AuthenticatorOption[*http.Request]) *bascule.Authenticator[*http.Request] {
-	a, err := NewAuthenticator(opts...)
-	suite.Require().NoError(err)
-	suite.Require().NotNil(a)
-	return a
-}
-
-// newAuthorizer creates a bascule.Authorizer that is expected to be valid.
-// Assertions as to validity are made prior to returning.
-func (suite *MiddlewareTestSuite) newAuthorizer(opts ...bascule.AuthorizerOption[*http.Request]) *bascule.Authorizer[*http.Request] {
-	a, err := NewAuthorizer(opts...)
-	suite.Require().NoError(err)
-	suite.Require().NotNil(a)
-	return a
-}
-
 // newMiddleware creates a Middleware that is expected to be valid.
 // Assertions as to validity are made prior to returning.
 func (suite *MiddlewareTestSuite) newMiddleware(opts ...MiddlewareOption) *Middleware {

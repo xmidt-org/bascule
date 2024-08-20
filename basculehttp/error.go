@@ -17,17 +17,23 @@ import (
 type ErrorStatusCoder func(request *http.Request, err error) int
 
 // DefaultErrorStatusCoder is the strategy used when no ErrorStatusCoder is supplied.
+// The following tests are done in order:
 //
-// If err has bascule.ErrMissingCredentials in its chain, this function returns
+// (1) First, if err is nil, this method returns 0.
+//
+// (2) If any error in the chain provides a 'StatusCode() int' method, the result
+// from that method is returned.
+//
+// (3) If err has bascule.ErrMissingCredentials in its chain, this function returns
 // http.StatusUnauthorized.
 //
-// If err has bascule.ErrInvalidCredentials in its chain, this function returns
+// (4) If err has bascule.ErrUnauthorized in its chain, this function returns
+// http.StatusForbidden.
+//
+// (5) If err has bascule.ErrInvalidCredentials in its chain, this function returns
 // http.StatusBadRequest.
 //
-// Failing the previous two checks, if the error provides a StatusCode() method,
-// the return value from that method is used.
-//
-// Otherwise, this method returns 0 to indicate that it doesn't know how to
+// (6) Otherwise, this method returns 0 to indicate that it doesn't know how to
 // produce a status code from the error.
 func DefaultErrorStatusCoder(_ *http.Request, err error) int {
 	type statusCoder interface {
@@ -37,19 +43,24 @@ func DefaultErrorStatusCoder(_ *http.Request, err error) int {
 	var sc statusCoder
 
 	switch {
-	// check if it's a status coder first, so that we can
-	// override status codes for built-in errors.
+	case err == nil:
+		return 0
+
 	case errors.As(err, &sc):
 		return sc.StatusCode()
 
 	case errors.Is(err, bascule.ErrMissingCredentials):
 		return http.StatusUnauthorized
 
+	case errors.Is(err, bascule.ErrUnauthorized):
+		return http.StatusForbidden
+
 	case errors.Is(err, bascule.ErrInvalidCredentials):
 		return http.StatusBadRequest
-	}
 
-	return 0
+	default:
+		return 0
+	}
 }
 
 // ErrorMarshaler is a strategy for marshaling an error's contents, particularly to

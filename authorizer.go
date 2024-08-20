@@ -3,7 +3,17 @@
 
 package bascule
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var (
+	// ErrUnauthorized is a general error indicating that a token was unauthorized
+	// for a particular resource.  Most authorizers and approvers should use this
+	// error or wrap this error to indicate failed authorization.
+	ErrUnauthorized = errors.New("unauthorized")
+)
 
 // AuthorizeEvent represents the result of bascule's authorize workflow.
 type AuthorizeEvent[R any] struct {
