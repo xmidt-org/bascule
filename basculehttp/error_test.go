@@ -18,10 +18,23 @@ type ErrorTestSuite struct {
 }
 
 func (suite *ErrorTestSuite) TestDefaultErrorStatusCoder() {
+	suite.Run("Nil", func() {
+		suite.Zero(
+			DefaultErrorStatusCoder(nil, nil),
+		)
+	})
+
 	suite.Run("ErrMissingCredentials", func() {
 		suite.Equal(
 			http.StatusUnauthorized,
 			DefaultErrorStatusCoder(nil, bascule.ErrMissingCredentials),
+		)
+	})
+
+	suite.Run("ErrUnauthorized", func() {
+		suite.Equal(
+			http.StatusForbidden,
+			DefaultErrorStatusCoder(nil, bascule.ErrUnauthorized),
 		)
 	})
 
@@ -53,8 +66,7 @@ func (suite *ErrorTestSuite) TestDefaultErrorStatusCoder() {
 	})
 
 	suite.Run("Unrecognized", func() {
-		suite.Equal(
-			0,
+		suite.Zero(
 			DefaultErrorStatusCoder(nil, errors.New("unrecognized error")),
 		)
 	})
