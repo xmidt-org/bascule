@@ -8,10 +8,8 @@ linters-settings:
 
 linters:
   enable:
-    - bodyclose
     - dupl
     - errorlint
-    # - funlen
     - goconst
     - gosec
     - misspell

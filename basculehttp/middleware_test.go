@@ -38,7 +38,7 @@ func (suite *MiddlewareTestSuite) serveHTTPFunc(response http.ResponseWriter, _ 
 // assertNormalResponse asserts that the Middleware allowed the response from serveHTTPFunc.
 func (suite *MiddlewareTestSuite) assertNormalResponse(response *httptest.ResponseRecorder) {
 	suite.Equal(299, response.Code)
-	suite.Equal("application/octet-stream", response.HeaderMap.Get("Content-Type"))
+	suite.Equal("application/octet-stream", response.Result().Header.Get("Content-Type"))
 	suite.Equal("normal response", response.Body.String())
 }
 
@@ -187,7 +187,7 @@ func (suite *MiddlewareTestSuite) TestCustomErrorRendering() {
 
 	h.ServeHTTP(response, request)
 	suite.Equal(567, response.Code)
-	suite.Equal("text/xml", response.HeaderMap.Get("Content-Type"))
+	suite.Equal("text/xml", response.Result().Header.Get("Content-Type"))
 	suite.Equal("<something/>", response.Body.String())
 }
 
@@ -225,7 +225,7 @@ func (suite *MiddlewareTestSuite) TestMarshalError() {
 	h.ServeHTTP(response, request)
 	suite.Equal(http.StatusInternalServerError, response.Code)
 
-	mediaType, _, err := mime.ParseMediaType(response.HeaderMap.Get("Content-Type"))
+	mediaType, _, err := mime.ParseMediaType(response.Result().Header.Get("Content-Type"))
 	suite.Require().NoError(err)
 	suite.Equal("text/plain", mediaType)
 	suite.Equal(marshalErr.Error(), response.Body.String())
@@ -320,7 +320,7 @@ func (suite *MiddlewareTestSuite) testBasicAuthChallenge() {
 
 	suite.Equal(
 		`Basic realm="test" charset="UTF-8"`,
-		response.HeaderMap.Get(WWWAuthenticateHeader),
+		response.Result().Header.Get(WWWAuthenticateHeader),
 	)
 
 	suite.True(authenticateEvent)
