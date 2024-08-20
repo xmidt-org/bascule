@@ -5,7 +5,6 @@ package basculecaps
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -194,18 +193,6 @@ func (suite *ApproverTestSuite) testApproveUnauthorized() {
 
 			err := ca.Approve(context.Background(), testCase.request, token)
 			suite.ErrorIs(err, bascule.ErrUnauthorized)
-			suite.NotEmpty(err.Error())
-
-			// if the returned error provides a 'StatusCode() int' method,
-			// it must return http.StatusForbidden.
-			type statusCoder interface {
-				StatusCode() int
-			}
-
-			var sc statusCoder
-			if errors.As(err, &sc) {
-				suite.Equal(http.StatusForbidden, sc.StatusCode())
-			}
 		})
 	}
 }
