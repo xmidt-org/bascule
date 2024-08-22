@@ -23,6 +23,7 @@ const (
 	CharsetParameter = "charset"
 
 	// Token68Parameter is the name of the reserved attribute for token68 encoding.
+	// This package does not support token68 encoding.
 	Token68Parameter = "token68"
 )
 
@@ -38,6 +39,9 @@ var (
 
 	// ErrReservedChallengeParameter indicates that an attempt was made to add a
 	// challenge auth parameter that was reserved by the RFC.
+	//
+	// Since this package explicitly does not support token68, trying to set a token68
+	// parameter results in this error.
 	ErrReservedChallengeParameter = errors.New("Reserved challenge auth parameter")
 )
 
@@ -59,6 +63,13 @@ func blankOrWhitespace(v string) bool {
 // ChallengeParameters holds the set of parameters.  The zero value of this
 // type is ready to use.  This type handles writing parameters as well as
 // provides commonly used parameter names for convenience.
+//
+// It is not required by spec, but any realm parameter is always placed first.
+// Additionally, the output of parameters is consistently ordered and will always
+// follow the order in which the parameters were set, realm being the exception.
+//
+// Token68 is not supported.  Any attempt to set that parameter will result
+// in an error.
 type ChallengeParameters struct {
 	// realm is a reserved parameter.  the spec doesn't require it to be
 	// first, but this package always renders it first if supplied.  so it's
