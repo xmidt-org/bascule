@@ -15,6 +15,16 @@ const (
 	//
 	// This value is used by default when no header is supplied to Challenges.WriteHeader.
 	WWWAuthenticateHeader = "WWW-Authenticate"
+
+	// RealmParameter is the name of the reserved parameter for realm.
+	RealmParameter = "realm"
+
+	// CharsetParameter is the name of the reserved parameter for charset.
+	CharsetParameter = "charset"
+
+	// Token68Parameter is the name of the reserved attribute for token68 encoding.
+	// This package does not support token68 encoding.
+	Token68Parameter = "token68"
 )
 
 var (
@@ -29,78 +39,153 @@ var (
 
 	// ErrReservedChallengeParameter indicates that an attempt was made to add a
 	// challenge auth parameter that was reserved by the RFC.
+	//
+	// Since this package explicitly does not support token68, trying to set a token68
+	// parameter results in this error.
 	ErrReservedChallengeParameter = errors.New("Reserved challenge auth parameter")
 )
 
-// reservedChallengeParameterNames holds the names of reserved challenge auth parameters
-// that cannot be added to a ChallengeParameters.
-var reservedChallengeParameterNames = map[string]bool{
-	"realm":   true,
-	"token68": true,
+// blankOrWhitespace tests if v is blank or has any whitespace.  These
+// are disallowed by RFC 7235.
+func blankOrWhitespace(v string) bool {
+	switch {
+	case len(v) == 0:
+		return true
+
+	case fastContainsSpace(v):
+		return true
+
+	default:
+		return false
+	}
 }
 
 // ChallengeParameters holds the set of parameters.  The zero value of this
 // type is ready to use.  This type handles writing parameters as well as
 // provides commonly used parameter names for convenience.
+//
+// It is not required by spec, but any realm parameter is always placed first.
+// Additionally, the output of parameters is consistently ordered and will always
+// follow the order in which the parameters were set, realm being the exception.
+//
+// Token68 is not supported.  Any attempt to set that parameter will result
+// in an error.
 type ChallengeParameters struct {
+	// realm is a reserved parameter.  the spec doesn't require it to be
+	// first, but this package always renders it first if supplied.  so it's
+	// called out as a separate struct field.
+	realm string
+
 	names, values []string
-	byName        map[string]int // the parameter index
+	byName        map[string]int // the parameter indices
 }
 
 // Len returns the number of name/value pairs contained in these parameters.
-func (cp *ChallengeParameters) Len() int {
-	return len(cp.names)
-}
-
-// Set sets the value of a parameter.  If a parameter was already set, it is
-// ovewritten.
-//
-// If the parameter name is invalid, this method raises an error.
-func (cp *ChallengeParameters) Set(name, value string) (err error) {
-	switch {
-	case len(name) == 0:
-		err = ErrInvalidChallengeParameter
-
-	case fastContainsSpace(name):
-		err = ErrInvalidChallengeParameter
-
-	case reservedChallengeParameterNames[name]:
-		err = ErrReservedChallengeParameter
-
-	default:
-		if i, exists := cp.byName[name]; exists {
-			cp.values[i] = value
-		} else {
-			if cp.byName == nil {
-				cp.byName = make(map[string]int)
-			}
-
-			cp.byName[name] = len(cp.names)
-			cp.names = append(cp.names, name)
-			cp.values = append(cp.values, value)
-		}
+func (cp *ChallengeParameters) Len() (c int) {
+	c = len(cp.names)
+	if len(cp.realm) > 0 {
+		c++
 	}
 
 	return
 }
 
-// Charset sets a charset auth parameter.  Basic auth is the main scheme
-// that uses this.
-func (cp *ChallengeParameters) Charset(value string) error {
-	return cp.Set("charset", value)
+// empty is a faster check for emptiness than Len() == 0.
+func (cp *ChallengeParameters) empty() bool {
+	return len(cp.realm) == 0 && len(cp.names) == 0
+}
+
+// unsafeSet performs no validation on the name or value.  This method must
+// be called after validation checks or in a context where the name and
+// value are known to be safe.  This method also doesn't handle special
+// parameters, like the realm.
+func (cp *ChallengeParameters) unsafeSet(name, value string) {
+	if i, exists := cp.byName[name]; exists {
+		cp.values[i] = value
+	} else if len(value) > 0 {
+		if cp.byName == nil {
+			cp.byName = make(map[string]int)
+		}
+
+		cp.byName[name] = len(cp.names)
+		cp.names = append(cp.names, name)
+		cp.values = append(cp.values, value)
+	}
+}
+
+// Set sets the value of a parameter.  If a parameter was already set, it is
+// ovewritten.  The realm may be set via this method, but token68 will be
+// rejected as invalid.
+//
+// This method returns ErrInvalidChallengeParameter if passed a name or a value
+// that is blank or contains whitespace.
+func (cp *ChallengeParameters) Set(name, value string) (err error) {
+	switch {
+	case blankOrWhitespace(name):
+		err = ErrInvalidChallengeParameter
+
+	case blankOrWhitespace(value):
+		err = ErrInvalidChallengeParameter
+
+	case Token68Parameter == strings.ToLower(name):
+		err = ErrReservedChallengeParameter
+
+	case RealmParameter == strings.ToLower(name):
+		cp.realm = value
+
+	default:
+		cp.unsafeSet(name, value)
+	}
+
+	return
+}
+
+// SetRealm sets a realm auth parameter.  The value cannot be blank or
+// contain any whitespace.
+func (cp *ChallengeParameters) SetRealm(value string) (err error) {
+	if blankOrWhitespace(value) {
+		err = ErrInvalidChallengeParameter
+	} else {
+		cp.realm = value
+	}
+
+	return
+}
+
+// SetCharset sets a charset auth parameter.  Basic auth is the main scheme
+// that uses this.  The value cannot be blank or contain any whitespace.
+func (cp *ChallengeParameters) SetCharset(value string) (err error) {
+	if blankOrWhitespace(value) {
+		err = ErrInvalidChallengeParameter
+	} else {
+		cp.unsafeSet(CharsetParameter, value)
+	}
+
+	return
+}
+
+func writeParameter(dst *strings.Builder, name, value string) {
+	dst.WriteString(name)
+	dst.WriteString(`="`)
+	dst.WriteString(value)
+	dst.WriteRune('"')
 }
 
 // Write formats this challenge to the given builder.
-func (cp *ChallengeParameters) Write(o *strings.Builder) {
+func (cp *ChallengeParameters) Write(dst *strings.Builder) {
+	first := true
+	if len(cp.realm) > 0 {
+		writeParameter(dst, RealmParameter, cp.realm)
+		first = false
+	}
+
 	for i := 0; i < len(cp.names); i++ {
-		if i > 0 {
-			o.WriteString(", ")
+		if !first {
+			dst.WriteString(", ")
 		}
 
-		o.WriteString(cp.names[i])
-		o.WriteString(`="`)
-		o.WriteString(cp.values[i])
-		o.WriteRune('"')
+		writeParameter(dst, cp.names[i], cp.values[i])
+		first = false
 	}
 }
 
@@ -112,18 +197,19 @@ func (cp *ChallengeParameters) String() string {
 }
 
 // NewChallengeParameters creates a ChallengeParameters from a sequence of name/value pairs.
-// The strings are expected to be in name, value, name, value, ... sequence.  If the number
-// of strings is odd, then the last parameter will have a blank value.
+// The strings are expected to be in name1, value1, name2, value2, ..., nameN, valueN  sequence.
+// If the number of strings is odd, this method returns an error.  If any duplicate names
+// occur, only the last name/value pair is used.
 //
 // If any error occurs while setting parameters, execution is halted and that
 // error is returned.
 func NewChallengeParameters(s ...string) (cp ChallengeParameters, err error) {
+	if len(s)%2 != 0 {
+		err = errors.New("Odd number of challenge parameters")
+	}
+
 	for i, j := 0, 1; err == nil && i < len(s); i, j = i+2, j+2 {
-		if j < len(s) {
-			err = cp.Set(s[i], s[j])
-		} else {
-			err = cp.Set(s[i], "")
-		}
+		err = cp.Set(s[i], s[j])
 	}
 
 	return
@@ -133,14 +219,6 @@ func NewChallengeParameters(s ...string) (cp ChallengeParameters, err error) {
 type Challenge struct {
 	// Scheme is the name of scheme supplied in the challenge.  This field is required.
 	Scheme Scheme
-
-	// Realm is the name of the realm for the challenge.  This field is
-	// optional, but it is HIGHLY recommended to set it to something useful
-	// to a client.
-	Realm string
-
-	// Token68 controls whether the token68 flag is written in the challenge.
-	Token68 bool
 
 	// Parameters are the optional auth parameters.
 	Parameters ChallengeParameters
@@ -158,18 +236,8 @@ func (c Challenge) Write(o *strings.Builder) (err error) {
 		err = ErrInvalidChallengeScheme
 
 	default:
-		o.WriteString(s)
-		if len(c.Realm) > 0 {
-			o.WriteString(` realm="`)
-			o.WriteString(c.Realm)
-			o.WriteRune('"')
-		}
-
-		if c.Token68 {
-			o.WriteString(" token68")
-		}
-
-		if c.Parameters.Len() > 0 {
+		o.WriteString(string(c.Scheme))
+		if !c.Parameters.empty() {
 			o.WriteRune(' ')
 			c.Parameters.Write(o)
 		}
@@ -182,14 +250,15 @@ func (c Challenge) Write(o *strings.Builder) (err error) {
 //
 // Although realm is optional, it is HIGHLY recommended to set it to something
 // recognizable for a client.
-func NewBasicChallenge(realm string, UTF8 bool) (c Challenge, err error) {
+func NewBasicChallenge(realm string, UTF8 bool) (c Challenge) {
 	c = Challenge{
 		Scheme: SchemeBasic,
-		Realm:  realm,
 	}
 
+	// ignore errors, as this function allows realm to be empty.
+	c.Parameters.SetRealm(realm)
 	if UTF8 {
-		err = c.Parameters.Charset("UTF-8")
+		c.Parameters.SetCharset("UTF-8")
 	}
 
 	return
@@ -205,20 +274,25 @@ func (chs Challenges) Append(ch ...Challenge) Challenges {
 	return append(chs, ch...)
 }
 
-// WriteHeader inserts one Http authenticate header per challenge in this set.
-// If this set is empty, the given http.Header is not modified.
-//
-// The name is used as the header name for each header this method writes.
-// Typically, this will be WWW-Authenticate or Proxy-Authenticate.  If name
-// is blank, WWWAuthenticateHeaderName is used.
+// WriteHeader write one WWWAuthenticateHeader for each challenge in this
+// set.
 //
 // If any challenge returns an error during formatting, execution is
 // halted and that error is returned.
-func (chs Challenges) WriteHeader(name string, h http.Header) error {
-	if len(name) == 0 {
-		name = WWWAuthenticateHeader
-	}
+func (chs Challenges) WriteHeader(dst http.Header) error {
+	return chs.WriteHeaderCustom(dst, WWWAuthenticateHeader)
+}
 
+// WriteHeaderCustom inserts one HTTP authenticate header per challenge in this set.
+// If this set is empty, the given http.Header is not modified.
+//
+// The name is used as the header name for each header this method writes.
+// Typically, this will be WWW-Authenticate or Proxy-Authenticate. The name
+// parameter is required.
+//
+// If any challenge returns an error during formatting, execution is
+// halted and that error is returned.
+func (chs Challenges) WriteHeaderCustom(dst http.Header, name string) error {
 	var o strings.Builder
 	for _, ch := range chs {
 		err := ch.Write(&o)
@@ -226,7 +300,7 @@ func (chs Challenges) WriteHeader(name string, h http.Header) error {
 			return err
 		}
 
-		h.Add(name, o.String())
+		dst.Add(name, o.String())
 		o.Reset()
 	}
 

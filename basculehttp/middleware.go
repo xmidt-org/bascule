@@ -226,7 +226,7 @@ func (m *Middleware) writeWorkflowError(response http.ResponseWriter, request *h
 	)
 
 	if statusCode == http.StatusUnauthorized {
-		writeErr = m.challenges.WriteHeader("", response.Header())
+		writeErr = m.challenges.WriteHeader(response.Header())
 	}
 
 	if writeErr == nil {

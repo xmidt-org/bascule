@@ -24,43 +24,152 @@ func (suite *ChallengeTestSuite) newValidParameters(s ...string) ChallengeParame
 	return cp
 }
 
-// newValidBasic uses NewBasicChallenge to create a Challenge and asserts
-// that no error occurred.
-func (suite *ChallengeTestSuite) newValidBasic(realm string, UTF8 bool) Challenge {
-	c, err := NewBasicChallenge(realm, UTF8)
-	suite.Require().NoError(err)
-	return c
+func (suite *ChallengeTestSuite) testChallengeParametersInvalid() {
+	testCases := []struct {
+		name, value string
+	}{
+		{}, // both blank
+		{"valid", ""},
+		{"", "valid"},
+		{"token68", "value"}, // reserved
+		{"embedded whitespace", "value"},
+		{"name", "embedded whitespace"},
+	}
+
+	for i, testCase := range testCases {
+		suite.Run(strconv.Itoa(i), func() {
+			var cp ChallengeParameters
+			suite.Error(cp.Set(testCase.name, testCase.value))
+		})
+	}
+}
+
+func (suite *ChallengeTestSuite) testChallengeParametersEmpty() {
+	var cp ChallengeParameters
+	suite.Zero(cp.Len())
+
+	var o strings.Builder
+	cp.Write(&o)
+	suite.Empty(o.String())
+	suite.Empty(cp.String())
+}
+
+func (suite *ChallengeTestSuite) testChallengeParametersValid() {
+	testCases := []struct {
+		namesAndValues []string
+		expectedFormat string
+	}{
+		{
+			namesAndValues: []string{"realm", "test"},
+			expectedFormat: `realm="test"`,
+		},
+		{
+			namesAndValues: []string{"nonce", "this_is_a_nonce", "qos", "a,b,c"},
+			expectedFormat: `nonce="this_is_a_nonce", qos="a,b,c"`,
+		},
+		{
+			namesAndValues: []string{"nonce", "this_is_a_nonce", "realm", "test@example.com", "qos", "a,b,c"},
+			expectedFormat: `realm="test@example.com", nonce="this_is_a_nonce", qos="a,b,c"`, // realm is always first
+		},
+	}
+
+	for i, testCase := range testCases {
+		suite.Run(strconv.Itoa(i), func() {
+			cp, err := NewChallengeParameters(testCase.namesAndValues...)
+			suite.Require().NoError(err)
+			suite.Equal(len(testCase.namesAndValues)/2, cp.Len())
+
+			var o strings.Builder
+			cp.Write(&o)
+			suite.Equal(testCase.expectedFormat, o.String())
+			suite.Equal(testCase.expectedFormat, cp.String())
+		})
+	}
+}
+
+func (suite *ChallengeTestSuite) testChallengeParametersDuplicate() {
+	var cp ChallengeParameters
+	suite.NoError(cp.Set("name", "value1"))
+	suite.NoError(cp.Set("another", "somevalue"))
+	suite.NoError(cp.Set("name", "value2"))
+
+	var o strings.Builder
+	cp.Write(&o)
+	suite.Equal(
+		`name="value2", another="somevalue"`,
+		o.String(),
+	)
+
+	suite.Equal(
+		`name="value2", another="somevalue"`,
+		cp.String(),
+	)
+
+	suite.Equal(2, cp.Len())
+}
+
+func (suite *ChallengeTestSuite) testChallengeParametersSetRealm() {
+	suite.Run("Invalid", func() {
+		var cp ChallengeParameters
+		suite.Error(cp.SetRealm("embedded whitespace"))
+		suite.Zero(cp.Len())
+
+		var o strings.Builder
+		cp.Write(&o)
+		suite.Empty(o.String())
+		suite.Empty(cp.String())
+	})
+
+	suite.Run("Valid", func() {
+		var cp ChallengeParameters
+		suite.NoError(cp.SetRealm("myrealm"))
+		suite.Equal(1, cp.Len())
+
+		var o strings.Builder
+		cp.Write(&o)
+		suite.Equal(`realm="myrealm"`, o.String())
+		suite.Equal(`realm="myrealm"`, cp.String())
+	})
+}
+
+func (suite *ChallengeTestSuite) testChallengeParametersSetCharset() {
+	suite.Run("Invalid", func() {
+		var cp ChallengeParameters
+		suite.Error(cp.SetCharset("embedded whitespace"))
+		suite.Zero(cp.Len())
+
+		var o strings.Builder
+		cp.Write(&o)
+		suite.Empty(o.String())
+		suite.Empty(cp.String())
+	})
+
+	suite.Run("Valid", func() {
+		var cp ChallengeParameters
+		suite.NoError(cp.SetCharset("UTF-8"))
+		suite.Equal(1, cp.Len())
+
+		var o strings.Builder
+		cp.Write(&o)
+		suite.Equal(`charset="UTF-8"`, o.String())
+		suite.Equal(`charset="UTF-8"`, cp.String())
+	})
+}
+
+func (suite *ChallengeTestSuite) testChallengeParametersOddParameterCount() {
+	cp, err := NewChallengeParameters("1", "2", "3")
+	suite.Error(err)
+	suite.Zero(cp.Len())
 }
 
 func (suite *ChallengeTestSuite) TestChallengeParameters() {
-	suite.Run("Invalid", func() {
-		badParameterNames := []string{
-			"",
-			"  ",
-			"this is not ok",
-			"neither\tis\bthis",
-			"token68", // reserved
-			"realm",   // reserved
-		}
-
-		for i, bad := range badParameterNames {
-			suite.Run(strconv.Itoa(i), func() {
-				var cp ChallengeParameters
-				suite.Error(cp.Set(bad, "value"))
-			})
-		}
-	})
-
-	suite.Run("Duplicate", func() {
-		var cp ChallengeParameters
-		suite.NoError(cp.Set("name", "value1"))
-		suite.NoError(cp.Set("another", "somevalue"))
-		suite.NoError(cp.Set("name", "value2"))
-		suite.Equal(
-			`name="value2", another="somevalue"`,
-			cp.String(),
-		)
-	})
+	suite.Run("Invalid", suite.testChallengeParametersInvalid)
+	suite.Run("Empty", suite.testChallengeParametersEmpty)
+	suite.Run("Valid", suite.testChallengeParametersValid)
+	suite.Run("Duplicate", suite.testChallengeParametersDuplicate)
+	suite.Run("SetRealm", suite.testChallengeParametersSetRealm)
+	suite.Run("SetCharset", suite.testChallengeParametersSetCharset)
+	suite.Run("OddParameterCount", suite.testChallengeParametersOddParameterCount)
 }
 
 func (suite *ChallengeTestSuite) testChallengeValid() {
@@ -76,46 +185,34 @@ func (suite *ChallengeTestSuite) testChallengeValid() {
 		},
 		{
 			challenge: Challenge{
-				Scheme: SchemeBasic,
-				Realm:  "test",
+				Scheme:     SchemeBasic,
+				Parameters: suite.newValidParameters(RealmParameter, "test"),
 			},
 			expectedFormat: `Basic realm="test"`,
 		},
 		{
-			challenge:      suite.newValidBasic("", false),
+			challenge:      NewBasicChallenge("", false),
 			expectedFormat: `Basic`,
 		},
 		{
-			challenge:      suite.newValidBasic("test", false),
+			challenge:      NewBasicChallenge("test", false),
 			expectedFormat: `Basic realm="test"`,
 		},
 		{
-			challenge:      suite.newValidBasic("test@example.com", true),
-			expectedFormat: `Basic realm="test@example.com" charset="UTF-8"`,
+			challenge:      NewBasicChallenge("test@example.com", true),
+			expectedFormat: `Basic realm="test@example.com", charset="UTF-8"`,
 		},
 		{
 			challenge: Challenge{
 				Scheme: Scheme("Custom"),
-				Realm:  "test@example.com",
 				Parameters: suite.newValidParameters(
-					"nonce", "this is a nonce",
-					"qop", "a, b, c",
+					"nonce", "this_is_a_nonce",
+					"qop", "a,b,c",
+					RealmParameter, "test@example.com", // this will get placed first
 					"custom", "1234",
 				),
 			},
-			expectedFormat: `Custom realm="test@example.com" nonce="this is a nonce", qop="a, b, c", custom="1234"`,
-		},
-		{
-			challenge: Challenge{
-				Scheme:  Scheme("Bearer"),
-				Realm:   "my realm",
-				Token68: true,
-				Parameters: suite.newValidParameters(
-					"nonce", "this is a nonce",
-					"blank",
-				),
-			},
-			expectedFormat: `Bearer realm="my realm" token68 nonce="this is a nonce", blank=""`,
+			expectedFormat: `Custom realm="test@example.com", nonce="this_is_a_nonce", qop="a,b,c", custom="1234"`,
 		},
 	}
 
@@ -161,28 +258,32 @@ func (suite *ChallengeTestSuite) testChallengesValid() {
 		{
 			challenges: Challenges{}.
 				Append(
-					suite.newValidBasic("test@server.com", true),
+					NewBasicChallenge("test@server.com", true),
 				),
 			expected: []string{
-				`Basic realm="test@server.com" charset="UTF-8"`,
+				`Basic realm="test@server.com", charset="UTF-8"`,
 			},
 		},
 		{
 			challenges: Challenges{}.
 				Append(Challenge{
-					Scheme:     Scheme("Bearer"),
-					Realm:      "my realm",
-					Parameters: suite.newValidParameters("foo", "bar"),
+					Scheme: Scheme("Bearer"),
+					Parameters: suite.newValidParameters(
+						RealmParameter, "myrealm",
+						"foo", "bar",
+					),
 				}).
 				Append(Challenge{
-					Scheme:     Scheme("Custom"),
-					Realm:      "another realm@somewhere.net",
-					Token68:    true,
-					Parameters: suite.newValidParameters("nonce", "this is a nonce", "age", "123"),
+					Scheme: Scheme("Custom"),
+					Parameters: suite.newValidParameters(
+						"nonce", "this_is_a_nonce",
+						RealmParameter, "anotherrealm@somewhere.net",
+						"age", "123",
+					),
 				}),
 			expected: []string{
-				`Bearer realm="my realm" foo="bar"`,
-				`Custom realm="another realm@somewhere.net" token68 nonce="this is a nonce", age="123"`,
+				`Bearer realm="myrealm", foo="bar"`,
+				`Custom realm="anotherrealm@somewhere.net", nonce="this_is_a_nonce", age="123"`,
 			},
 		},
 	}
@@ -191,13 +292,13 @@ func (suite *ChallengeTestSuite) testChallengesValid() {
 		suite.Run(strconv.Itoa(i), func() {
 			suite.Run("DefaultHeader", func() {
 				header := make(http.Header)
-				suite.NoError(testCase.challenges.WriteHeader("", header))
+				suite.NoError(testCase.challenges.WriteHeader(header))
 				suite.ElementsMatch(testCase.expected, header.Values(WWWAuthenticateHeader))
 			})
 
 			suite.Run("CustomHeader", func() {
 				header := make(http.Header)
-				suite.NoError(testCase.challenges.WriteHeader("Custom", header))
+				suite.NoError(testCase.challenges.WriteHeaderCustom(header, "Custom"))
 				suite.ElementsMatch(testCase.expected, header.Values("Custom"))
 			})
 		})
@@ -220,7 +321,8 @@ func (suite *ChallengeTestSuite) testChallengesInvalid() {
 	for i, bad := range badChallenges {
 		suite.Run(strconv.Itoa(i), func() {
 			header := make(http.Header)
-			suite.Error(bad.WriteHeader("", header))
+			suite.Error(bad.WriteHeader(header))
+			suite.Error(bad.WriteHeaderCustom(header, "Custom"))
 		})
 	}
 }

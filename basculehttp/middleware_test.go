@@ -47,11 +47,6 @@ func (suite *MiddlewareTestSuite) serveHTTPNoCall(http.ResponseWriter, *http.Req
 	suite.Fail("The handler should not have been called")
 }
 
-func (suite *MiddlewareTestSuite) assertChallenge(c Challenge, err error) Challenge {
-	suite.Require().NoError(err)
-	return c
-}
-
 func (suite *MiddlewareTestSuite) TestUseAuthenticatorError() {
 	m, err := NewMiddleware(
 		UseAuthenticator(
@@ -305,7 +300,7 @@ func (suite *MiddlewareTestSuite) testBasicAuthChallenge() {
 				),
 			),
 			WithChallenges(
-				suite.assertChallenge(NewBasicChallenge("test", true)),
+				NewBasicChallenge("test", true),
 			),
 		)
 
@@ -319,7 +314,7 @@ func (suite *MiddlewareTestSuite) testBasicAuthChallenge() {
 	suite.Equal(http.StatusUnauthorized, response.Code)
 
 	suite.Equal(
-		`Basic realm="test" charset="UTF-8"`,
+		`Basic realm="test", charset="UTF-8"`,
 		response.Result().Header.Get(WWWAuthenticateHeader),
 	)
 
