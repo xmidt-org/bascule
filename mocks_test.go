@@ -35,6 +35,34 @@ func (m *mockTokenWithCapabilities) ExpectCapabilities(caps ...string) *mock.Cal
 	return m.On("Capabilities").Return(caps)
 }
 
+type mockTokenUnwrapOne struct {
+	mockToken
+}
+
+func (m *mockTokenUnwrapOne) Unwrap() Token {
+	args := m.Called()
+	t, _ := args.Get(0).(Token)
+	return t
+}
+
+func (m *mockTokenUnwrapOne) ExpectUnwrap(t Token) *mock.Call {
+	return m.On("Unwrap").Return(t)
+}
+
+type mockTokenUnwrapMany struct {
+	mockToken
+}
+
+func (m *mockTokenUnwrapMany) Unwrap() []Token {
+	args := m.Called()
+	t, _ := args.Get(0).([]Token)
+	return t
+}
+
+func (m *mockTokenUnwrapMany) ExpectUnwrap(t ...Token) *mock.Call {
+	return m.On("Unwrap").Return(t)
+}
+
 type mockValidator[S any] struct {
 	mock.Mock
 }

@@ -30,11 +30,152 @@ var (
 )
 
 // Token is a runtime representation of credentials.  This interface will be further
-// customized by infrastructure.
+// customized by infrastructure. A Token may have subtokens and may provide access
+// to an arbitrary tree of subtokens by supplying either an 'Unwrap() Token' or
+// an 'Unwrap() []Token' method.  Subtokens are not required to have the same principal.
 type Token interface {
 	// Principal is the security subject of this token, e.g. the user name or other
 	// user identifier.
 	Principal() string
+}
+
+// MultiToken is an aggregate Token that is the root of a subtree of Tokens.
+type MultiToken []Token
+
+// Principal returns the principal for the first token in this set, or
+// the empty string if this set is empty.
+func (mt MultiToken) Principal() string {
+	if len(mt) > 0 {
+		return mt[0].Principal()
+	}
+
+	return ""
+}
+
+// Unwrap provides access to this token's children.
+func (mt MultiToken) Unwrap() []Token {
+	return []Token(mt)
+}
+
+// JoinTokens joins multiple tokens into one.  Any nil tokens are discarded.
+// The principal of the returned token will always be the principal of the
+// first non-nil token supplied to this function.
+//
+// If there is only (1) non-nil token, that token is returned as is.  Otherwise,
+// no attempt is made to flatten the set of tokens. If there are multiple non-nil
+// tokens, the returned token will have an 'Unwrap() []Token' method to access
+// the joined tokens individually.
+//
+// If no non-nil tokens are passed to this function, it returns nil.
+func JoinTokens(tokens ...Token) Token {
+	if len(tokens) == 0 {
+		return nil
+	}
+
+	mt := make(MultiToken, 0, len(tokens))
+	for _, t := range tokens {
+		if t != nil {
+			mt = append(mt, t)
+		}
+	}
+
+	switch len(mt) {
+	case 0:
+		return nil
+
+	case 1:
+		return mt[0]
+
+	default:
+		return mt
+	}
+}
+
+// UnwrapToken does the opposite of JoinTokens.
+//
+// If the supplied token provides an 'Unwrap() Token' method, and that
+// method returns a non-nil Token, the returned slice contains only that Token.
+//
+// If the supplied token provides an 'Unwrap() []Token' method, the
+// result of that method is returned.
+//
+// Otherwise, this function returns nil.
+func UnwrapToken(t Token) []Token {
+	switch u := t.(type) {
+	case interface{ Unwrap() Token }:
+		uu := u.Unwrap()
+		if uu != nil {
+			return []Token{uu}
+		}
+
+	case interface{ Unwrap() []Token }:
+		return u.Unwrap()
+	}
+
+	return nil
+}
+
+var tokenType = reflect.TypeOf((*Token)(nil)).Elem()
+
+// tokenTargetValue produces a reflect value to set and the required type that
+// a token must be convertible to.  This function panics in all the same cases
+// as errors.As.
+func tokenTarget[T any](target *T) (targetValue reflect.Value, targetType reflect.Type) {
+	if target == nil {
+		panic("bascule: token target must be a non-nil pointer")
+	}
+
+	targetValue = reflect.ValueOf(target)
+	targetType = targetValue.Type().Elem()
+	if targetType.Kind() != reflect.Interface && !targetType.Implements(tokenType) {
+		panic("bascule: *target must be an interface or implement Token")
+	}
+
+	return
+}
+
+// tokenAs is a recursive function that checks the Token tree to see if
+// it can do a coversion to the targetType.  targetValue will hold the
+// result of the conversion.
+func tokenAs(t Token, targetValue reflect.Value, targetType reflect.Type) bool {
+	if reflect.TypeOf(t).AssignableTo(targetType) {
+		targetValue.Elem().Set(reflect.ValueOf(t))
+		return true
+	}
+
+	switch u := t.(type) {
+	case interface{ Unwrap() Token }:
+		t = u.Unwrap()
+		if t != nil {
+			return tokenAs(t, targetValue, targetType)
+		}
+
+	case interface{ Unwrap() []Token }:
+		for _, t := range u.Unwrap() {
+			if t != nil && tokenAs(t, targetValue, targetType) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// TokenAs attempts to coerce the given Token into an arbitrary target. This function
+// is similar to errors.As. If target is nil, this function panics.  If target is neither
+// an interface or a concrete implementation of the Token interface, this function
+// also panics.
+//
+// The Token's tree is examined depth-first beginning with the given token and
+// preceding down.  If a token is found that is convertible to T, then target is set
+// to that token and this function returns true.  Otherwise, this function returns false.
+func TokenAs[T any](t Token, target *T) bool {
+	if t == nil {
+		return false
+	}
+
+	targetValue, targetType := tokenTarget(target)
+	return tokenAs(t, targetValue, targetType)
 }
 
 // TokenParser produces tokens from a source.  The original source S of the credentials

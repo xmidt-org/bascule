@@ -7,10 +7,248 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 )
+
+type TokenSuite struct {
+	suite.Suite
+}
+
+func (suite *TokenSuite) TestMultiToken() {
+	suite.Run("Empty", func() {
+		var mt MultiToken
+		suite.Empty(mt.Principal())
+		suite.Empty(mt.Unwrap())
+	})
+
+	suite.Run("One", func() {
+		t := StubToken("test")
+		mt := MultiToken{t}
+		suite.Equal(t.Principal(), mt.Principal())
+
+		unwrapped := mt.Unwrap()
+		suite.Require().Len(unwrapped, 1)
+		suite.Equal(t, unwrapped[0])
+	})
+
+	suite.Run("Several", func() {
+		var (
+			m1 = StubToken("test")
+			m2 = StubToken("another")
+			m3 = StubToken("and another")
+		)
+
+		mt := MultiToken{m1, m2, m3}
+		suite.Equal(m1.Principal(), mt.Principal())
+
+		unwrapped := mt.Unwrap()
+		suite.Require().Len(unwrapped, 3)
+		suite.Equal(m1, unwrapped[0])
+		suite.Equal(m2, unwrapped[1])
+		suite.Equal(m3, unwrapped[2])
+	})
+}
+
+func (suite *TokenSuite) TestJoinTokens() {
+	suite.Run("Nil", func() {
+		suite.Nil(JoinTokens())
+		suite.Nil(JoinTokens(nil))
+		suite.Nil(JoinTokens(nil, nil))
+		suite.Nil(JoinTokens(nil, nil, nil))
+	})
+
+	suite.Run("NonNil", func() {
+		testCases := []struct {
+			tokens         []Token
+			expectedUnwrap []Token
+		}{
+			{
+				tokens:         []Token{StubToken("test")},
+				expectedUnwrap: nil,
+			},
+			{
+				tokens:         []Token{nil, StubToken("test")},
+				expectedUnwrap: nil,
+			},
+			{
+				tokens:         []Token{StubToken("test"), nil},
+				expectedUnwrap: nil,
+			},
+			{
+				tokens:         []Token{nil, StubToken("test"), nil},
+				expectedUnwrap: nil,
+			},
+			{
+				tokens:         []Token{StubToken("test"), StubToken("another"), StubToken("yet another")},
+				expectedUnwrap: []Token{StubToken("test"), StubToken("another"), StubToken("yet another")},
+			},
+			{
+				tokens:         []Token{StubToken("test"), nil, StubToken("another"), StubToken("yet another")},
+				expectedUnwrap: []Token{StubToken("test"), StubToken("another"), StubToken("yet another")},
+			},
+		}
+
+		for i, testCase := range testCases {
+			suite.Run(strconv.Itoa(i), func() {
+				joined := JoinTokens(testCase.tokens...)
+				suite.Equal("test", joined.Principal())
+				suite.Equal(
+					testCase.expectedUnwrap,
+					UnwrapToken(joined),
+				)
+			})
+		}
+	})
+}
+
+func (suite *TokenSuite) TestUnwrapToken() {
+	suite.Run("Nil", func() {
+		suite.Nil(UnwrapToken(nil))
+	})
+
+	suite.Run("Simple", func() {
+		suite.Nil(
+			UnwrapToken(StubToken("solo")),
+		)
+	})
+
+	suite.Run("Scalar", func() {
+		t := StubToken("test")
+		m := new(mockTokenUnwrapOne)
+		m.ExpectUnwrap(t).Once()
+
+		suite.Equal([]Token{t}, UnwrapToken(m))
+		m.AssertExpectations(suite.T())
+	})
+
+	suite.Run("Multi", func() {
+		t1 := StubToken("test")
+		t2 := StubToken("another")
+		m := new(mockTokenUnwrapMany)
+		m.ExpectUnwrap(t1, t2).Once()
+
+		suite.Equal([]Token{t1, t2}, UnwrapToken(m))
+		m.AssertExpectations(suite.T())
+	})
+}
+
+func (suite *TokenSuite) testTokenAsNilToken() {
+	var target int // won't matter
+	suite.False(
+		TokenAs(nil, &target),
+	)
+}
+
+func (suite *TokenSuite) testTokenAsNilTarget() {
+	m := new(mockToken)
+	suite.Panics(func() {
+		TokenAs[int](m, nil)
+	})
+
+	m.AssertExpectations(suite.T())
+}
+
+func (suite *TokenSuite) testTokenAsInvalidTargetType() {
+	var invalid int // not an interface and does not implement Token
+	m := new(mockToken)
+	suite.Panics(func() {
+		TokenAs[int](m, &invalid)
+	})
+
+	m.AssertExpectations(suite.T())
+}
+
+// wrapToken wraps the given token within another, and returns the wrapper.
+func (suite *TokenSuite) wrapToken(t Token) Token {
+	wrapper := new(mockTokenUnwrapOne)
+	wrapper.ExpectUnwrap(t).Maybe()
+	return wrapper
+}
+
+func (suite *TokenSuite) testTokenAsConcreteType() {
+	suite.Run("Trivial", func() {
+		var target StubToken
+		t := StubToken("test")
+		suite.True(TokenAs(t, &target))
+		suite.Equal(t, target)
+	})
+
+	suite.Run("NoConversion", func() {
+		var target StubToken
+		m := new(mockToken)
+		suite.False(TokenAs(m, &target))
+	})
+
+	suite.Run("Chain", func() {
+		nested := StubToken("test")
+		wrapper := suite.wrapToken(
+			suite.wrapToken(nested),
+		)
+
+		var target StubToken
+		suite.True(TokenAs(wrapper, &target))
+		suite.Equal(nested, target)
+	})
+
+	suite.Run("Tree", func() {
+		nested := StubToken("test")
+		wrapper := JoinTokens(new(mockToken), nested, new(mockToken))
+
+		var target StubToken
+		suite.True(TokenAs(wrapper, &target))
+		suite.Equal(nested, target)
+	})
+}
+
+func (suite *TokenSuite) testTokenAsInterface() {
+	suite.Run("Trivial", func() {
+		var target CapabilitiesAccessor
+		m := new(mockTokenWithCapabilities)
+		suite.True(TokenAs(m, &target))
+		suite.Same(m, target)
+	})
+
+	suite.Run("NoConversion", func() {
+		var target CapabilitiesAccessor
+		m := new(mockToken)
+		suite.False(TokenAs(m, &target))
+	})
+
+	suite.Run("Chain", func() {
+		nested := new(mockTokenWithCapabilities)
+		wrapper := suite.wrapToken(
+			suite.wrapToken(nested),
+		)
+
+		var target CapabilitiesAccessor
+		suite.True(TokenAs(wrapper, &target))
+		suite.Same(nested, target)
+	})
+
+	suite.Run("Tree", func() {
+		nested := new(mockTokenWithCapabilities)
+		wrapper := JoinTokens(new(mockToken), nested, new(mockToken))
+
+		var target CapabilitiesAccessor
+		suite.True(TokenAs(wrapper, &target))
+		suite.Same(nested, target)
+	})
+}
+
+func (suite *TokenSuite) TestTokenAs() {
+	suite.Run("NilToken", suite.testTokenAsNilToken)
+	suite.Run("NilTarget", suite.testTokenAsNilTarget)
+	suite.Run("InvalidTargetType", suite.testTokenAsInvalidTargetType)
+	suite.Run("ConcreteType", suite.testTokenAsConcreteType)
+	suite.Run("Interface", suite.testTokenAsInterface)
+}
+
+func TestToken(t *testing.T) {
+	suite.Run(t, new(TokenSuite))
+}
 
 type TokenParserSuite struct {
 	TestSuite
