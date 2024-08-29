@@ -4,38 +4,37 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/alecthomas/kong"
 )
 
-func run(args []string, ctx *Context) (err error) {
-	var (
-		grammar *kong.Kong
-		kongCtx *kong.Context
+func newKong() (*kong.Kong, error) {
+	return kong.New(
+		new(CLI),
+		kong.UsageOnError(),
+		kong.Description("hashes plaintext using bascule's infrastructure"),
 	)
+}
 
-	grammar, err = kong.New(new(CLI), kong.Bind(ctx))
+func run(grammar *kong.Kong, args []string) (err error) {
+	var ctx *kong.Context
 	if err == nil {
-		kongCtx, err = grammar.Parse(args)
+		ctx, err = grammar.Parse(args)
 	}
 
 	if err == nil {
-		err = kongCtx.Run()
+		err = ctx.Run()
 	}
 
 	return
 }
 
 func main() {
-	err := run(os.Args[1:], &Context{
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	})
-
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+	grammar, err := newKong()
+	if err == nil {
+		err = run(grammar, os.Args[1:])
 	}
+
+	grammar.FatalIfErrorf(err)
 }
