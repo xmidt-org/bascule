@@ -5,10 +5,7 @@
 *.so
 *.dylib
 *.swp
-
-# Example binaries
-examples/acquirer/acquirer
-examples/basculehttp/basculehttp
+cmd/hash/hash
 
 # Test binary, build with `go test -c`
 *.test
