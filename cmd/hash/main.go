@@ -9,32 +9,33 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-func newKong() (*kong.Kong, error) {
+func newKong(extra ...kong.Option) (*kong.Kong, error) {
 	return kong.New(
 		new(CLI),
-		kong.UsageOnError(),
-		kong.Description("hashes plaintext using bascule's infrastructure"),
+		append(
+			[]kong.Option{
+				kong.UsageOnError(),
+				kong.Description("hashes plaintext using bascule's infrastructure"),
+			},
+			extra...,
+		)...,
 	)
 }
 
-func run(grammar *kong.Kong, args []string) (err error) {
+func run(args []string, extra ...kong.Option) {
 	var ctx *kong.Context
+	k, err := newKong(extra...)
 	if err == nil {
-		ctx, err = grammar.Parse(args)
+		ctx, err = k.Parse(args)
 	}
 
 	if err == nil {
 		err = ctx.Run()
 	}
 
-	return
+	k.FatalIfErrorf(err)
 }
 
 func main() {
-	grammar, err := newKong()
-	if err == nil {
-		err = run(grammar, os.Args[1:])
-	}
-
-	grammar.FatalIfErrorf(err)
+	run(os.Args[1:])
 }
