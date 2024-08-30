@@ -13,13 +13,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const bcryptPlaintext string = "bcrypt plaintext"
+
 type BcryptTestSuite struct {
 	suite.Suite
-}
-
-// plaintext returns a known, valid byte slice to hash
-func (suite *BcryptTestSuite) plaintext() []byte {
-	return []byte("this is a password")
 }
 
 // goodHash returns a hash that is expected to be successful.
@@ -28,7 +25,7 @@ func (suite *BcryptTestSuite) goodHash(cost int) []byte {
 	var (
 		b      bytes.Buffer
 		hasher = Bcrypt{Cost: cost}
-		_, err = hasher.Hash(&b, suite.plaintext())
+		_, err = hasher.Hash(&b, []byte(bcryptPlaintext))
 	)
 
 	suite.Require().NoError(err)
@@ -41,7 +38,7 @@ func (suite *BcryptTestSuite) TestHash() {
 			o      strings.Builder
 			hasher = Bcrypt{}
 
-			n, err = hasher.Hash(&o, suite.plaintext())
+			n, err = hasher.Hash(&o, []byte(bcryptPlaintext))
 		)
 
 		suite.NoError(err)
@@ -53,7 +50,7 @@ func (suite *BcryptTestSuite) TestHash() {
 			o      strings.Builder
 			hasher = Bcrypt{Cost: 12}
 
-			n, err = hasher.Hash(&o, suite.plaintext())
+			n, err = hasher.Hash(&o, []byte(bcryptPlaintext))
 		)
 
 		suite.NoError(err)
@@ -65,7 +62,7 @@ func (suite *BcryptTestSuite) TestHash() {
 			o      strings.Builder
 			hasher = Bcrypt{Cost: bcrypt.MaxCost + 100}
 
-			_, err = hasher.Hash(&o, suite.plaintext())
+			_, err = hasher.Hash(&o, []byte(bcryptPlaintext))
 		)
 
 		suite.Error(err)
@@ -79,7 +76,7 @@ func (suite *BcryptTestSuite) TestMatches() {
 				var (
 					hashed  = suite.goodHash(cost)
 					hasher  = Bcrypt{Cost: cost}
-					ok, err = hasher.Matches(suite.plaintext(), hashed)
+					ok, err = hasher.Matches([]byte(bcryptPlaintext), hashed)
 				)
 
 				suite.True(ok)
