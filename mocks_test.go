@@ -21,6 +21,18 @@ func (m *mockToken) ExpectPrincipal(v string) *mock.Call {
 	return m.On("Principal").Return(v)
 }
 
+type mockTokenWithPassword struct {
+	mockToken
+}
+
+func (m *mockTokenWithPassword) Password() string {
+	return m.Called().String(0)
+}
+
+func (m *mockTokenWithPassword) ExpectPassword(v string) *mock.Call {
+	return m.On("Password").Return(v)
+}
+
 type mockTokenWithCapabilities struct {
 	mockToken
 }

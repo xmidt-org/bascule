@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package bascule provides a configurable way to validate an auth token.
+Package bascule implements authentication and authorization workflows, along
+with commonly needed supporting infrastructure.
 */
 package bascule
