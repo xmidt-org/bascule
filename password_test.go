@@ -24,7 +24,7 @@ func (suite *PasswordTestSuite) TestGetPassword() {
 	})
 
 	suite.Run("WithPassword", func() {
-		const expectedPassword = "this is an expected password"
+		const expectedPassword = "this is an expected password" //nolint:gosec
 		token := new(mockTokenWithPassword)
 		token.ExpectPassword(expectedPassword)
 
