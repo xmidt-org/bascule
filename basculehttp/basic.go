@@ -14,8 +14,13 @@ import (
 
 // BasicToken is the interface that Basic Auth tokens implement.
 type BasicToken interface {
-	bascule.Passworder
+	// UserName is the user name in the basic auth string and will
+	// be e the same as Principal().
 	UserName() string
+
+	// Password returns the password from the basic auth string.
+	// This also permits a BasicToken to be used with bascule.GetPassword.
+	Password() string
 }
 
 // basicToken is the internal basic token struct that results from
