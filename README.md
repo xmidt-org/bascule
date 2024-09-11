@@ -14,10 +14,111 @@ A library for authentication and authorization workflows.
 Bascule provides authentication and authorization workflows, particularly focused on the needs of an HTTP server.
 
 ## Table of Contents
-
+- [Usage](#usage)
 - [Code of Conduct](#code-of-conduct)
 - [Install](#install)
 - [Contributing](#contributing)
+
+
+## Usage
+
+### Create Basic Auth Middleware For Http Requests
+
+> tp, err := basculehttp.NewAuthorizationParser(
+		basculehttp.WithBasic(),
+	)
+	if err != nil {
+		fmt.Prrintln(err)
+	}
+
+	m, err := basculehttp.NewMiddleware(
+		basculehttp.UseAuthenticator(
+
+			basculehttp.NewAuthenticator(
+				bascule.WithTokenParsers(tp),
+				bascule.WithValidators(
+					bascule.AsValidator[*http.Request](
+						func(token bascule.Token) error {
+							if basic, ok := token.(basculehttp.BasicToken); ok && basic.UserName() == "some-username" && basic.Password() == "some-password" {
+								return nil
+							}
+
+							return bascule.ErrBadCredentials
+						},
+					),
+				),
+			),
+		),
+	)
+
+### Create JWT Auth Middleware For Http Requests
+
+> // get public keys with automatic refresh
+	keyUrl := "http://localhost/keys"
+	cache := jwk.NewCache(context.Background())
+	err := cache.Register(keyUrl, jwk.WithRefreshInterval(time.Duration(p.refreshIntervalHours)*time.Hour))
+	keys, err := jwk.NewCachedSet(cache, keyUrl), err
+	if err != nil {
+		fmt.Println("error getting public keys")
+	}
+
+	// create token parser
+
+	jwtp, err := basculejwt.NewTokenParser(jwt.WithKeySet(keys))
+	if err != nil {
+		fmt.Println("error creating token parser")
+	}
+
+	tp, err := basculehttp.NewAuthorizationParser(
+		basculehttp.WithScheme(basculehttp.SchemeBearer, jwtp),
+	)
+	if err != nil {
+		fmt.Println("error creating authoritization parser")
+	}
+
+
+	// create middleware
+
+	_, err = basculehttp.NewMiddleware(
+		basculehttp.UseAuthenticator(
+			basculehttp.NewAuthenticator(
+				bascule.WithTokenParsers(tp),
+				bascule.WithValidators(
+					bascule.AsValidator[*http.Request](
+						func(token bascule.Token) error {
+							_, ok := token.(basculejwt.Claims)
+							if !ok {
+								return bascule.ErrBadCredentials
+							}
+
+							capabilities, _ := bascule.GetCapabilities(token)
+
+							// perform capability and other validation checks here
+
+							fmt.Println(capabilities)
+
+							return nil
+						},
+					),
+				),
+			),
+		),
+	)
+
+	if (err != nil) {
+		fmt.Println("error creating middleware")
+	}
+
+
+### Use Middleware To Intercept Http Requests
+
+> func getHandlers(m *basculehttp.Middleware, next http.Handler) http.Handler {
+	return m.ThenFunc(
+		next.ServeHTTP,
+	)
+}
+
+
 
 ## Code of Conduct
 
