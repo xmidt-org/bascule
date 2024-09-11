@@ -79,7 +79,7 @@ Bascule provides authentication and authorization workflows, particularly focuse
 
 	// create middleware
 
-	_, err = basculehttp.NewMiddleware(
+	m, err = basculehttp.NewMiddleware(
 		basculehttp.UseAuthenticator(
 			basculehttp.NewAuthenticator(
 				bascule.WithTokenParsers(tp),
