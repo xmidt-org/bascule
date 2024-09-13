@@ -4,8 +4,6 @@
 package basculehash
 
 import (
-	"io"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,18 +18,17 @@ type Bcrypt struct {
 	Cost int
 }
 
-// Hash executes the bcrypt algorithm and write the output to dst.
-func (b Bcrypt) Hash(dst io.Writer, plaintext []byte) (n int, err error) {
-	hashed, err := bcrypt.GenerateFromPassword(plaintext, b.Cost)
-	if err == nil {
-		n, err = dst.Write(hashed)
-	}
+var _ Hasher = Bcrypt{}
+var _ Comparer = Bcrypt{}
 
-	return
+// Hash executes the bcrypt algorithm and write the output to dst.
+func (b Bcrypt) Hash(plaintext []byte) (Digest, error) {
+	hashed, err := bcrypt.GenerateFromPassword(plaintext, b.Cost)
+	return Digest(hashed), err
 }
 
 // Matches attempts to match a plaintext against its bcrypt hashed value.
-func (b Bcrypt) Matches(plaintext, hash []byte) (ok bool, err error) {
+func (b Bcrypt) Matches(plaintext []byte, hash Digest) (ok bool, err error) {
 	err = bcrypt.CompareHashAndPassword(hash, plaintext)
 	ok = (err == nil)
 	return
