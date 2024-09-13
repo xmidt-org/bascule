@@ -13,16 +13,6 @@ import (
 
 type BcryptTestSuite struct {
 	TestSuite
-
-	plaintext []byte
-}
-
-func (suite *BcryptTestSuite) SetupSubTest() {
-	suite.SetupTest()
-}
-
-func (suite *BcryptTestSuite) SetupTest() {
-	suite.plaintext = []byte("bcrypt plaintext")
 }
 
 func (suite *BcryptTestSuite) TestHash() {
