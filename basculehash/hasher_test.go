@@ -29,12 +29,16 @@ func (suite *HasherTestSuite) testMatches(cmp Comparer, d Digest) {
 
 func (suite *HasherTestSuite) TestMatches() {
 	suite.Run("Default", func() {
-		suite.testMatches(nil, suite.goodHash(Default(), suite.plaintext))
+		suite.testMatches(nil, suite.goodHash(
+			Default().Hash(suite.plaintext)),
+		)
 	})
 
 	suite.Run("Custom", func() {
 		custom := Bcrypt{Cost: 9}
-		suite.testMatches(custom, suite.goodHash(custom, suite.plaintext))
+		suite.testMatches(custom,
+			suite.goodHash(custom.Hash(suite.plaintext)),
+		)
 	})
 }
 

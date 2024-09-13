@@ -18,7 +18,9 @@ type DigestTestSuite struct {
 
 func (suite *DigestTestSuite) SetupTest() {
 	suite.TestSuite.SetupTest()
-	suite.digest = suite.goodHash(Default(), suite.plaintext)
+	suite.digest = suite.goodHash(
+		Default().Hash(suite.plaintext),
+	)
 }
 
 func (suite *DigestTestSuite) TestCopy() {

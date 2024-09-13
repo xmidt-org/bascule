@@ -5,6 +5,8 @@ package basculehash
 
 import (
 	"sync"
+
+	"github.com/xmidt-org/bascule"
 )
 
 // Store is an in-memory, threadsafe store of principals together with hashed
@@ -26,6 +28,14 @@ func (s *Store) set(principal string, d Digest) {
 	s.lock.Unlock()
 }
 
+// Len returns the count of principals currently in this Store.
+func (s *Store) Len() (n int) {
+	s.lock.RLock()
+	n = len(s.principals)
+	s.lock.RUnlock()
+	return
+}
+
 // Set adds or updates a principal's password.
 //
 // This method does not retain d.  A distinct copy of the digest
@@ -39,8 +49,8 @@ func (s *Store) Set(principal string, d Digest) {
 
 // Matches tests if the given principal's hashed password matches the
 // plaintext password.  This method returns true if both (1) the principal
-// exists, and (2) the password matches.  If either condition is false,
-// this method returns false.
+// exists, and (2) the password matches.  If the principal does not exist,
+// this method returns bascule.ErrBadCredentials.
 func (s *Store) Matches(cmp Comparer, principal string, plaintext []byte) (bool, error) {
 	s.lock.RLock()
 	digest, exists := s.principals.Get(principal)
@@ -50,5 +60,5 @@ func (s *Store) Matches(cmp Comparer, principal string, plaintext []byte) (bool,
 		return Matches(cmp, plaintext, digest)
 	}
 
-	return false, nil
+	return false, bascule.ErrBadCredentials
 }

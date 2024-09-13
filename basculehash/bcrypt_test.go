@@ -18,22 +18,19 @@ type BcryptTestSuite struct {
 func (suite *BcryptTestSuite) TestHash() {
 	suite.Run("DefaultCost", func() {
 		suite.goodHash(
-			Bcrypt{},
-			suite.plaintext,
+			Bcrypt{}.Hash(suite.plaintext),
 		)
 	})
 
 	suite.Run("CustomCost", func() {
 		suite.goodHash(
-			Bcrypt{Cost: 12},
-			suite.plaintext,
+			Bcrypt{Cost: 12}.Hash(suite.plaintext),
 		)
 	})
 
 	suite.Run("CostTooHigh", func() {
 		suite.badHash(
-			Bcrypt{Cost: bcrypt.MaxCost + 100},
-			suite.plaintext,
+			Bcrypt{Cost: bcrypt.MaxCost + 100}.Hash(suite.plaintext),
 		)
 	})
 }
@@ -43,8 +40,11 @@ func (suite *BcryptTestSuite) TestMatches() {
 		for _, cost := range []int{0 /* default */, 4, 8} {
 			suite.Run(fmt.Sprintf("cost=%d", cost), func() {
 				var (
-					hasher  = Bcrypt{Cost: cost}
-					hashed  = suite.goodHash(hasher, suite.plaintext)
+					hasher = Bcrypt{Cost: cost}
+					hashed = suite.goodHash(
+						hasher.Hash(suite.plaintext),
+					)
+
 					ok, err = hasher.Matches(suite.plaintext, hashed)
 				)
 
@@ -58,8 +58,11 @@ func (suite *BcryptTestSuite) TestMatches() {
 		for _, cost := range []int{0 /* default */, 4, 8} {
 			suite.Run(fmt.Sprintf("cost=%d", cost), func() {
 				var (
-					hasher  = Bcrypt{Cost: cost}
-					hashed  = suite.goodHash(hasher, suite.plaintext)
+					hasher = Bcrypt{Cost: cost}
+					hashed = suite.goodHash(
+						hasher.Hash(suite.plaintext),
+					)
+
 					ok, err = hasher.Matches([]byte("a different plaintext"), hashed)
 				)
 

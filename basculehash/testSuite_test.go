@@ -24,8 +24,7 @@ func (suite *TestSuite) SetupTest() {
 
 // goodHash asserts that a hasher did create a digest successfully,
 // and returns that Digest.
-func (suite *TestSuite) goodHash(h Hasher, plaintext []byte) Digest {
-	d, err := h.Hash(plaintext)
+func (suite *TestSuite) goodHash(d Digest, err error) Digest {
 	suite.Require().NoError(err)
 	suite.Require().NotEmpty(d)
 	return d
@@ -33,8 +32,19 @@ func (suite *TestSuite) goodHash(h Hasher, plaintext []byte) Digest {
 
 // badHash asserts that the hash fails.  The digest and error are returned
 // for any future asserts.
-func (suite *TestSuite) badHash(h Hasher, plaintext []byte) (Digest, error) {
-	d, err := h.Hash(plaintext)
+func (suite *TestSuite) badHash(d Digest, err error) (Digest, error) {
 	suite.Require().Error(err)
 	return d, err // hashers are not required to return empty digests on error
+}
+
+// match asserts that the result from a match operation is successful
+func (suite *TestSuite) match(matched bool, err error) {
+	suite.Require().True(matched)
+	suite.Require().NoError(err)
+}
+
+// noMatch asserts that the result from a match operation failed.
+func (suite *TestSuite) noMatch(matched bool, err error) {
+	suite.Require().False(matched)
+	suite.Require().Error(err)
 }
