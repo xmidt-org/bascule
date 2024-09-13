@@ -28,14 +28,6 @@ func (s *Store) set(principal string, d Digest) {
 	s.lock.Unlock()
 }
 
-// Len returns the count of principals currently in this Store.
-func (s *Store) Len() (n int) {
-	s.lock.RLock()
-	n = len(s.principals)
-	s.lock.RUnlock()
-	return
-}
-
 // Set adds or updates a principal's password.
 //
 // This method does not retain d.  A distinct copy of the digest
