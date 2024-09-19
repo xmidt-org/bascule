@@ -24,6 +24,29 @@ func (suite *StoreTestSuite) SetupTest() {
 	suite.credentials = new(Store)
 }
 
+func (suite *StoreTestSuite) TestMarshalJSON() {
+	var (
+		joeDigest  = suite.defaultHash()
+		fredDigest = suite.defaultHash()
+
+		expectedJSON = fmt.Sprintf(
+			`{
+				"joe": "%s",
+				"fred": "%s"
+			}`,
+			joeDigest,
+			fredDigest,
+		)
+	)
+
+	suite.credentials.Set(suite.testCtx, "joe", joeDigest)
+	suite.credentials.Set(suite.testCtx, "fred", fredDigest)
+	actualJSON, err := json.Marshal(suite.credentials)
+
+	suite.Require().NoError(err)
+	suite.JSONEq(expectedJSON, string(actualJSON))
+}
+
 func (suite *StoreTestSuite) TestUnmarshalJSON() {
 	var (
 		joeDigest  = suite.defaultHash()
@@ -41,7 +64,6 @@ func (suite *StoreTestSuite) TestUnmarshalJSON() {
 
 	err := json.Unmarshal([]byte(jsonValue), suite.credentials)
 	suite.Require().NoError(err)
-	suite.Equal(2, suite.credentials.Len())
 	suite.exists("joe", joeDigest)
 	suite.exists("fred", fredDigest)
 }

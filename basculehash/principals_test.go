@@ -4,8 +4,6 @@
 package basculehash
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -22,28 +20,6 @@ func (suite *PrincipalsTestSuite) SetupSubTest() {
 func (suite *PrincipalsTestSuite) SetupTest() {
 	suite.CredentialsTestSuite.SetupTest()
 	suite.credentials = Principals{}
-}
-
-func (suite *PrincipalsTestSuite) TestUnmarshalJSON() {
-	var (
-		joeDigest  = suite.defaultHash()
-		fredDigest = suite.defaultHash()
-
-		jsonValue = fmt.Sprintf(
-			`{
-				"joe": "%s",
-				"fred": "%s"
-			}`,
-			joeDigest,
-			fredDigest,
-		)
-	)
-
-	err := json.Unmarshal([]byte(jsonValue), &suite.credentials)
-	suite.Require().NoError(err)
-	suite.Equal(2, suite.credentials.Len())
-	suite.exists("joe", joeDigest)
-	suite.exists("fred", fredDigest)
 }
 
 func TestPrincipals(t *testing.T) {

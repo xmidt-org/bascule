@@ -4,8 +4,8 @@
 package basculehash
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 )
 
@@ -19,28 +19,18 @@ type Store struct {
 	principals Principals
 }
 
-var _ Matcher = (*Store)(nil)
 var _ Credentials = (*Store)(nil)
 
-// Len returns the number of principals contained in this Store.
-func (s *Store) Len() (n int) {
+// Get returns the Digest associated with the principal.
+func (s *Store) Get(ctx context.Context, principal string) (d Digest, exists bool) {
 	s.lock.RLock()
-	n = s.principals.Len()
-	s.lock.RUnlock()
-	return
-}
-
-// Get returns the Digest associated with the principal.  This method
-// returns false to indicate that the principal did not exist.
-func (s *Store) Get(principal string) (d Digest, exists bool) {
-	s.lock.RLock()
-	d, exists = s.principals.Get(principal)
+	d, exists = s.principals.Get(ctx, principal)
 	s.lock.RUnlock()
 	return
 }
 
 // Set adds or updates a principal's password.
-func (s *Store) Set(principal string, d Digest) {
+func (s *Store) Set(ctx context.Context, principal string, d Digest) {
 	clone := d.Copy()
 	s.lock.Lock()
 
@@ -48,23 +38,24 @@ func (s *Store) Set(principal string, d Digest) {
 		s.principals = make(Principals)
 	}
 
-	s.principals.Set(principal, clone)
+	s.principals.Set(ctx, principal, clone)
 
 	s.lock.Unlock()
 }
 
-// Delete removes the principal from this Store.  This method returns
-// true if the deletion occurred, false if the principal didn't exist.
-func (s *Store) Delete(principal string) (d Digest, existed bool) {
+// Delete removes the principal(s) from this Store.
+func (s *Store) Delete(_ context.Context, principals ...string) {
 	s.lock.Lock()
-	d, existed = s.principals.Delete(principal)
+
+	for _, toDelete := range principals {
+		delete(s.principals, toDelete)
+	}
+
 	s.lock.Unlock()
-	return
 }
 
-// Update performs a bulk update to this Store. Copies are made of
-// all digests before storing internally.
-func (s *Store) Update(more Principals) {
+// Update performs a bulk update to this Store.
+func (s *Store) Update(_ context.Context, more Principals) {
 	names := make([]string, 0, len(more))
 	digests := make([]Digest, 0, len(more))
 	for principal, digest := range more {
@@ -83,24 +74,6 @@ func (s *Store) Update(more Principals) {
 	}
 
 	s.lock.Unlock()
-}
-
-// Matches tests if the given principal's hashed password matches the
-// plaintext password.  This method returns true if both (1) the principal
-// exists, and (2) the password matches.  If the principal does not exist,
-// this method returns bascule.ErrBadCredentials.
-func (s *Store) Matches(cmp Comparer, principal string, plaintext []byte) (err error) {
-	s.lock.RLock()
-	digest, exists := s.principals.Get(principal)
-	s.lock.RUnlock()
-
-	if exists {
-		err = Matches(cmp, plaintext, digest)
-	} else {
-		err = fmt.Errorf("No such principal: %s", principal)
-	}
-
-	return
 }
 
 // MarshalJSON writes the current state of this Store to JSON.

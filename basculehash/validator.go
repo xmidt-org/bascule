@@ -11,8 +11,8 @@ import (
 )
 
 type matcherValidator[S any] struct {
-	cmp Comparer
-	m   Matcher
+	cmp   Comparer
+	creds Credentials
 }
 
 func (mv *matcherValidator[S]) Validate(ctx context.Context, _ S, t bascule.Token) (next bascule.Token, err error) {
@@ -22,8 +22,13 @@ func (mv *matcherValidator[S]) Validate(ctx context.Context, _ S, t bascule.Toke
 		return
 	}
 
-	if err = mv.m.Matches(mv.cmp, t.Principal(), []byte(password)); err != nil {
-		err = errors.Join(bascule.ErrBadCredentials, err)
+	if digest, exists := mv.creds.Get(ctx, t.Principal()); exists {
+		err = mv.cmp.Matches([]byte(password), digest)
+		if err != nil {
+			err = errors.Join(bascule.ErrBadCredentials, err)
+		}
+	} else {
+		err = bascule.ErrBadCredentials
 	}
 
 	return
@@ -31,15 +36,13 @@ func (mv *matcherValidator[S]) Validate(ctx context.Context, _ S, t bascule.Toke
 
 // NewValidator returns a bascule.Validator that always uses the same hash
 // Comparer.  The source S is unused, but conforms to the Validator interface.
-func NewValidator[S any](cmp Comparer, m Matcher) bascule.Validator[S] {
-	v := &matcherValidator[S]{
-		cmp: cmp,
-		m:   m,
+func NewValidator[S any](cmp Comparer, creds Credentials) bascule.Validator[S] {
+	if cmp == nil {
+		cmp = Default()
 	}
 
-	if v.cmp == nil {
-		v.cmp = Default()
+	return &matcherValidator[S]{
+		cmp:   cmp,
+		creds: creds,
 	}
-
-	return v
 }

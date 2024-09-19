@@ -36,15 +36,3 @@ func (suite *TestSuite) badHash(d Digest, err error) (Digest, error) {
 	suite.Require().Error(err)
 	return d, err // hashers are not required to return empty digests on error
 }
-
-// match asserts that the result from a match operation is successful
-func (suite *TestSuite) match(matched bool, err error) {
-	suite.Require().True(matched)
-	suite.Require().NoError(err)
-}
-
-// noMatch asserts that the result from a match operation failed.
-func (suite *TestSuite) noMatch(matched bool, err error) {
-	suite.Require().False(matched)
-	suite.Require().Error(err)
-}
