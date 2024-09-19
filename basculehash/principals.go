@@ -3,16 +3,18 @@
 
 package basculehash
 
-import "github.com/xmidt-org/bascule"
+import "fmt"
 
-// Principals is a mapping between user names and associated
-// hashed password digest. This zero value of this type is
-// ready to use.
+// Principals is a Credentials implementation that is a simple map
+// of principals to digests.  This type is not safe for concurrent
+// usage.
 //
-// This type is appropriate as a validator if the set of principals
-// is fixed and will not change.  If the set of credentials needs to
-// be mutable, use a Store instead.
+// This type is appropriate if the set of credentials is either immutable
+// or protected from concurrent updates by some other means.
 type Principals map[string]Digest
+
+var _ Matcher = Principals{}
+var _ Credentials = Principals{}
 
 // Len returns the number of principals in this set.
 func (p Principals) Len() int {
@@ -27,36 +29,37 @@ func (p Principals) Get(principal string) (d Digest, exists bool) {
 }
 
 // Set adds or replaces the given principal and its associated digest.
-// If a caller intends to retain the Digest, a copy should be made
-// before calling this method.
-func (p *Principals) Set(principal string, d Digest) {
-	if *p == nil {
-		*p = make(Principals)
-	}
-
-	(*p)[principal] = d
+func (p Principals) Set(principal string, d Digest) {
+	p[principal] = d.Copy()
 }
 
 // Delete removes the given principal from this set, returning any existing
 // Digest and an indicator of whether it existed.
-func (p *Principals) Delete(principal string) (d Digest, exists bool) {
-	if d, exists = (*p)[principal]; exists {
-		delete(*p, principal)
+func (p Principals) Delete(principal string) (d Digest, existed bool) {
+	if d, existed = (p)[principal]; existed {
+		delete(p, principal)
 	}
 
 	return
+}
+
+// Update performs a bulk update of credentials. Each digest is copied
+// before storing in this instance.
+func (p Principals) Update(more Principals) {
+	for principal, digest := range more {
+		p[principal] = digest.Copy()
+	}
 }
 
 // Matches tests if a given principal's password matches the associated
 // digest.  If no such principal exists, this method returns bascule.ErrBadCredentials.
 //
 // If cmp is nil, DefaultComparer is used.
-func (p Principals) Matches(cmp Comparer, principal string, plaintext []byte) (match bool, err error) {
-	d, exists := p[principal]
-	if exists {
-		match, err = Matches(cmp, plaintext, d)
+func (p Principals) Matches(cmp Comparer, principal string, plaintext []byte) (err error) {
+	if d, exists := p[principal]; exists {
+		err = Matches(cmp, plaintext, d)
 	} else {
-		err = bascule.ErrBadCredentials
+		err = fmt.Errorf("No such principal: %s", principal)
 	}
 
 	return

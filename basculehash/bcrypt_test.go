@@ -44,12 +44,11 @@ func (suite *BcryptTestSuite) TestMatches() {
 					hashed = suite.goodHash(
 						hasher.Hash(suite.plaintext),
 					)
-
-					ok, err = hasher.Matches(suite.plaintext, hashed)
 				)
 
-				suite.True(ok)
-				suite.NoError(err)
+				suite.NoError(
+					hasher.Matches(suite.plaintext, hashed),
+				)
 			})
 		}
 	})
@@ -62,12 +61,11 @@ func (suite *BcryptTestSuite) TestMatches() {
 					hashed = suite.goodHash(
 						hasher.Hash(suite.plaintext),
 					)
-
-					ok, err = hasher.Matches([]byte("a different plaintext"), hashed)
 				)
 
-				suite.False(ok)
-				suite.Error(err)
+				suite.Error(
+					hasher.Matches([]byte("a different plaintext"), hashed),
+				)
 			})
 		}
 	})

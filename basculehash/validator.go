@@ -5,15 +5,10 @@ package basculehash
 
 import (
 	"context"
+	"errors"
 
 	"github.com/xmidt-org/bascule"
 )
-
-// Matcher is the common interface between a Principals and a Store.
-type Matcher interface {
-	// Matches checks the associated digest with the given plaintext.
-	Matches(Comparer, string, []byte) (bool, error)
-}
 
 type matcherValidator[S any] struct {
 	cmp Comparer
@@ -27,13 +22,8 @@ func (mv *matcherValidator[S]) Validate(ctx context.Context, _ S, t bascule.Toke
 		return
 	}
 
-	matched, matchErr := mv.m.Matches(mv.cmp, t.Principal(), []byte(password))
-	switch {
-	case !matched:
-		err = bascule.ErrBadCredentials
-
-	case matchErr != nil:
-		err = bascule.ErrBadCredentials
+	if err = mv.m.Matches(mv.cmp, t.Principal(), []byte(password)); err != nil {
+		err = errors.Join(bascule.ErrBadCredentials, err)
 	}
 
 	return

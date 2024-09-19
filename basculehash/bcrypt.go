@@ -28,8 +28,6 @@ func (b Bcrypt) Hash(plaintext []byte) (Digest, error) {
 }
 
 // Matches attempts to match a plaintext against its bcrypt hashed value.
-func (b Bcrypt) Matches(plaintext []byte, hash Digest) (ok bool, err error) {
-	err = bcrypt.CompareHashAndPassword(hash, plaintext)
-	ok = (err == nil)
-	return
+func (b Bcrypt) Matches(plaintext []byte, hash Digest) error {
+	return bcrypt.CompareHashAndPassword(hash, plaintext)
 }

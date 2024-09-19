@@ -11,20 +11,20 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type PrincipalsTestSuite struct {
-	CredentialsTestSuite[Principals]
+type StoreTestSuite struct {
+	CredentialsTestSuite[*Store]
 }
 
-func (suite *PrincipalsTestSuite) SetupSubTest() {
+func (suite *StoreTestSuite) SetupSubTest() {
 	suite.SetupTest()
 }
 
-func (suite *PrincipalsTestSuite) SetupTest() {
+func (suite *StoreTestSuite) SetupTest() {
 	suite.CredentialsTestSuite.SetupTest()
-	suite.credentials = Principals{}
+	suite.credentials = new(Store)
 }
 
-func (suite *PrincipalsTestSuite) TestUnmarshalJSON() {
+func (suite *StoreTestSuite) TestUnmarshalJSON() {
 	var (
 		joeDigest  = suite.defaultHash()
 		fredDigest = suite.defaultHash()
@@ -39,13 +39,13 @@ func (suite *PrincipalsTestSuite) TestUnmarshalJSON() {
 		)
 	)
 
-	err := json.Unmarshal([]byte(jsonValue), &suite.credentials)
+	err := json.Unmarshal([]byte(jsonValue), suite.credentials)
 	suite.Require().NoError(err)
 	suite.Equal(2, suite.credentials.Len())
 	suite.exists("joe", joeDigest)
 	suite.exists("fred", fredDigest)
 }
 
-func TestPrincipals(t *testing.T) {
-	suite.Run(t, new(PrincipalsTestSuite))
+func TestStore(t *testing.T) {
+	suite.Run(t, new(StoreTestSuite))
 }
