@@ -45,7 +45,11 @@ func (cmd *Bcrypt) Run(kong *kong.Kong) error {
 		Cost: cmd.Cost,
 	}
 
-	_, err := hasher.Hash(kong.Stdout, []byte(cmd.Plaintext))
+	digest, err := hasher.Hash([]byte(cmd.Plaintext))
+	if err == nil {
+		digest.WriteTo(kong.Stdout)
+	}
+
 	return err
 }
 
