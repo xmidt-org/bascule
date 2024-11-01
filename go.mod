@@ -3,7 +3,7 @@ module github.com/xmidt-org/bascule
 go 1.23
 
 require (
-	github.com/alecthomas/kong v1.2.1
+	github.com/alecthomas/kong v1.3.0
 	github.com/lestrrat-go/jwx/v2 v2.1.2
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/multierr v1.11.0
