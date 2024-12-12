@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/alecthomas/kong v1.6.0
 	github.com/lestrrat-go/jwx/v2 v2.1.3
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.31.0
 )
