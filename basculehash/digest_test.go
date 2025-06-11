@@ -25,8 +25,8 @@ func (suite *DigestTestSuite) SetupTest() {
 
 func (suite *DigestTestSuite) TestCopy() {
 	clone := suite.digest.Copy()
-	suite.Equal(suite.digest, clone)
-	suite.NotSame(suite.digest, clone)
+	suite.Equal(&suite.digest, &clone)
+	suite.NotSame(&suite.digest, &clone)
 }
 
 func (suite *DigestTestSuite) TestString() {
