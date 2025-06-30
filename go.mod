@@ -1,6 +1,6 @@
 module github.com/xmidt-org/bascule
 
-go 1.23.0
+go 1.24
 
 require (
 	github.com/alecthomas/kong v1.12.0
