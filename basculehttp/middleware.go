@@ -203,7 +203,7 @@ func (m *Middleware) writeRawError(response http.ResponseWriter, err error) {
 	errBody := []byte(err.Error())
 	response.Header().Set("Content-Length", strconv.Itoa(len(errBody)))
 	response.WriteHeader(http.StatusInternalServerError)
-	response.Write(errBody)
+	response.Write(errBody) //nolint:gosec // G705: False positive - error is from internal package validation, not user input
 }
 
 // writeWorkflowError handles writing an error that came from the bascule workflow to an HTTP request.
