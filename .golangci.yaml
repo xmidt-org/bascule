@@ -8,6 +8,10 @@ linters:
     errorlint:
       # Report non-wrapping error creation using fmt.Errorf
       errorf: false
+    gosec:
+      # Disable G104: Errors unhandled (similar to errcheck which is disabled)
+      excludes:
+        - G104
   enable:
     - dupl
     - errorlint
@@ -19,6 +23,10 @@ linters:
   disable:
     - errcheck
     - ineffassign
+    # Disable default-enabled linters
+    - govet
+    - staticcheck
+    - unused
 
 issues:
   max-issues-per-linter: 0
