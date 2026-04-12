@@ -8,9 +8,10 @@ on:
     - cron: '0 12 * * *'  # Daily at 12:00 UTC
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  contents: write
 
 jobs:
   release:
-    uses: xmidt-org/shared-go/.github/workflows/auto-releaser.yml@8f72b028f3bbb741244c9fde8633ecb5ceb77fd0 # main
+    uses: xmidt-org/shared-go/.github/workflows/auto-releaser.yml@8f72b028f3bbb741244c9fde8633ecb5ceb77fd0 # v4.9.38
     secrets: inherit
