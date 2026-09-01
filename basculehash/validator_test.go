@@ -18,7 +18,7 @@ type validatorTestToken struct {
 	principal, password string
 }
 
-func (t validatorTestToken) Principal() string { return t.principal }
+func (t validatorTestToken) Principal() (string, bool) { return t.principal, true }
 
 func (t validatorTestToken) Password() string { return t.password }
 
@@ -50,6 +50,7 @@ func (suite *ValidatorTestSuite) newDefaultToken(principal string) bascule.Token
 // newCredentials builds a standard set of credentials using the given hasher.
 func (suite *ValidatorTestSuite) newCredentials(h Hasher) Credentials {
 	return Principals{
+		// nolint: goconst
 		"joe":  suite.goodHash(h.Hash(suite.plaintext)),
 		"fred": suite.goodHash(h.Hash(suite.plaintext)),
 	}
