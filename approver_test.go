@@ -63,7 +63,6 @@ func (suite *ApproversTestSuite) TestAuthorize() {
 				)
 
 				for _, err := range testCase.results {
-					err := err
 					as = as.Append(
 						ApproverFunc[string](func(ctx context.Context, resource string, token Token) error {
 							suite.Same(testCtx, ctx)
@@ -92,7 +91,6 @@ func (suite *ApproversTestSuite) TestAuthorize() {
 				)
 
 				for _, err := range testCase.results {
-					err := err
 					as = as.AppendFunc(
 						func(ctx context.Context, resource string, token Token) error {
 							suite.Same(testCtx, ctx)
@@ -153,7 +151,6 @@ func (suite *ApproversTestSuite) TestAny() {
 			)
 
 			for _, err := range testCase.results {
-				err := err
 				as = as.Append(
 					ApproverFunc[string](func(ctx context.Context, resource string, token Token) error {
 						suite.Same(testCtx, ctx)

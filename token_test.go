@@ -339,7 +339,7 @@ func (suite *TokenParserSuite) TestAsTokenParser() {
 func (suite *TokenParserSuite) appendMissing(tps TokenParsers[int], count int) TokenParsers[int] {
 	initialLen := tps.Len()
 
-	for repeat := 0; repeat < count; repeat++ {
+	for range count {
 		m := new(mockTokenParser[int])
 		m.ExpectParse(suite.expectedCtx, suite.expectedSource).
 			Return(nil, ErrMissingCredentials).Once()
@@ -381,7 +381,7 @@ func (suite *TokenParserSuite) appendFail(tps TokenParsers[int]) TokenParsers[in
 // a successful parse or a non-missing error.
 func (suite *TokenParserSuite) appendNoCall(tps TokenParsers[int], count int) TokenParsers[int] {
 	initialLen := tps.Len()
-	for repeat := 0; repeat < count; repeat++ {
+	for range count {
 		m := new(mockTokenParser[int])
 		tps = tps.Append(m)
 	}
