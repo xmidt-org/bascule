@@ -31,7 +31,8 @@ func ExampleMiddleware_basicauth() {
 	h := m.ThenFunc(
 		func(response http.ResponseWriter, request *http.Request) {
 			if t, ok := bascule.GetFrom(request); ok {
-				fmt.Println("principal:", t.Principal())
+				p, _ := t.Principal()
+				fmt.Println("principal:", p)
 			} else {
 				fmt.Println("no token found")
 			}
@@ -87,7 +88,8 @@ func ExampleMiddleware_authentication() {
 	h := m.ThenFunc(
 		func(response http.ResponseWriter, request *http.Request) {
 			t, _ := bascule.GetFrom(request)
-			fmt.Println("principal:", t.Principal())
+			p, _ := t.Principal()
+			fmt.Println("principal:", p)
 		},
 	)
 
@@ -128,7 +130,7 @@ func ExampleMiddleware_authorization() {
 					// this can also be a type that implements the bascule.Approver interface,
 					// when used with bascule.WithApprovers
 					func(_ context.Context, resource *http.Request, token bascule.Token) error {
-						if token.Principal() != "joe" {
+						if p, _ := token.Principal(); p != "joe" {
 							// only joe can access this resource
 							return bascule.ErrUnauthorized
 						}
@@ -143,7 +145,8 @@ func ExampleMiddleware_authorization() {
 	h := m.ThenFunc(
 		func(response http.ResponseWriter, request *http.Request) {
 			t, _ := bascule.GetFrom(request)
-			fmt.Println("principal:", t.Principal())
+			p, _ := t.Principal()
+			fmt.Println("principal:", p)
 		},
 	)
 

@@ -49,21 +49,27 @@ func (suite *RunTestSuite) testBcryptSubcommandInvalidParameters() {
 		args []string
 	}{
 		{
+			// nolint: goconst
 			args: []string{"bcrypt"},
 		},
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", "--cost", "123", "plaintext"},
 		},
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", "-c", "123", "plaintext"},
 		},
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", "--cost", "1", "plaintext"},
 		},
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", "-c", "1", "plaintext"},
 		},
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", "this plaintext is way to long ... asdfoiuwelrkjhsldkjfp983yu5pkljheflkajsodifuypwieuyrtplkahjsdflkajhsdf"},
 		},
 	}
@@ -86,12 +92,15 @@ func (suite *RunTestSuite) testBcryptSubcommandSuccess() {
 		args []string
 	}{
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", plaintext},
 		},
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", "-c", "5", plaintext},
 		},
 		{
+			// nolint: goconst
 			args: []string{"bcrypt", "--cost", "9", plaintext},
 		},
 	}

@@ -13,7 +13,7 @@ type Extra struct {
 	Age  int
 }
 
-func (e Extra) Principal() string { return e.Name }
+func (e Extra) Principal() (string, bool) { return e.Name, true }
 
 // ExampleJoinTokens_augment shows how to augment a Token as part
 // of authentication workflow.
@@ -40,7 +40,8 @@ func ExampleJoinTokens_augment() {
 		"source",
 	)
 
-	fmt.Println("authenticated principal:", authenticated.Principal())
+	p, _ := authenticated.Principal()
+	fmt.Println("authenticated principal:", p)
 
 	var extra Extra
 	if !TokenAs(authenticated, &extra) {

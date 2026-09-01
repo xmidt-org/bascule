@@ -5,12 +5,14 @@ package basculejwt
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/jwt"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/suite"
 	"github.com/xmidt-org/bascule"
 )
@@ -39,24 +41,12 @@ type TokenTestSuite struct {
 }
 
 func (suite *TokenTestSuite) initializeKey() {
-	var err error
-	suite.testKey, err = jwk.ParseKey([]byte(`{
-    "p": "7HMYtb-1dKyDp1OkdKc9WDdVMw3vtiiKDyuyRwnnwMOoYLPYxqE0CUMzw8_zXuzq7WJAmGiFd5q7oVzkbHzrtQ",
-    "kty": "RSA",
-    "q": "5253lCAgBLr8SR_VzzDtk_3XTHVmVIgniajMl7XM-ttrUONV86DoIm9VBx6ywEKpj5Xv3USBRNlpf8OXqWVhPw",
-    "d": "G7RLbBiCkiZuepbu46G0P8J7vn5l8G6U78gcMRdEhEsaXGZz_ZnbqjW6u8KI_3akrBT__GDPf8Hx8HBNKX5T9jNQW0WtJg1XnwHOK_OJefZl2fnx-85h3tfPD4zI3m54fydce_2kDVvqTOx_XXdNJD7v5TIAgvCymQv7qvzQ0VE",
-    "e": "AQAB",
-    "use": "sig",
-    "kid": "test",
-    "qi": "a_6YlMdA9b6piRodA0MR7DwjbALlMan19wj_VkgZ8Xoilq68sGaV2CQDoAdsTW9Mjt5PpCxvJawz0AMr6LIk9w",
-    "dp": "s55HgiGs_YHjzSOsBXXaEv6NuWf31l_7aMTf_DkZFYVMjpFwtotVFUg4taJuFYlSeZwux9h2s0IXEOCZIZTQFQ",
-    "alg": "RS256",
-    "dq": "M79xoX9laWleDAPATSnFlbfGsmP106T2IkPKK4oNIXJ6loWerHEoNrrqKkNk-LRvMZn3HmS4-uoaOuVDPi9bBQ",
-    "n": "1cHjMu7H10hKxnoq3-PJT9R25bkgVX1b39faqfecC82RMcD2DkgCiKGxkCmdUzuebpmXCZuxp-rVVbjrnrI5phAdjshZlkHwV0tyJOcerXsPgu4uk_VIJgtLdvgUAtVEd8-ZF4Y9YNOAKtf2AHAoRdP0ZVH7iVWbE6qU-IN2los"
-}`))
-
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	suite.Require().NoError(err)
-
+	suite.testKey, err = jwk.Import[jwk.RSAPrivateKey](key)
+	suite.Require().NoError(err)
+	suite.Require().NoError(suite.testKey.Set(jwk.KeyIDKey, "test"))
+	suite.Require().NoError(suite.testKey.Set(jwk.AlgorithmKey, jwa.RS256()))
 	suite.testKeySet = jwk.NewSet()
 	err = suite.testKeySet.AddKey(suite.testKey)
 	suite.Require().NoError(err)
@@ -103,7 +93,7 @@ func (suite *TokenTestSuite) createJWT() {
 
 	suite.Require().NoError(err)
 
-	suite.signedJWT, err = jwt.Sign(suite.testJWT, jwt.WithKey(jwa.RS256, suite.testKey))
+	suite.signedJWT, err = jwt.Sign(suite.testJWT, jwt.WithKey(jwa.RS256(), suite.testKey))
 	suite.Require().NoError(err)
 }
 
@@ -124,26 +114,41 @@ func (suite *TokenTestSuite) TestTokenParser() {
 		token, err := tp.Parse(context.Background(), string(suite.signedJWT))
 		suite.Require().NoError(err)
 		suite.Require().NotNil(token)
-
-		suite.Equal(suite.subject, token.Principal())
+		p, ok := token.Principal()
+		suite.Require().True(ok)
+		suite.Equal(suite.subject, p)
 		caps, ok := bascule.GetCapabilities(token)
 		suite.Equal(suite.capabilities, caps)
-		suite.True(ok)
+		suite.Require().True(ok)
 
 		suite.Require().Implements((*bascule.AttributesAccessor)(nil), token)
 		v, ok := bascule.GetAttribute[string](token.(bascule.AttributesAccessor), "version")
-		suite.True(ok)
+		suite.Require().True(ok)
 		suite.Equal(suite.version, v)
 
 		suite.Require().Implements((*Claims)(nil), token)
 		claims := token.(Claims)
-		suite.Equal(suite.audience, claims.Audience())
-		suite.Equal(suite.subject, claims.Subject())
-		suite.Equal(suite.issuer, claims.Issuer())
-		suite.Equal(suite.expiration, claims.Expiration())
-		suite.Equal(suite.issuedAt, claims.IssuedAt())
-		suite.Equal(suite.notBefore, claims.NotBefore())
-		suite.Equal(suite.jwtID, claims.JwtID())
+		v1, ok := claims.Audience()
+		suite.Require().True(ok)
+		suite.Equal(suite.audience, v1)
+		v2, ok := claims.Subject()
+		suite.Require().True(ok)
+		suite.Equal(suite.subject, v2)
+		v3, ok := claims.Issuer()
+		suite.Require().True(ok)
+		suite.Equal(suite.issuer, v3)
+		v4, ok := claims.Expiration()
+		suite.Require().True(ok)
+		suite.Equal(suite.expiration, v4)
+		v5, ok := claims.IssuedAt()
+		suite.Require().True(ok)
+		suite.Equal(suite.issuedAt, v5)
+		v6, ok := claims.NotBefore()
+		suite.Require().True(ok)
+		suite.Equal(suite.notBefore, v6)
+		v7, ok := claims.JwtID()
+		suite.Require().True(ok)
+		suite.Equal(suite.jwtID, v7)
 	})
 
 	suite.Run("NoOptions", func() {

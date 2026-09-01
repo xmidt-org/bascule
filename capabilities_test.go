@@ -33,7 +33,7 @@ func (suite *CapabilitiesTestSuite) testGetCapabilitiesAccessor() {
 		mt := new(mockTokenWithCapabilities)
 		mt.ExpectCapabilities().Once()
 		caps, ok := GetCapabilities(mt)
-		suite.True(ok)
+		suite.Require().True(ok)
 		suite.Empty(caps)
 
 		mt.AssertExpectations(suite.T())
@@ -41,9 +41,11 @@ func (suite *CapabilitiesTestSuite) testGetCapabilitiesAccessor() {
 
 	suite.Run("HasCapabilities", func() {
 		mt := new(mockTokenWithCapabilities)
+		// nolint: goconst
 		mt.ExpectCapabilities("one", "two", "three").Once()
 		caps, ok := GetCapabilities(mt)
-		suite.True(ok)
+		suite.Require().True(ok)
+		// nolint: goconst
 		suite.Equal([]string{"one", "two", "three"}, caps)
 
 		mt.AssertExpectations(suite.T())
@@ -53,27 +55,27 @@ func (suite *CapabilitiesTestSuite) testGetCapabilitiesAccessor() {
 func (suite *CapabilitiesTestSuite) testGetCapabilitiesStringSlice() {
 	suite.Run("Empty", func() {
 		caps, ok := GetCapabilities([]string{})
-		suite.True(ok)
+		suite.Require().True(ok)
 		suite.Empty(caps)
 	})
 
 	suite.Run("NonEmpty", func() {
 		caps, ok := GetCapabilities([]string{"one", "two", "three"})
-		suite.True(ok)
+		suite.Require().True(ok)
 		suite.Equal([]string{"one", "two", "three"}, caps)
 	})
 }
 
 func (suite *CapabilitiesTestSuite) testGetCapabilitiesString() {
 	caps, ok := GetCapabilities("single")
-	suite.True(ok)
+	suite.Require().True(ok)
 	suite.Equal([]string{"single"}, caps)
 }
 
 func (suite *CapabilitiesTestSuite) testGetCapabilitiesAnySlice() {
 	suite.Run("AllStrings", func() {
 		caps, ok := GetCapabilities([]any{"one", "two", "three"})
-		suite.True(ok)
+		suite.Require().True(ok)
 		suite.Equal([]string{"one", "two", "three"}, caps)
 	})
 

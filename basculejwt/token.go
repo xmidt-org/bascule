@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v2/jwt"
+	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/xmidt-org/bascule"
 )
 
@@ -17,27 +17,27 @@ const CapabilitiesKey = "capabilities"
 // Claims exposes standard JWT claims from a Token.
 type Claims interface {
 	// Audience returns the aud field of the JWT.
-	Audience() []string
+	Audience() ([]string, bool)
 
 	// Expiration returns the exp field of the JWT.
-	Expiration() time.Time
+	Expiration() (time.Time, bool)
 
 	// IssuedAt returns the iat field of the JWT.
-	IssuedAt() time.Time
+	IssuedAt() (time.Time, bool)
 
 	// Issuer returns the iss field of the JWT.
-	Issuer() string
+	Issuer() (string, bool)
 
 	// JwtID returns the jti field of the JWT.
-	JwtID() string
+	JwtID() (string, bool)
 
 	// NotBefore returns the nbf field of the JWT.
-	NotBefore() time.Time
+	NotBefore() (time.Time, bool)
 
 	// Subject returns the sub field of the JWT.  For tokens that
 	// implement this interface, this method returns the same value
 	// as tne Principal method.
-	Subject() string
+	Subject() (string, bool)
 }
 
 // token is the internal implementation of the JWT Token interface.  It fronts
@@ -46,40 +46,40 @@ type token struct {
 	jwt jwt.Token
 }
 
-func (t token) Audience() []string {
+func (t token) Audience() ([]string, bool) {
 	return t.jwt.Audience()
 }
 
-func (t token) Expiration() time.Time {
+func (t token) Expiration() (time.Time, bool) {
 	return t.jwt.Expiration()
 }
 
-func (t token) IssuedAt() time.Time {
+func (t token) IssuedAt() (time.Time, bool) {
 	return t.jwt.IssuedAt()
 }
 
-func (t token) Issuer() string {
+func (t token) Issuer() (string, bool) {
 	return t.jwt.Issuer()
 }
 
-func (t token) JwtID() string {
+func (t token) JwtID() (string, bool) {
 	return t.jwt.JwtID()
 }
 
-func (t token) NotBefore() time.Time {
+func (t token) NotBefore() (time.Time, bool) {
 	return t.jwt.NotBefore()
 }
 
-func (t token) Subject() string {
+func (t token) Subject() (string, bool) {
 	return t.jwt.Subject()
 }
 
-func (t token) Principal() string {
+func (t token) Principal() (string, bool) {
 	return t.jwt.Subject()
 }
 
 func (t token) Capabilities() (caps []string) {
-	if v, ok := t.jwt.Get(CapabilitiesKey); ok {
+	if v, ok := t.jwt.Field(CapabilitiesKey); ok {
 		caps, _ = bascule.GetCapabilities(v)
 	}
 
@@ -87,7 +87,7 @@ func (t token) Capabilities() (caps []string) {
 }
 
 func (t token) Get(key string) (any, bool) {
-	return t.jwt.Get(key)
+	return t.jwt.Field(key)
 }
 
 // tokenParser is the canonical parser for bascule that deals with JWTs.

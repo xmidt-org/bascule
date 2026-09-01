@@ -13,8 +13,8 @@ type mockToken struct {
 	mock.Mock
 }
 
-func (m *mockToken) Principal() string {
-	return m.Called().String(0)
+func (m *mockToken) Principal() (string, bool) {
+	return m.Called().String(0), true
 }
 
 func (m *mockToken) ExpectPrincipal(v string) *mock.Call {

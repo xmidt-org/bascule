@@ -36,7 +36,7 @@ var (
 type Token interface {
 	// Principal is the security subject of this token, e.g. the user name or other
 	// user identifier.
-	Principal() string
+	Principal() (string, bool)
 }
 
 // MultiToken is an aggregate Token that is the root of a subtree of Tokens.
@@ -44,12 +44,12 @@ type MultiToken []Token
 
 // Principal returns the principal for the first token in this set, or
 // the empty string if this set is empty.
-func (mt MultiToken) Principal() string {
+func (mt MultiToken) Principal() (string, bool) {
 	if len(mt) > 0 {
 		return mt[0].Principal()
 	}
 
-	return ""
+	return "", false
 }
 
 // Unwrap provides access to this token's children.
@@ -282,7 +282,7 @@ func (tps TokenParsers[S]) Parse(ctx context.Context, source S) (t Token, err er
 type StubToken string
 
 // Principal just returns this token's string value.
-func (st StubToken) Principal() string { return string(st) }
+func (st StubToken) Principal() (string, bool) { return string(st), true }
 
 // StubTokenParser is a parser that returns the same Token for all
 // calls.  Useful in testing and in development.

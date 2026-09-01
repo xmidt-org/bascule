@@ -90,20 +90,24 @@ func (suite *CredentialsTestSuite[C]) TestUpdate() {
 	joeDigest := suite.defaultHash()
 	fredDigest := suite.defaultHash()
 	suite.credentials.Update(suite.testCtx, Principals{
+		// nolint: goconst
 		"joe":  joeDigest,
 		"fred": fredDigest,
 	})
 
+	// nolint: goconst
 	suite.exists("joe", joeDigest)
 	suite.exists("fred", fredDigest)
 
 	joeDigest = suite.defaultHash()
 	moeDigest := suite.defaultHash()
 	suite.credentials.Update(suite.testCtx, Principals{
+		// nolint: goconst
 		"joe": joeDigest,
 		"moe": moeDigest,
 	})
 
+	// nolint: goconst
 	suite.exists("joe", joeDigest)
 	suite.exists("fred", fredDigest)
 	suite.exists("moe", moeDigest)
