@@ -57,7 +57,7 @@ func (suite *ListenerTestSuite) TestListeners() {
 					ls Listeners[AuthenticateEvent[int]]
 				)
 
-				for i := 0; i < count; i++ {
+				for range count {
 					var l Listener[AuthenticateEvent[int]] = ListenerFunc[AuthenticateEvent[int]](
 						func(actualEvent AuthenticateEvent[int]) {
 							suite.Equal(expectedEvent, actualEvent)
@@ -84,7 +84,7 @@ func (suite *ListenerTestSuite) TestListeners() {
 					ls Listeners[AuthenticateEvent[int]]
 				)
 
-				for i := 0; i < count; i++ {
+				for range count {
 					ls = ls.AppendFunc(func(e AuthenticateEvent[int]) {
 						suite.Equal(expectedEvent, e)
 						called++

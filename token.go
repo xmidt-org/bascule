@@ -115,7 +115,7 @@ func UnwrapToken(t Token) []Token {
 	return nil
 }
 
-var tokenType = reflect.TypeOf((*Token)(nil)).Elem()
+var tokenType = reflect.TypeFor[Token]()
 
 // tokenTargetValue produces a reflect value to set and the required type that
 // a token must be convertible to.  This function panics in all the same cases
