@@ -105,6 +105,10 @@ type Authenticator[S any] struct {
 // (2) The token is validated using any configured validator(s)
 // (3) Appropriate events are dispatched to listeners after either of steps (1) or (2)
 func (a *Authenticator[S]) Authenticate(ctx context.Context, source S) (token Token, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	token, err = a.parsers.Parse(ctx, source)
 	if err == nil {
 		var next Token

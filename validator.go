@@ -35,6 +35,10 @@ type Validator[S any] interface {
 // If any validator fails, this function halts further validation and returns
 // the error.
 func Validate[S any](ctx context.Context, source S, original Token, v ...Validator[S]) (validated Token, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	next := original
 	for i, prev := 0, next; err == nil && i < len(v); i, prev = i+1, next {
 		next, err = v[i].Validate(ctx, source, prev)
@@ -65,6 +69,10 @@ func (vs Validators[S]) Append(more ...Validator[S]) Validators[S] {
 // if all validators pass.  Any validation failure prevents subsequent validators
 // from running.
 func (vs Validators[S]) Validate(ctx context.Context, source S, t Token) (Token, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	return Validate(ctx, source, t, vs...)
 }
 
@@ -85,6 +93,10 @@ type ValidatorFunc[S any] interface {
 type validatorFunc[S any] func(context.Context, S, Token) (Token, error)
 
 func (vf validatorFunc[S]) Validate(ctx context.Context, source S, t Token) (next Token, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	next, err = vf(ctx, source, t)
 	if next == nil {
 		next = t
@@ -107,6 +119,10 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				return t, vf(t)
 			},
 		)
@@ -114,6 +130,10 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(S, Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				return t, vf(source, t)
 			},
 		)
@@ -121,6 +141,10 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(Token) (Token, error):
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (next Token, err error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				next, err = vf(t)
 				if next == nil {
 					next = t
@@ -133,6 +157,10 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(S, Token) (Token, error):
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (next Token, err error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				next, err = vf(source, t)
 				if next == nil {
 					next = t
@@ -145,6 +173,10 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(context.Context, Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				return t, vf(ctx, t)
 			},
 		)
@@ -152,6 +184,10 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(context.Context, S, Token) error:
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (Token, error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				return t, vf(ctx, source, t)
 			},
 		)
@@ -159,6 +195,10 @@ func asValidatorSimple[S any, F ValidatorFunc[S]](f F) (v Validator[S]) {
 	case func(context.Context, Token) (Token, error):
 		v = validatorFunc[S](
 			func(ctx context.Context, source S, t Token) (next Token, err error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				next, err = vf(ctx, t)
 				if next == nil {
 					next = t

@@ -206,6 +206,10 @@ type TokenParserFunc[S any] interface {
 type tokenParserFunc[S any] func(context.Context, S) (Token, error)
 
 func (tpf tokenParserFunc[S]) Parse(ctx context.Context, source S) (Token, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	return tpf(ctx, source)
 }
 
@@ -215,7 +219,11 @@ func AsTokenParser[S any, F TokenParserFunc[S]](f F) TokenParser[S] {
 	// first, try the simple cases
 	switch ft := any(f).(type) {
 	case func(S) (Token, error):
-		return tokenParserFunc[S](func(_ context.Context, source S) (Token, error) {
+		return tokenParserFunc[S](func(ctx context.Context, source S) (Token, error) {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+
 			return ft(source) // curry away the context
 		})
 
@@ -228,7 +236,11 @@ func AsTokenParser[S any, F TokenParserFunc[S]](f F) TokenParser[S] {
 	fVal := reflect.ValueOf(f)
 	if ft := reflect.TypeOf((func(S) (Token, error))(nil)); fVal.CanConvert(ft) {
 		sourceOnly := fVal.Convert(ft).Interface().(func(S) (Token, error))
-		return tokenParserFunc[S](func(_ context.Context, source S) (Token, error) {
+		return tokenParserFunc[S](func(ctx context.Context, source S) (Token, error) {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+
 			return sourceOnly(source) // curry away the context
 		})
 	} else {
@@ -266,6 +278,10 @@ func (tps TokenParsers[S]) Append(more ...TokenParser[S]) TokenParsers[S] {
 // Otherwise, the token returned from the first successful parse is returned by
 // this aggregate method.
 func (tps TokenParsers[S]) Parse(ctx context.Context, source S) (t Token, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if len(tps) == 0 {
 		err = ErrNoTokenParsers
 	}
@@ -293,4 +309,10 @@ type StubTokenParser[S any] struct {
 }
 
 // Parse always returns the configured Token and a nil error.
-func (stp StubTokenParser[S]) Parse(context.Context, S) (Token, error) { return stp.Token, nil }
+func (stp StubTokenParser[S]) Parse(ctx context.Context, _ S) (Token, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return stp.Token, nil
+}

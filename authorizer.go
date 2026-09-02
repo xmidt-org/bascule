@@ -111,6 +111,10 @@ type Authorizer[R any] struct {
 //
 // Any error that occurred during authorization is returned.
 func (a *Authorizer[R]) Authorize(ctx context.Context, resource R, token Token) (err error) {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	err = a.approvers.Approve(ctx, resource, token)
 	a.listeners.OnEvent(AuthorizeEvent[R]{
 		Resource: resource,

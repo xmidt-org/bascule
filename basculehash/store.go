@@ -23,6 +23,10 @@ var _ Credentials = (*Store)(nil)
 
 // Get returns the Digest associated with the principal.
 func (s *Store) Get(ctx context.Context, principal string) (d Digest, exists bool) {
+	if err := ctx.Err(); err != nil {
+		return nil, false
+	}
+
 	s.lock.RLock()
 	d, exists = s.principals.Get(ctx, principal)
 	s.lock.RUnlock()
@@ -31,6 +35,10 @@ func (s *Store) Get(ctx context.Context, principal string) (d Digest, exists boo
 
 // Set adds or updates a principal's password.
 func (s *Store) Set(ctx context.Context, principal string, d Digest) {
+	if err := ctx.Err(); err != nil {
+		return
+	}
+
 	clone := d.Copy()
 	s.lock.Lock()
 
@@ -44,7 +52,11 @@ func (s *Store) Set(ctx context.Context, principal string, d Digest) {
 }
 
 // Delete removes the principal(s) from this Store.
-func (s *Store) Delete(_ context.Context, principals ...string) {
+func (s *Store) Delete(ctx context.Context, principals ...string) {
+	if err := ctx.Err(); err != nil {
+		return
+	}
+
 	s.lock.Lock()
 
 	for _, toDelete := range principals {
@@ -55,7 +67,11 @@ func (s *Store) Delete(_ context.Context, principals ...string) {
 }
 
 // Update performs a bulk update to this Store.
-func (s *Store) Update(_ context.Context, more Principals) {
+func (s *Store) Update(ctx context.Context, more Principals) {
+	if err := ctx.Err(); err != nil {
+		return
+	}
+
 	names := make([]string, 0, len(more))
 	digests := make([]Digest, 0, len(more))
 	for principal, digest := range more {

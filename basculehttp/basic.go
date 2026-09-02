@@ -49,7 +49,11 @@ type BasicTokenParser struct{}
 // Parse assumes that value is of the format required by https://datatracker.ietf.org/doc/html/rfc7617.
 // The returned Token will return the basic auth username from its Principal() method.
 // The returned Token will also implement BasicToken.
-func (BasicTokenParser) Parse(_ context.Context, value string) (bascule.Token, error) {
+func (BasicTokenParser) Parse(ctx context.Context, value string) (bascule.Token, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// this mimics what the stdlib does at net/http.Request.BasicAuth()
 	raw, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {

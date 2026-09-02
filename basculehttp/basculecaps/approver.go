@@ -118,7 +118,11 @@ func NewApprover(opts ...ApproverOption) (a *Approver, err error) {
 // This method returns success (i.e. a nil error) when the first matching capability is found.  If
 // the token provided no capabilities, or if none of the token's capabilities authorized the request,
 // this method returns bascule.ErrUnauthorized.
-func (a *Approver) Approve(_ context.Context, resource *http.Request, token bascule.Token) error {
+func (a *Approver) Approve(ctx context.Context, resource *http.Request, token bascule.Token) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	capabilities, _ := bascule.GetCapabilities(token)
 	for _, matcher := range a.matchers {
 		for _, capability := range capabilities {

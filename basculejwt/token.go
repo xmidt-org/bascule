@@ -109,6 +109,10 @@ func NewTokenParser(options ...jwt.ParseOption) (bascule.TokenParser[string], er
 // Parse parses the value as a JWT, using the parsing options passed to NewTokenParser.
 // The returned Token will implement the bascule.Attributes, bascule.Capabilities, and Claims interfaces.
 func (tp *tokenParser) Parse(ctx context.Context, value string) (bascule.Token, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	jwtToken, err := jwt.ParseString(value, tp.options...)
 	if err != nil {
 		return nil, err

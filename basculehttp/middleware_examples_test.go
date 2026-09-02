@@ -129,7 +129,11 @@ func ExampleMiddleware_authorization() {
 				bascule.WithApproverFuncs(
 					// this can also be a type that implements the bascule.Approver interface,
 					// when used with bascule.WithApprovers
-					func(_ context.Context, resource *http.Request, token bascule.Token) error {
+					func(ctx context.Context, resource *http.Request, token bascule.Token) error {
+						if err := ctx.Err(); err != nil {
+							return err
+						}
+
 						if p, _ := token.Principal(); p != "joe" {
 							// only joe can access this resource
 							return bascule.ErrUnauthorized

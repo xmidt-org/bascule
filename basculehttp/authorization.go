@@ -116,6 +116,10 @@ func NewAuthorizationParser(opts ...AuthorizationParserOption) (*AuthorizationPa
 // If a token parser is registered for the given scheme, that token parser is invoked.
 // Otherwise, UnsupportedSchemeError is returned, indicating the scheme in question.
 func (ap *AuthorizationParser) Parse(ctx context.Context, source *http.Request) (bascule.Token, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	authValue := source.Header.Get(ap.header)
 	if len(authValue) == 0 {
 		return nil, bascule.ErrMissingCredentials

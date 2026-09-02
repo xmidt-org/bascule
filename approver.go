@@ -26,6 +26,10 @@ type Approver[R any] interface {
 type ApproverFunc[R any] func(context.Context, R, Token) error
 
 func (af ApproverFunc[R]) Approve(ctx context.Context, resource R, token Token) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	return af(ctx, resource, token)
 }
 
@@ -55,6 +59,10 @@ func (as Approvers[R]) AppendFunc(more ...ApproverFunc[R]) Approvers[R] {
 // Because authorization can be arbitrarily expensive, execution halts at the first failed
 // authorization attempt.
 func (as Approvers[R]) Approve(ctx context.Context, resource R, token Token) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	for _, a := range as {
 		if err := a.Approve(ctx, resource, token); err != nil {
 			return err
@@ -71,6 +79,10 @@ type requireAny[R any] struct {
 // Approve returns nil at the first approver that returns nil, i.e. accepts the access.
 // Otherwise, this method returns an aggregate error of all the authorization errors.
 func (ra requireAny[R]) Approve(ctx context.Context, resource R, token Token) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	var err error
 	for _, a := range ra.a {
 		authErr := a.Approve(ctx, resource, token)

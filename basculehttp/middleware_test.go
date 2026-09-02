@@ -250,7 +250,11 @@ func (suite *MiddlewareTestSuite) testBasicAuthSuccess() {
 			WithAuthorizer(
 				suite.newAuthorizer(
 					bascule.WithApproverFuncs(
-						func(_ context.Context, request *http.Request, token bascule.Token) error {
+						func(ctx context.Context, request *http.Request, token bascule.Token) error {
+							if err := ctx.Err(); err != nil {
+								return err
+							}
+
 							suite.assertBasicAuthRequest(request)
 							suite.assertBasicToken(token)
 							return nil
@@ -359,7 +363,11 @@ func (suite *MiddlewareTestSuite) testBasicAuthAuthorizerError() {
 			WithAuthorizer(
 				suite.newAuthorizer(
 					bascule.WithApproverFuncs(
-						func(_ context.Context, resource *http.Request, token bascule.Token) error {
+						func(ctx context.Context, resource *http.Request, token bascule.Token) error {
+							if err := ctx.Err(); err != nil {
+								return err
+							}
+
 							suite.assertBasicAuthRequest(resource)
 							suite.assertBasicToken(token)
 							return expectedErr

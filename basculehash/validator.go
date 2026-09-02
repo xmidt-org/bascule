@@ -16,6 +16,10 @@ type matcherValidator[S any] struct {
 }
 
 func (mv *matcherValidator[S]) Validate(ctx context.Context, _ S, t bascule.Token) (next bascule.Token, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	next = t
 	password, ok := bascule.GetPassword(t)
 	if !ok {
