@@ -49,9 +49,7 @@ func (suite *BasicTestSuite) TestBasicTokenParser() {
 
 		suite.NoError(err)
 		suite.Require().NotNil(token)
-		p1, ok := token.Principal()
-		suite.Require().True(ok)
-		suite.Equal("Aladdin", p1)
+		suite.Equal("Aladdin", token.Principal())
 
 		suite.Require().Implements((*BasicToken)(nil), token)
 		suite.Equal("Aladdin", token.(BasicToken).UserName())

@@ -27,11 +27,7 @@ func (suite *TokenSuite) TestMultiToken() {
 	suite.Run("One", func() {
 		t := StubToken("test")
 		mt := MultiToken{t}
-		p1, ok1 := t.Principal()
-		suite.True(ok1)
-		p2, ok2 := mt.Principal()
-		suite.True(ok2)
-		suite.Equal(p1, p2)
+		suite.Equal(t.Principal(), mt.Principal())
 		unwrapped := mt.Unwrap()
 		suite.Require().Len(unwrapped, 1)
 		suite.Equal(t, unwrapped[0])
@@ -45,11 +41,7 @@ func (suite *TokenSuite) TestMultiToken() {
 		)
 
 		mt := MultiToken{m1, m2, m3}
-		p1, ok1 := m1.Principal()
-		suite.True(ok1)
-		p2, ok2 := mt.Principal()
-		suite.True(ok2)
-		suite.Equal(p1, p2)
+		suite.Equal(m1.Principal(), mt.Principal())
 
 		unwrapped := mt.Unwrap()
 		suite.Require().Len(unwrapped, 3)
@@ -101,9 +93,7 @@ func (suite *TokenSuite) TestJoinTokens() {
 		for i, testCase := range testCases {
 			suite.Run(strconv.Itoa(i), func() {
 				joined := JoinTokens(testCase.tokens...)
-				p, ok := joined.Principal()
-				suite.Require().True(ok)
-				suite.Equal("test", p)
+				suite.Equal("test", joined.Principal())
 				suite.Equal(
 					testCase.expectedUnwrap,
 					UnwrapToken(joined),
@@ -451,9 +441,7 @@ func (suite *TokenParserSuite) TestStubTokenParser() {
 	token, err := stp.Parse(context.Background(), 123)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(token)
-	p, ok := token.Principal()
-	suite.Require().True(ok)
-	suite.Equal(p, "test")
+	suite.Equal("test", token.Principal())
 }
 
 func TestTokenParser(t *testing.T) {

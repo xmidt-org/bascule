@@ -18,7 +18,7 @@ type validatorTestToken struct {
 	principal, password string
 }
 
-func (t validatorTestToken) Principal() (string, bool) { return t.principal, true }
+func (t validatorTestToken) Principal() string { return t.principal }
 
 func (t validatorTestToken) Password() string { return t.password }
 
