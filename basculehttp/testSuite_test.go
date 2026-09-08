@@ -48,9 +48,7 @@ func (suite *TestSuite) basicAuth() string {
 // assertBasicToken asserts that the token matches the one created by newBasicToken.
 func (suite *TestSuite) assertBasicToken(token bascule.Token) {
 	suite.Require().NotNil(token)
-	p, ok := token.Principal()
-	suite.Require().True(ok)
-	suite.Equal(expectedPrincipal, p)
+	suite.Equal(expectedPrincipal, token.Principal())
 	suite.Require().Implements((*BasicToken)(nil), token)
 	suite.Equal(expectedPrincipal, token.(BasicToken).UserName())
 	suite.Equal(expectedPassword, token.(BasicToken).Password())

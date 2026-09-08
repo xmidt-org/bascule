@@ -30,8 +30,8 @@ type basicToken struct {
 	password string
 }
 
-func (bt basicToken) Principal() (string, bool) {
-	return bt.userName, len(bt.userName) != 0
+func (bt basicToken) Principal() string {
+	return bt.userName
 }
 
 func (bt basicToken) UserName() string {

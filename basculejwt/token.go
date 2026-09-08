@@ -17,27 +17,27 @@ const CapabilitiesKey = "capabilities"
 // Claims exposes standard JWT claims from a Token.
 type Claims interface {
 	// Audience returns the aud field of the JWT.
-	Audience() ([]string, bool)
+	Audience() []string
 
 	// Expiration returns the exp field of the JWT.
-	Expiration() (time.Time, bool)
+	Expiration() time.Time
 
 	// IssuedAt returns the iat field of the JWT.
-	IssuedAt() (time.Time, bool)
+	IssuedAt() time.Time
 
 	// Issuer returns the iss field of the JWT.
-	Issuer() (string, bool)
+	Issuer() string
 
 	// JwtID returns the jti field of the JWT.
-	JwtID() (string, bool)
+	JwtID() string
 
 	// NotBefore returns the nbf field of the JWT.
-	NotBefore() (time.Time, bool)
+	NotBefore() time.Time
 
 	// Subject returns the sub field of the JWT.  For tokens that
 	// implement this interface, this method returns the same value
 	// as tne Principal method.
-	Subject() (string, bool)
+	Subject() string
 }
 
 // token is the internal implementation of the JWT Token interface.  It fronts
@@ -46,36 +46,52 @@ type token struct {
 	jwt jwt.Token
 }
 
-func (t token) Audience() ([]string, bool) {
-	return t.jwt.Audience()
+func (t token) Audience() []string {
+	v, _ := t.jwt.Audience()
+
+	return v
 }
 
-func (t token) Expiration() (time.Time, bool) {
-	return t.jwt.Expiration()
+func (t token) Expiration() time.Time {
+	v, _ := t.jwt.Expiration()
+
+	return v
 }
 
-func (t token) IssuedAt() (time.Time, bool) {
-	return t.jwt.IssuedAt()
+func (t token) IssuedAt() time.Time {
+	v, _ := t.jwt.IssuedAt()
+
+	return v
 }
 
-func (t token) Issuer() (string, bool) {
-	return t.jwt.Issuer()
+func (t token) Issuer() string {
+	v, _ := t.jwt.Issuer()
+
+	return v
 }
 
-func (t token) JwtID() (string, bool) {
-	return t.jwt.JwtID()
+func (t token) JwtID() string {
+	v, _ := t.jwt.JwtID()
+
+	return v
 }
 
-func (t token) NotBefore() (time.Time, bool) {
-	return t.jwt.NotBefore()
+func (t token) NotBefore() time.Time {
+	v, _ := t.jwt.NotBefore()
+
+	return v
 }
 
-func (t token) Subject() (string, bool) {
-	return t.jwt.Subject()
+func (t token) Subject() string {
+	v, _ := t.jwt.Subject()
+
+	return v
 }
 
-func (t token) Principal() (string, bool) {
-	return t.jwt.Subject()
+func (t token) Principal() string {
+	v, _ := t.jwt.Subject()
+
+	return v
 }
 
 func (t token) Capabilities() (caps []string) {

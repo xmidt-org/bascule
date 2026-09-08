@@ -22,12 +22,7 @@ func (mv *matcherValidator[S]) Validate(ctx context.Context, _ S, t bascule.Toke
 		return
 	}
 
-	p, ok := t.Principal()
-	if !ok {
-		return
-	}
-
-	if digest, exists := mv.creds.Get(ctx, p); exists {
+	if digest, exists := mv.creds.Get(ctx, t.Principal()); exists {
 		err = mv.cmp.Matches([]byte(password), digest)
 		if err != nil {
 			err = errors.Join(bascule.ErrBadCredentials, err)

@@ -19,8 +19,8 @@ type testToken struct {
 	capabilities []string
 }
 
-func (tt *testToken) Principal() (string, bool) {
-	return tt.principal, true
+func (tt *testToken) Principal() string {
+	return tt.principal
 }
 
 func (tt *testToken) Capabilities() []string {
