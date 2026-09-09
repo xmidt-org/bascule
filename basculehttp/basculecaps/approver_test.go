@@ -54,7 +54,7 @@ func (suite *ApproverTestSuite) newApprover(opts ...ApproverOption) *Approver {
 	return ca
 }
 
-func (suite *ApproverTestSuite) TestInvalidPrefix() {
+func (suite *ApproverTestSuite) TestInvalidCapabilities() {
 	invalidPrefixes := []string{
 		"(.*):foo:", // subexpressions aren't allowed
 		"(?!foo)",
@@ -62,23 +62,21 @@ func (suite *ApproverTestSuite) TestInvalidPrefix() {
 
 	for i, invalid := range invalidPrefixes {
 		suite.Run(strconv.Itoa(i), func() {
-			ca, err := NewApprover(
-				WithPrefixes(invalid),
+			_, err := NewApprover(
+				WithCapabilities(invalid),
 			)
 
 			suite.Error(err)
-			suite.Nil(ca)
 		})
 	}
 }
 
 func (suite *ApproverTestSuite) TestInvalidAllMethod() {
-	ca, err := NewApprover(
-		WithAllMethod(""), // blanks aren't allowed
+	_, err := NewApprover(
+		WithCapabilities("x1:webpa:api:.*:"), // blanks aren't allowed
 	)
 
 	suite.Error(err)
-	suite.Nil(ca)
 }
 
 func (suite *ApproverTestSuite) testApproveMissingCapabilities() {
@@ -97,21 +95,21 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			capabilities: []string{"x1:webpa:api:.*:all"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithCapabilities("x1:webpa:api:.*:all"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:device/.*/config:all"},
 			request:      suite.newRequest("GET", "/device/DEADBEEF/config"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithCapabilities("x1:webpa:api:device/.*/config:all", "x1:webpa:api:.*:all"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:/test/.*:put"},
-			request:      suite.newRequest("PUT", "/test/foo"),
+			request:      suite.newRequest("PUT", "/api/v2/test/foo"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithCapabilities("x1:webpa:api:.*/test/.*:put"),
 			},
 		},
 		{
@@ -123,15 +121,11 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			},
 			request: suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
-			},
-		},
-		{
-			capabilities: []string{"x1:webpa:api:/test/.*:custom"},
-			request:      suite.newRequest("PATCH", "/test/foo"),
-			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
-				WithAllMethod("custom"),
+				WithCapabilities(
+					"x1:xmidt:api:.*/device/.*/config:all",
+					"x1:webpa:api:/something/else:get",
+					"x1:doesnot:apply:.*:all",
+					"x1:webpa:api:/test/.*:put"),
 			},
 		},
 	}
@@ -165,21 +159,21 @@ func (suite *ApproverTestSuite) testApproveUnauthorized() {
 			capabilities: []string{"x1:webpa:api:.*:put"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithCapabilities("x1:webpa:api:.*/test:get"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:/doesnotmatch:get"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithCapabilities("x1:webpa:api:.*/test:get"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:(?!foo):put"}, // bad expression
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithCapabilities("x1:webpa:api:.*/test:get"),
 			},
 		},
 	}
