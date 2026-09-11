@@ -31,17 +31,15 @@ var (
 // is strict:  it requires no leading or trailing space and exactly (1) space as
 // a separator.  If the raw value does not adhere to this format, ErrInvalidAuthorization
 // is returned.
-func ParseAuthorization(raw string) (s Scheme, v string, err error) {
-	var scheme string
-	var found bool
-	scheme, v, found = strings.Cut(raw, " ")
-	if found && len(scheme) > 0 && !fastIsSpace(v[0]) && !fastIsSpace(v[len(v)-1]) {
-		s = Scheme(scheme)
-	} else {
-		err = ErrInvalidAuthorization
+func ParseAuthorization(raw string) (Scheme, string, error) {
+	scheme, v, found := strings.Cut(raw, " ")
+	scheme = strings.TrimSpace(scheme)
+	if !found || len(scheme) == 0 ||
+		len(v) == 0 || fastIsSpace(v[0]) || fastIsSpace(v[len(v)-1]) {
+		return "", "", ErrInvalidAuthorization
 	}
 
-	return
+	return Scheme(scheme), v, nil
 }
 
 // AuthorizationParserOption is a configurable option for an AuthorizationParser.

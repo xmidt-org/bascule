@@ -33,6 +33,47 @@ func (suite *AuthorizationTestSuite) newAuthorizationParser(opts ...Authorizatio
 	return ap
 }
 
+func (suite *AuthorizationTestSuite) TestParseAuthorization() {
+	tests := []struct {
+		name            string
+		authHeaderValue string
+		err             error
+	}{
+		{
+			name:            "success",
+			authHeaderValue: "Basic foobar",
+		},
+		{
+			name:            "scheme only failure",
+			authHeaderValue: "Basic",
+			err:             ErrInvalidAuthorization,
+		},
+		{
+			name:            "scheme and whitespace failure",
+			authHeaderValue: "Basic ",
+			err:             ErrInvalidAuthorization,
+		},
+		{
+			name: "emtpy string failure",
+			err:  ErrInvalidAuthorization,
+		},
+	}
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			s, v, err := ParseAuthorization(tc.authHeaderValue)
+			if tc.err != nil {
+				suite.ErrorIs(err, tc.err)
+
+				return
+			}
+
+			suite.NoError(err)
+			suite.NotEmpty(s)
+			suite.NotEmpty(v)
+		})
+	}
+}
+
 func (suite *AuthorizationTestSuite) TestBasicAuthSuccess() {
 	suite.Run("DefaultHeader", func() {
 		var (
