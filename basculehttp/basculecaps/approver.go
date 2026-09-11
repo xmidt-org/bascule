@@ -156,6 +156,7 @@ func (m matcher) matchStrinhg(cap string) error {
 
 	return nil
 }
+
 func (m matcher) approveMethod(resource *http.Request) error {
 	switch m.method {
 	case DefaultAllMethod, strings.ToLower(resource.Method):
