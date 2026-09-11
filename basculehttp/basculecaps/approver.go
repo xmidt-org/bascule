@@ -28,7 +28,7 @@ const (
 
 // urlPathNormalization ensures that the given URL has a leading slash.
 func urlPathNormalization(url string) string {
-	if url[0] == '/' {
+	if strings.HasPrefix(url, "/") {
 		return url
 	}
 
