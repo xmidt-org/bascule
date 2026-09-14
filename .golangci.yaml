@@ -27,6 +27,12 @@ linters:
     - govet
     - staticcheck
     - unused
+  exclusions:
+    rules:
+      # Test files often repeat literals for readability.
+      - path: _test\.go
+        linters:
+          - goconst
 
 issues:
   max-issues-per-linter: 0
