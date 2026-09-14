@@ -54,7 +54,7 @@ func (suite *AuthorizationTestSuite) TestParseAuthorization() {
 			err:             ErrInvalidAuthorization,
 		},
 		{
-			name: "emtpy string failure",
+			name: "empty string failure",
 			err:  ErrInvalidAuthorization,
 		},
 	}
