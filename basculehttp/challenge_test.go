@@ -227,8 +227,8 @@ func (suite *ChallengeTestSuite) testChallengeValid() {
 
 func (suite *ChallengeTestSuite) testChallengeInvalid() {
 	badChallenges := []Challenge{
-		Challenge{}, // blank scheme
-		Challenge{
+		{}, // blank scheme
+		{
 			Scheme: Scheme("this is not a valid scheme"),
 		},
 	}
