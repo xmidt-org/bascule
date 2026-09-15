@@ -407,19 +407,19 @@ func (suite *ApproverTestSuite) testApproveCapabilityURL() {
 		}, {
 			// a request with no path at all
 			capability: "x1:webpa:api:.*:all",
-			target:     "http://foo.com",
+			target:     "http://example.com",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:/test:all",
-			target:     "http://foo.com",
+			target:     "http://example.com",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:/test:all",
-			target:     "http://foo.com/test",
+			target:     "http://example.com/test",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:.*:all",
-			target:     "http://foo.com/",
+			target:     "http://example.com/",
 			approved:   true,
 		},
 	}

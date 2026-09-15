@@ -37,25 +37,16 @@ func (aof approverOptionFunc) apply(a *Approver) error { return aof(a) }
 func WithPrefixes(prefixes ...string) ApproverOption {
 	return approverOptionFunc(func(a *Approver) error {
 		for _, p := range prefixes {
-			// The prefix may contain subexpressions of its own, which shift the
-			// url and method that follow it.  Compile it alone to learn how
-			// many it has.
-			prefixRegex, err := regexp.Compile(p)
-			if err != nil {
-				return fmt.Errorf("Unable to compile capability prefix [%s]: %s", p, err)
-			}
-
 			// Group the prefix so that a top-level alternation cannot escape
-			// the anchor or the subexpressions that follow it.
+			// the anchor or the subexpressions that follow it.  The prefix may
+			// contain subexpressions of its own; since they are all opened
+			// before the two below, the url and method are always the last two.
 			re, err := regexp.Compile("^(?:" + p + ")(.+):(.+?)$")
 			if err != nil {
 				return fmt.Errorf("Unable to compile capability prefix [%s]: %s", p, err)
 			}
 
-			a.matchers = append(a.matchers, matcher{
-				regex:  re,
-				offset: prefixRegex.NumSubexp(),
-			})
+			a.matchers = append(a.matchers, re)
 		}
 
 		return nil
@@ -91,17 +82,6 @@ func WithAllMethod(allMethod string) ApproverOption {
 	})
 }
 
-// matcher is a compiled capability prefix, together with the number of
-// subexpressions the prefix itself contributed.  That count is the offset of
-// the url and method subexpressions that follow it.
-type matcher struct {
-	regex *regexp.Regexp
-
-	// offset is the number of subexpressions belonging to the prefix.  The url
-	// is at offset+1 and the method at offset+2.
-	offset int
-}
-
 // Approver is a bascule HTTP approver that authorizes tokens
 // with capabilities against requests.
 //
@@ -111,7 +91,7 @@ type matcher struct {
 // may themselves contain colon delimiters, and can be regular expressions that
 // contain subexpressions.
 type Approver struct {
-	matchers  []matcher
+	matchers  []*regexp.Regexp
 	allMethod string
 	cacheSize int
 
@@ -158,17 +138,18 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 	capabilities, _ := bascule.GetCapabilities(token)
 	for _, matcher := range a.matchers {
 		for _, capability := range capabilities {
-			substrings := matcher.regex.FindStringSubmatch(capability)
-			if len(substrings) < matcher.offset+3 {
+			substrings := matcher.FindStringSubmatch(capability)
+			if len(substrings) < 3 {
 				// no match
 				continue
 			}
 
 			// the format of capabilities is <prefix><url pattern>:<method>
-			// <url pattern> and <method> follow the prefix's own subexpressions
-			err := a.approveURL(resource, substrings[matcher.offset+1])
+			// <url pattern> and <method> are the last two subexpressions, after
+			// any the prefix itself contributed
+			err := a.approveURL(resource, substrings[len(substrings)-2])
 			if err == nil {
-				err = a.approveMethod(resource, substrings[matcher.offset+2])
+				err = a.approveMethod(resource, substrings[len(substrings)-1])
 			}
 
 			if err == nil {
