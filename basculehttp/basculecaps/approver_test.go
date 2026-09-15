@@ -136,6 +136,16 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 				WithAllMethod("custom"),
 			},
 		},
+		// Success case that fails.
+		{
+			capabilities: []string{
+				"x1:webpa:api:test/.*:put",
+			},
+			request: suite.newRequest("PUT", "/api/v1/test/foo"),
+			options: []ApproverOption{
+				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+			},
+		},
 	}
 
 	for i, testCase := range testCases {
