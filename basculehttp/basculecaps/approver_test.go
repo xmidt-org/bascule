@@ -207,211 +207,228 @@ func (suite *ApproverTestSuite) testApproveCapabilityURL() {
 
 	testCases := []struct {
 		capability string
-		path       string
+		target     string
 		approved   bool
 	}{
 		{
 			// a pattern need not be rooted
 			capability: "x1:webpa:api:device/.*/config:all",
-			path:       "/device/mac:112233/config",
+			target:     "/device/mac:112233/config",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:device/.*/config:all",
-			path:       "/mistake/device/mac:112233/config",
+			target:     "/mistake/device/mac:112233/config",
 			approved:   false,
 		}, {
 			// a doubled leading slash is not absorbed
 			capability: "x1:webpa:api:device/.*/config:all",
-			path:       "//device/mac:112233/config",
+			target:     "//device/mac:112233/config",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:/device/.*/config:all",
-			path:       "/device/mac:112233/config",
+			target:     "/device/mac:112233/config",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:/device/.*/config:all",
-			path:       "/mistake/device/mac:112233/config",
+			target:     "/mistake/device/mac:112233/config",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:/device/.*/config:all",
-			path:       "//device/mac:112233/config",
+			target:     "//device/mac:112233/config",
 			approved:   false,
 		}, {
 			// a capability is a prefix grant, not an exact match
 			capability: "x1:webpa:api:/device/.*/config:all",
-			path:       "/device/mac:112233/config/ignored",
+			target:     "/device/mac:112233/config/ignored",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:test:all",
-			path:       "/mistake/test",
+			target:     "/mistake/test",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:test:all",
-			path:       "/test/foo",
+			target:     "/test/foo",
 			approved:   true,
 		}, {
 			// a leading .* may match nothing at all
 			capability: "x1:webpa:api:.*/device/.*/config:all",
-			path:       "/device/mac:112233/config",
+			target:     "/device/mac:112233/config",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:.*/device/.*/config:all",
-			path:       "/api/device/mac:112233/config",
+			target:     "/api/device/mac:112233/config",
 			approved:   true,
 		}, {
 			// every alternative is rooted, not just the first
 			capability: "x1:webpa:api:test|dir:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:test|dir:all",
-			path:       "/dir",
+			target:     "/dir",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:test|dir:all",
-			path:       "/invalid/test",
+			target:     "/invalid/test",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:test|dir:all",
-			path:       "/invalid/dir",
+			target:     "/invalid/dir",
 			approved:   false,
 		}, {
 			// a token reaches only what its own capability grants
 			capability: "x1:webpa:api:/device/alice/config:all",
-			path:       "/device/alice/config",
+			target:     "/device/alice/config",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:/device/alice/config:all",
-			path:       "/device/bob/config",
+			target:     "/device/bob/config",
 			approved:   false,
 		}, {
 			// neither alternative is rooted, both must match
 			capability: "x1:webpa:api:foo|bar:all",
-			path:       "/foo",
+			target:     "/foo",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:foo|bar:all",
-			path:       "/bar",
+			target:     "/bar",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:foo|bar:all",
-			path:       "/xxx/bar",
+			target:     "/xxx/bar",
 			approved:   false,
 		}, {
 			// both alternatives rooted
 			capability: "x1:webpa:api:/foo|/bar:all",
-			path:       "/bar",
+			target:     "/bar",
 			approved:   true,
 		}, {
 			// alternatives may disagree about the leading '/'
 			capability: "x1:webpa:api:foo|/bar:all",
-			path:       "/foo",
+			target:     "/foo",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:foo|/bar:all",
-			path:       "/bar",
+			target:     "/bar",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:/foo|bar:all",
-			path:       "/foo",
+			target:     "/foo",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:/foo|bar:all",
-			path:       "/bar",
+			target:     "/bar",
 			approved:   true,
 		}, {
 			// alternation may be nested
 			capability: "x1:webpa:api:(x|/y)|z:all",
-			path:       "/y",
+			target:     "/y",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:(x|/y)|z:all",
-			path:       "/z",
+			target:     "/z",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:(x|/y)|z:all",
-			path:       "/a/y",
+			target:     "/a/y",
 			approved:   false,
 		}, {
 			// single character alternatives parse as a character class
 			capability: "x1:webpa:api:a|b|c:all",
-			path:       "/b",
+			target:     "/b",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:a|b|c:all",
-			path:       "/d",
+			target:     "/d",
 			approved:   false,
 		}, {
 			// a doubled slash is not a way to reach /admin
 			capability: "x1:webpa:api:/admin:all",
-			path:       "/admin",
+			target:     "/admin",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:/admin:all",
-			path:       "//admin",
+			target:     "//admin",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:/admin:all",
-			path:       "///admin",
+			target:     "///admin",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:/admin:all",
-			path:       "/admin/sub",
+			target:     "/admin/sub",
 			approved:   true,
 		}, {
 			// an unrooted pattern is still confined to one leading slash
 			capability: "x1:webpa:api:admin:all",
-			path:       "/admin",
+			target:     "/admin",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api:admin:all",
-			path:       "//admin",
+			target:     "//admin",
 			approved:   false,
 		}, {
 			capability: "x1:webpa:api:admin:all",
-			path:       "///admin",
+			target:     "///admin",
 			approved:   false,
 		}, {
 			// a pattern that asks for a doubled slash still gets it
 			capability: "x1:webpa:api://admin:all",
-			path:       "//admin",
+			target:     "//admin",
 			approved:   true,
 		}, {
 			capability: "x1:webpa:api://admin:all",
-			path:       "/admin",
+			target:     "/admin",
 			approved:   false,
 		}, {
 			// a trailing slash is inside the grant
 			capability: "x1:webpa:api:/admin:all",
-			path:       "/admin/",
+			target:     "/admin/",
 			approved:   true,
 		}, {
 			// a doubled slash anywhere is not collapsed
 			capability: "x1:webpa:api:/x/admin:all",
-			path:       "/x//admin",
+			target:     "/x//admin",
 			approved:   false,
 		}, {
 			// a wildcard still covers a doubled slash
 			capability: "x1:webpa:api:.*:all",
-			path:       "//admin",
+			target:     "//admin",
 			approved:   true,
 		}, {
 			// the doubled slash guard applies to alternations too
 			capability: "x1:webpa:api:test|dir:all",
-			path:       "//dir",
+			target:     "//dir",
 			approved:   false,
+		}, {
+			// a request with no path at all
+			capability: "x1:webpa:api:.*:all",
+			target:     "http://foo.com",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:/test:all",
+			target:     "http://foo.com",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:/test:all",
+			target:     "http://foo.com/test",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:.*:all",
+			target:     "http://foo.com/",
+			approved:   true,
 		},
 	}
 
 	for _, testCase := range testCases {
-		suite.Run(fmt.Sprintf("'%s' + '%s' -> %t", testCase.capability, testCase.path, testCase.approved), func() {
+		suite.Run(fmt.Sprintf("'%s' + '%s' -> %t", testCase.capability, testCase.target, testCase.approved), func() {
 			err := suite.newApprover(WithPrefixes(prefix)).Approve(
 				context.Background(),
-				suite.newRequest("GET", testCase.path),
+				suite.newRequest("GET", testCase.target),
 				suite.newToken(testCase.capability),
 			)
 
@@ -430,58 +447,58 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 	testCases := []struct {
 		prefix     string
 		capability string
-		path       string
+		target     string
 		approved   bool
 	}{
 		{
 			// a plain literal prefix
 			prefix:     "x1:webpa:api:",
 			capability: "x1:webpa:api:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			// every alternative of a prefix is anchored, not just the first
 			prefix:     "x1:webpa:|x2:webpa:",
 			capability: "x1:webpa:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			prefix:     "x1:webpa:|x2:webpa:",
 			capability: "x2:webpa:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			prefix:     "x1:webpa:|x2:webpa:",
 			capability: "x3:webpa:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   false,
 		}, {
 			// a prefix may contain subexpressions of its own
 			prefix:     "x(1|2):webpa:",
 			capability: "x1:webpa:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			prefix:     "x(1|2):webpa:",
 			capability: "x2:webpa:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			prefix:     "x(1|2):webpa:",
 			capability: "x3:webpa:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   false,
 		}, {
 			// nested and repeated subexpressions shift the url and method too
 			prefix:     "(a)(b)((c)):",
 			capability: "abc:/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		}, {
 			// a prefix may be empty
 			prefix:     "",
 			capability: "/test:all",
-			path:       "/test",
+			target:     "/test",
 			approved:   true,
 		},
 	}
@@ -496,7 +513,7 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 
 			err = ca.Approve(
 				context.Background(),
-				suite.newRequest("GET", testCase.path),
+				suite.newRequest("GET", testCase.target),
 				suite.newToken(testCase.capability),
 			)
 
