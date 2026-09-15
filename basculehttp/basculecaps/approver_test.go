@@ -128,6 +128,45 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 					"x1:webpa:api:/test/.*:put"),
 			},
 		},
+		{
+			capabilities: []string{
+				"x1:xmidt:api:/device/.*/config:all",
+				"x1:webpa:api:/something/else:get",
+				"x1:doesnot:apply:.*:all",
+				"x1:webpa:api:test/.*:put", // this should match
+			},
+			request: suite.newRequest("PUT", "/api/v1/test/foo"),
+			options: []ApproverOption{
+				WithCapabilities(
+					"x1:webpa:api:(?:/api/v[0-9]+/|/|){1}test/.*:put"),
+			},
+		},
+		{
+			capabilities: []string{
+				"x1:xmidt:api:/device/.*/config:all",
+				"x1:webpa:api:/something/else:get",
+				"x1:doesnot:apply:.*:all",
+				"x1:webpa:api:test/.*:put", // this should match
+			},
+			request: suite.newRequest("PUT", "/test/foo"),
+			options: []ApproverOption{
+				WithCapabilities(
+					"x1:webpa:api:(?:/api/v[0-9]+/|/|){1}test/.*:put"),
+			},
+		},
+		{
+			capabilities: []string{
+				"x1:xmidt:api:/device/.*/config:all",
+				"x1:webpa:api:/something/else:get",
+				"x1:doesnot:apply:.*:all",
+				"x1:webpa:api:.*/test/.*:put", // this should match
+			},
+			request: suite.newRequest("PUT", "/api/v10/bar/test/foo"),
+			options: []ApproverOption{
+				WithCapabilities(
+					"x1:webpa:api:(?:/api/v[0-9]+/|/|){1}.*/test/.*:put"),
+			},
+		},
 	}
 
 	for i, testCase := range testCases {

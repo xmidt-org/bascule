@@ -22,8 +22,8 @@ const (
 	// 1) api scope (in the form of "string:string:string")
 	// 2) url pattern
 	// 3) method
-	ConfigurationMatcherRegex = `^(\b(?:[^:]+:){2}[^:]+):([^:]+):([^:]+\b)$`
 	MatcherRegex              = `(%s):(%s):(%s)`
+	ConfigurationMatcherRegex = `^(\b(?:[^:]+:){2}[^:]+\b):([^:]+.[^:]+|(?:\(\?\:[^:]+.[^:]+\))|\.\*):(\b[^:]+\b)$`
 )
 
 // urlPathNormalization ensures that the given URL has a leading slash.
