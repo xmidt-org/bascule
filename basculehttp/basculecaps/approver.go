@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -86,6 +87,34 @@ func WithAllMethod(allMethod string) ApproverOption {
 	})
 }
 
+// WithURLNormalizeFunc sets a function that rewrites a request's URL before its
+// path is matched against a capability.  By default the URL is used as it
+// arrived.
+//
+// This is for deployments whose paths carry something capabilities are not
+// written against, such as an api version: strip /api/v1 here and a capability
+// may be written test/.* rather than .*/test/.*.  Since every capability is
+// matched against the result, a normalization that removes too much widens
+// every token at once.
+//
+// The URL is passed and returned by value, so a function may modify what it is
+// given without affecting the request the handlers below will see.
+func WithURLNormalizeFunc(fn func(url.URL) url.URL) ApproverOption {
+	return approverOptionFunc(func(a *Approver) error {
+		if fn == nil {
+			return errors.New("the url normalize function cannot be nil")
+		}
+
+		a.normalizeURL = fn
+		return nil
+	})
+}
+
+// urlIdentityFunc is the default normalization function where nothing is changed.
+func urlIdentityFunc(u url.URL) url.URL {
+	return u
+}
+
 // Approver is a bascule HTTP approver that authorizes tokens
 // with capabilities against requests.
 //
@@ -98,6 +127,10 @@ type Approver struct {
 	matchers  []*regexp.Regexp
 	allMethod string
 	cacheSize int
+
+	// normalizeURL rewrites a request's URL before its path is matched.  It is
+	// nil unless WithURLNormalizeFunc was used.
+	normalizeURL func(url.URL) url.URL
 
 	// urlCache holds capability url patterns compiled by approveURL.  Patterns
 	// come from tokens rather than from configuration, so they cannot be
@@ -112,8 +145,9 @@ type Approver struct {
 // will not authorize any requests.
 func NewApprover(opts ...ApproverOption) (*Approver, error) {
 	a := Approver{
-		cacheSize: DefaultCacheSize,
-		allMethod: DefaultAllMethod,
+		cacheSize:    DefaultCacheSize,
+		allMethod:    DefaultAllMethod,
+		normalizeURL: urlIdentityFunc,
 	}
 
 	var err error
@@ -179,8 +213,6 @@ func (a *Approver) approveMethod(resource *http.Request, capabilityMethod string
 }
 
 func (a *Approver) approveURL(resource *http.Request, capabilityURL string) error {
-	resourcePath := resource.URL.EscapedPath()
-
 	// The pattern is anchored as a whole.  Grouping keeps a top-level
 	// alternation from escaping the anchor, and leaves the pattern itself
 	// untouched -- a leading '/' cannot be added to a regex safely.
@@ -189,7 +221,12 @@ func (a *Approver) approveURL(resource *http.Request, capabilityURL string) erro
 		return err
 	}
 
-	rooted := resourcePath
+	// The URL is passed by value, so a normalization that modifies what it is
+	// given cannot alter the request.
+	normalized := a.normalizeURL(*resource.URL)
+	path := normalized.EscapedPath()
+
+	rooted := path
 	if !strings.HasPrefix(rooted, "/") {
 		rooted = "/" + rooted
 	}
@@ -210,5 +247,5 @@ func (a *Approver) approveURL(resource *http.Request, capabilityURL string) erro
 		}
 	}
 
-	return fmt.Errorf("url does not match request URL [%s]", resourcePath)
+	return fmt.Errorf("url does not match request URL [%s]", path)
 }

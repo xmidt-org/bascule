@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -53,6 +55,17 @@ func (suite *ApproverTestSuite) newApprover(opts ...ApproverOption) *Approver {
 	suite.Require().NoError(err)
 	suite.Require().NotNil(ca)
 	return ca
+}
+
+// stripAPIVersion removes a leading /api/vN from a request's path, so that
+// capabilities may be written without it.
+var apiVersion = regexp.MustCompile(`^/api/v[0-9]+`)
+
+func stripAPIVersion(u url.URL) url.URL {
+	u.Path = apiVersion.ReplaceAllString(u.Path, "")
+	u.RawPath = ""
+
+	return u
 }
 
 func (suite *ApproverTestSuite) TestInvalidPrefix() {
@@ -136,14 +149,16 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 				WithAllMethod("custom"),
 			},
 		},
-		// Success case that fails.
 		{
+			// a capability written without the api version, matched against a
+			// versioned path by normalizing the version away first
 			capabilities: []string{
 				"x1:webpa:api:test/.*:put",
 			},
 			request: suite.newRequest("PUT", "/api/v1/test/foo"),
 			options: []ApproverOption{
 				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithURLNormalizeFunc(stripAPIVersion),
 			},
 		},
 	}
@@ -536,12 +551,48 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 	}
 }
 
+// testApproveURLNormalizeFunc covers the option itself: that it is consulted,
+// that it cannot alter the request, and how it fails.
+func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
+	const capability = "x1:webpa:api:test/.*:put"
+
+	suite.Run("Normalized", func() {
+		request := suite.newRequest("PUT", "/api/v2/test/foo")
+		ca := suite.newApprover(
+			WithPrefixes("x1:webpa:api:"),
+			WithURLNormalizeFunc(stripAPIVersion),
+		)
+
+		suite.NoError(ca.Approve(context.Background(), request, suite.newToken(capability)))
+
+		suite.Equal("/api/v2/test/foo", request.URL.Path,
+			"the request's own URL must not have been modified")
+	})
+
+	suite.Run("WithoutTheOption", func() {
+		ca := suite.newApprover(WithPrefixes("x1:webpa:api:"))
+
+		suite.ErrorIs(
+			ca.Approve(context.Background(),
+				suite.newRequest("PUT", "/api/v2/test/foo"),
+				suite.newToken(capability)),
+			bascule.ErrUnauthorized,
+			"without normalization the version is part of the path")
+	})
+
+	suite.Run("Nil", func() {
+		_, err := NewApprover(WithPrefixes("x1:webpa:api:"), WithURLNormalizeFunc(nil))
+		suite.Error(err)
+	})
+}
+
 func (suite *ApproverTestSuite) TestApprove() {
 	suite.Run("MissingCapabilities", suite.testApproveMissingCapabilities)
 	suite.Run("Success", suite.testApproveSuccess)
 	suite.Run("Unauthorized", suite.testApproveUnauthorized)
 	suite.Run("CapabilityURL", suite.testApproveCapabilityURL)
 	suite.Run("ConfiguredPrefix", suite.testApproveConfiguredPrefix)
+	suite.Run("URLNormalizeFunc", suite.testApproveURLNormalizeFunc)
 }
 
 func TestApprover(t *testing.T) {
