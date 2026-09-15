@@ -5,8 +5,11 @@ package basculecaps
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -54,29 +57,43 @@ func (suite *ApproverTestSuite) newApprover(opts ...ApproverOption) *Approver {
 	return ca
 }
 
-func (suite *ApproverTestSuite) TestInvalidCapabilities() {
+// stripAPIVersion removes a leading /api/vN from a request's path, so that
+// capabilities may be written without it.
+var apiVersion = regexp.MustCompile(`^/api/v[0-9]+`)
+
+func stripAPIVersion(u url.URL) url.URL {
+	u.Path = apiVersion.ReplaceAllString(u.Path, "")
+	u.RawPath = ""
+
+	return u
+}
+
+func (suite *ApproverTestSuite) TestInvalidPrefix() {
 	invalidPrefixes := []string{
-		"(.*):foo:", // subexpressions aren't allowed
-		"(?!foo)",
+		"(?!foo)", // RE2 has no negative lookahead
+		"(a",      // unbalanced
+		"*",       // nothing to repeat
 	}
 
 	for i, invalid := range invalidPrefixes {
 		suite.Run(strconv.Itoa(i), func() {
-			_, err := NewApprover(
-				WithCapabilities(invalid),
+			ca, err := NewApprover(
+				WithPrefixes(invalid),
 			)
 
 			suite.Error(err)
+			suite.Nil(ca)
 		})
 	}
 }
 
 func (suite *ApproverTestSuite) TestInvalidAllMethod() {
-	_, err := NewApprover(
-		WithCapabilities("x1:webpa:api:.*:"), // blanks aren't allowed
+	ca, err := NewApprover(
+		WithAllMethod(""), // blanks aren't allowed
 	)
 
 	suite.Error(err)
+	suite.Nil(ca)
 }
 
 func (suite *ApproverTestSuite) testApproveMissingCapabilities() {
@@ -95,21 +112,21 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			capabilities: []string{"x1:webpa:api:.*:all"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithCapabilities("x1:webpa:api:.*:all"),
+				WithPrefixes("x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:device/.*/config:all"},
 			request:      suite.newRequest("GET", "/device/DEADBEEF/config"),
 			options: []ApproverOption{
-				WithCapabilities("x1:webpa:api:device/.*/config:all", "x1:webpa:api:.*:all"),
+				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:/test/.*:put"},
-			request:      suite.newRequest("PUT", "/api/v2/test/foo"),
+			request:      suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
-				WithCapabilities("x1:webpa:api:.*/test/.*:put"),
+				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
 			},
 		},
 		{
@@ -121,11 +138,27 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			},
 			request: suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
-				WithCapabilities(
-					"x1:xmidt:api:.*/device/.*/config:all",
-					"x1:webpa:api:/something/else:get",
-					"x1:doesnot:apply:.*:all",
-					"x1:webpa:api:/test/.*:put"),
+				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+			},
+		},
+		{
+			capabilities: []string{"x1:webpa:api:/test/.*:custom"},
+			request:      suite.newRequest("PATCH", "/test/foo"),
+			options: []ApproverOption{
+				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithAllMethod("custom"),
+			},
+		},
+		{
+			// a capability written without the api version, matched against a
+			// versioned path by normalizing the version away first
+			capabilities: []string{
+				"x1:webpa:api:test/.*:put",
+			},
+			request: suite.newRequest("PUT", "/api/v1/test/foo"),
+			options: []ApproverOption{
+				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithURLNormalizeFunc(stripAPIVersion),
 			},
 		},
 	}
@@ -159,21 +192,21 @@ func (suite *ApproverTestSuite) testApproveUnauthorized() {
 			capabilities: []string{"x1:webpa:api:.*:put"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithCapabilities("x1:webpa:api:.*/test:get"),
+				WithPrefixes("x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:/doesnotmatch:get"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithCapabilities("x1:webpa:api:.*/test:get"),
+				WithPrefixes("x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:(?!foo):put"}, // bad expression
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithCapabilities("x1:webpa:api:.*/test:get"),
+				WithPrefixes("x1:webpa:api:"),
 			},
 		},
 	}
@@ -191,10 +224,375 @@ func (suite *ApproverTestSuite) testApproveUnauthorized() {
 	}
 }
 
+// testApproveCapabilityURL documents how the url pattern carried by a token's
+// capability is matched against a request.  The prefix is the only thing
+// configured; the capability itself decides what the token may reach.
+func (suite *ApproverTestSuite) testApproveCapabilityURL() {
+	const prefix = "x1:webpa:api:"
+
+	testCases := []struct {
+		capability string
+		target     string
+		approved   bool
+	}{
+		{
+			// a pattern need not be rooted
+			capability: "x1:webpa:api:device/.*/config:all",
+			target:     "/device/mac:112233/config",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:device/.*/config:all",
+			target:     "/mistake/device/mac:112233/config",
+			approved:   false,
+		}, {
+			// a doubled leading slash is not absorbed
+			capability: "x1:webpa:api:device/.*/config:all",
+			target:     "//device/mac:112233/config",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:/device/.*/config:all",
+			target:     "/device/mac:112233/config",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:/device/.*/config:all",
+			target:     "/mistake/device/mac:112233/config",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:/device/.*/config:all",
+			target:     "//device/mac:112233/config",
+			approved:   false,
+		}, {
+			// a capability is a prefix grant, not an exact match
+			capability: "x1:webpa:api:/device/.*/config:all",
+			target:     "/device/mac:112233/config/ignored",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:test:all",
+			target:     "/mistake/test",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:test:all",
+			target:     "/test/foo",
+			approved:   true,
+		}, {
+			// a leading .* may match nothing at all
+			capability: "x1:webpa:api:.*/device/.*/config:all",
+			target:     "/device/mac:112233/config",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:.*/device/.*/config:all",
+			target:     "/api/device/mac:112233/config",
+			approved:   true,
+		}, {
+			// every alternative is rooted, not just the first
+			capability: "x1:webpa:api:test|dir:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:test|dir:all",
+			target:     "/dir",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:test|dir:all",
+			target:     "/invalid/test",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:test|dir:all",
+			target:     "/invalid/dir",
+			approved:   false,
+		}, {
+			// a token reaches only what its own capability grants
+			capability: "x1:webpa:api:/device/alice/config:all",
+			target:     "/device/alice/config",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:/device/alice/config:all",
+			target:     "/device/bob/config",
+			approved:   false,
+		}, {
+			// neither alternative is rooted, both must match
+			capability: "x1:webpa:api:foo|bar:all",
+			target:     "/foo",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:foo|bar:all",
+			target:     "/bar",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:foo|bar:all",
+			target:     "/xxx/bar",
+			approved:   false,
+		}, {
+			// both alternatives rooted
+			capability: "x1:webpa:api:/foo|/bar:all",
+			target:     "/bar",
+			approved:   true,
+		}, {
+			// alternatives may disagree about the leading '/'
+			capability: "x1:webpa:api:foo|/bar:all",
+			target:     "/foo",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:foo|/bar:all",
+			target:     "/bar",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:/foo|bar:all",
+			target:     "/foo",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:/foo|bar:all",
+			target:     "/bar",
+			approved:   true,
+		}, {
+			// alternation may be nested
+			capability: "x1:webpa:api:(x|/y)|z:all",
+			target:     "/y",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:(x|/y)|z:all",
+			target:     "/z",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:(x|/y)|z:all",
+			target:     "/a/y",
+			approved:   false,
+		}, {
+			// single character alternatives parse as a character class
+			capability: "x1:webpa:api:a|b|c:all",
+			target:     "/b",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:a|b|c:all",
+			target:     "/d",
+			approved:   false,
+		}, {
+			// a doubled slash is not a way to reach /admin
+			capability: "x1:webpa:api:/admin:all",
+			target:     "/admin",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:/admin:all",
+			target:     "//admin",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:/admin:all",
+			target:     "///admin",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:/admin:all",
+			target:     "/admin/sub",
+			approved:   true,
+		}, {
+			// an unrooted pattern is still confined to one leading slash
+			capability: "x1:webpa:api:admin:all",
+			target:     "/admin",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:admin:all",
+			target:     "//admin",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:admin:all",
+			target:     "///admin",
+			approved:   false,
+		}, {
+			// a pattern that asks for a doubled slash still gets it
+			capability: "x1:webpa:api://admin:all",
+			target:     "//admin",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api://admin:all",
+			target:     "/admin",
+			approved:   false,
+		}, {
+			// a trailing slash is inside the grant
+			capability: "x1:webpa:api:/admin:all",
+			target:     "/admin/",
+			approved:   true,
+		}, {
+			// a doubled slash anywhere is not collapsed
+			capability: "x1:webpa:api:/x/admin:all",
+			target:     "/x//admin",
+			approved:   false,
+		}, {
+			// a wildcard still covers a doubled slash
+			capability: "x1:webpa:api:.*:all",
+			target:     "//admin",
+			approved:   true,
+		}, {
+			// the doubled slash guard applies to alternations too
+			capability: "x1:webpa:api:test|dir:all",
+			target:     "//dir",
+			approved:   false,
+		}, {
+			// a request with no path at all
+			capability: "x1:webpa:api:.*:all",
+			target:     "http://example.com",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:/test:all",
+			target:     "http://example.com",
+			approved:   false,
+		}, {
+			capability: "x1:webpa:api:/test:all",
+			target:     "http://example.com/test",
+			approved:   true,
+		}, {
+			capability: "x1:webpa:api:.*:all",
+			target:     "http://example.com/",
+			approved:   true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		suite.Run(fmt.Sprintf("'%s' + '%s' -> %t", testCase.capability, testCase.target, testCase.approved), func() {
+			err := suite.newApprover(WithPrefixes(prefix)).Approve(
+				context.Background(),
+				suite.newRequest("GET", testCase.target),
+				suite.newToken(testCase.capability),
+			)
+
+			if testCase.approved {
+				suite.NoError(err)
+			} else {
+				suite.ErrorIs(err, bascule.ErrUnauthorized)
+			}
+		})
+	}
+}
+
+// testApproveConfiguredPrefix documents how the configured prefix selects which
+// of a token's capabilities are honored.
+func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
+	testCases := []struct {
+		prefix     string
+		capability string
+		target     string
+		approved   bool
+	}{
+		{
+			// a plain literal prefix
+			prefix:     "x1:webpa:api:",
+			capability: "x1:webpa:api:/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			// every alternative of a prefix is anchored, not just the first
+			prefix:     "x1:webpa:|x2:webpa:",
+			capability: "x1:webpa:/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			prefix:     "x1:webpa:|x2:webpa:",
+			capability: "x2:webpa:/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			prefix:     "x1:webpa:|x2:webpa:",
+			capability: "x3:webpa:/test:all",
+			target:     "/test",
+			approved:   false,
+		}, {
+			// a prefix may contain subexpressions of its own
+			prefix:     "x(1|2):webpa:",
+			capability: "x1:webpa:/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			prefix:     "x(1|2):webpa:",
+			capability: "x2:webpa:/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			prefix:     "x(1|2):webpa:",
+			capability: "x3:webpa:/test:all",
+			target:     "/test",
+			approved:   false,
+		}, {
+			// nested and repeated subexpressions shift the url and method too
+			prefix:     "(a)(b)((c)):",
+			capability: "abc:/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			// a prefix may be empty
+			prefix:     "",
+			capability: "/test:all",
+			target:     "/test",
+			approved:   true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		suite.Run(fmt.Sprintf("'%s' + '%s' -> %t", testCase.prefix, testCase.capability, testCase.approved), func() {
+			ca, err := NewApprover(WithPrefixes(testCase.prefix))
+			if err != nil {
+				suite.False(testCase.approved, "prefix was rejected: %s", err)
+				return
+			}
+
+			err = ca.Approve(
+				context.Background(),
+				suite.newRequest("GET", testCase.target),
+				suite.newToken(testCase.capability),
+			)
+
+			if testCase.approved {
+				suite.NoError(err)
+			} else {
+				suite.ErrorIs(err, bascule.ErrUnauthorized)
+			}
+		})
+	}
+}
+
+// testApproveURLNormalizeFunc covers the option itself: that it is consulted,
+// that it cannot alter the request, and how it fails.
+func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
+	const capability = "x1:webpa:api:test/.*:put"
+
+	suite.Run("Normalized", func() {
+		request := suite.newRequest("PUT", "/api/v2/test/foo")
+		ca := suite.newApprover(
+			WithPrefixes("x1:webpa:api:"),
+			WithURLNormalizeFunc(stripAPIVersion),
+		)
+
+		suite.NoError(ca.Approve(context.Background(), request, suite.newToken(capability)))
+
+		suite.Equal("/api/v2/test/foo", request.URL.Path,
+			"the request's own URL must not have been modified")
+	})
+
+	suite.Run("WithoutTheOption", func() {
+		ca := suite.newApprover(WithPrefixes("x1:webpa:api:"))
+
+		suite.ErrorIs(
+			ca.Approve(context.Background(),
+				suite.newRequest("PUT", "/api/v2/test/foo"),
+				suite.newToken(capability)),
+			bascule.ErrUnauthorized,
+			"without normalization the version is part of the path")
+	})
+
+	suite.Run("Nil", func() {
+		_, err := NewApprover(WithPrefixes("x1:webpa:api:"), WithURLNormalizeFunc(nil))
+		suite.Error(err)
+	})
+}
+
 func (suite *ApproverTestSuite) TestApprove() {
 	suite.Run("MissingCapabilities", suite.testApproveMissingCapabilities)
 	suite.Run("Success", suite.testApproveSuccess)
 	suite.Run("Unauthorized", suite.testApproveUnauthorized)
+	suite.Run("CapabilityURL", suite.testApproveCapabilityURL)
+	suite.Run("ConfiguredPrefix", suite.testApproveConfiguredPrefix)
+	suite.Run("URLNormalizeFunc", suite.testApproveURLNormalizeFunc)
 }
 
 func TestApprover(t *testing.T) {

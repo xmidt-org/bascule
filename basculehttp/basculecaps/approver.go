@@ -5,8 +5,10 @@ package basculecaps
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -17,23 +19,7 @@ import (
 const (
 	// DefaultAllMethod is one of the default method strings that will match any HTTP method.
 	DefaultAllMethod = "all"
-
-	// ConfigurationMatcherRegex searches for the following three capability related groups:
-	// 1) api scope (in the form of "string:string:string")
-	// 2) url pattern
-	// 3) method
-	ConfigurationMatcherRegex = `^(\b(?:[^:]+:){2}[^:]+):([^:]+):([^:]+\b)$`
-	MatcherRegex              = `(%s):(%s):(%s)`
 )
-
-// urlPathNormalization ensures that the given URL has a leading slash.
-func urlPathNormalization(url string) string {
-	if strings.HasPrefix(url, "/") {
-		return url
-	}
-
-	return "/" + url
-}
 
 // ApproverOption is a configurable option used to create an Approver.
 type ApproverOption interface {
@@ -47,35 +33,109 @@ func (aof approverOptionFunc) apply(a *Approver) error { return aof(a) }
 // WithPrefixes adds several prefixes used to match capabilities, e.g. x1:webpa:foo:.
 // If no prefixes are set via this option, the approver rejects all tokens.
 //
-// Note that a prefix can itself be a regular expression, but may not have any subexpressions.
-func WithCapabilities(capabilities ...string) ApproverOption {
-	regex := regexp.MustCompile(ConfigurationMatcherRegex)
+// Note that a prefix can itself be a regular expression, and may contain
+// subexpressions.
+func WithPrefixes(prefixes ...string) ApproverOption {
 	return approverOptionFunc(func(a *Approver) error {
-		for _, cap := range capabilities {
-			substrings := regex.FindStringSubmatch(cap)
-			if len(substrings) < 4 {
-				return fmt.Errorf("Expected %s have three components (api scope, url pattern and method) instead of %d", cap, len(substrings))
-			}
-
-			capRegex, err := regexp.Compile(fmt.Sprintf(MatcherRegex, substrings[1], substrings[2], substrings[3]))
+		for _, p := range prefixes {
+			// Group the prefix so that a top-level alternation cannot escape
+			// the anchor or the subexpressions that follow it.  The prefix may
+			// contain subexpressions of its own; since they are all opened
+			// before the two below, the url and method are always the last two.
+			re, err := regexp.Compile("^(?:" + p + ")(.+):(.+?)$")
 			if err != nil {
-				return fmt.Errorf("Unable to compile capability matcher %s: %v", cap, err)
+				return fmt.Errorf("Unable to compile capability prefix [%s]: %s", p, err)
 			}
 
-			urlRegex, err := regexp.Compile(substrings[2])
-			if err != nil {
-				return fmt.Errorf("Unable to compile url regex %s for the capability matcher %s: %v", substrings[2], cap, err)
-			}
-
-			a.matchers = append(a.matchers, matcher{
-				capRegex: capRegex,
-				urlRegex: urlRegex,
-				method:   substrings[3],
-			})
+			a.matchers = append(a.matchers, re)
 		}
 
 		return nil
 	})
+}
+
+// WithCacheSize sets how many compiled capability url patterns an Approver
+// retains.  By default, DefaultCacheSize is used.  The size must be positive.
+//
+// Capability url patterns arrive on tokens rather than from configuration, so
+// this cache is bounded.  Once it is full the entry added longest ago is
+// evicted; reading an entry does not protect it.  A token presenting a large
+// number of distinct patterns will therefore evict the patterns in everyday
+// use, costing each of those a recompile when it is next seen.  It cannot grow
+// the cache beyond this size.
+func WithCacheSize(size int) ApproverOption {
+	return approverOptionFunc(func(a *Approver) error {
+		if size < 1 {
+			return errors.New("the url cache size must be positive")
+		}
+
+		a.cacheSize = size
+		return nil
+	})
+}
+
+// WithAllMethod changes the value used to signal a match of all HTTP methods.
+// By default, DefaultAllMethod is used.
+func WithAllMethod(allMethod string) ApproverOption {
+	return approverOptionFunc(func(a *Approver) error {
+		if allMethod == "" {
+			return errors.New("the all method expression cannot be blank")
+		}
+
+		a.allMethod = allMethod
+		return nil
+	})
+}
+
+// WithURLNormalizeFunc sets a function that rewrites a request's URL before its
+// path is matched against a capability.  By default the URL is used as it
+// arrived.
+//
+// This is for deployments whose paths carry something capabilities are not
+// written against, such as an api version: strip /api/v1 here and a capability
+// may be written test/.* rather than .*/test/.*.  Since every capability is
+// matched against the result, a normalization that removes too much widens
+// every token at once.
+//
+// The URL is passed and returned by value, so a function may modify what it is
+// given without affecting the request the handlers below will see.
+func WithURLNormalizeFunc(fn func(url.URL) url.URL) ApproverOption {
+	return approverOptionFunc(func(a *Approver) error {
+		if fn == nil {
+			return errors.New("the url normalize function cannot be nil")
+		}
+
+		a.normalizeURL = fn
+		return nil
+	})
+}
+
+// urlIdentityFunc is the default normalization function where nothing is changed.
+func urlIdentityFunc(u url.URL) url.URL {
+	return u
+}
+
+// Approver is a bascule HTTP approver that authorizes tokens
+// with capabilities against requests.
+//
+// This approver expects capabilities in tokens to be of the form <prefix><endpoint regex>:<method>.
+//
+// The allowed prefixes must be set via one or more WithPrefixes options.  Prefixes
+// may themselves contain colon delimiters, and can be regular expressions that
+// contain subexpressions.
+type Approver struct {
+	matchers  []*regexp.Regexp
+	allMethod string
+	cacheSize int
+
+	// normalizeURL rewrites a request's URL before its path is matched.  It is
+	// nil unless WithURLNormalizeFunc was used.
+	normalizeURL func(url.URL) url.URL
+
+	// urlCache holds capability url patterns compiled by approveURL.  Patterns
+	// come from tokens rather than from configuration, so they cannot be
+	// compiled up front.
+	urlCache *urlCache
 }
 
 // NewApprover creates a Approver using the supplied options. At least (1) of the configured
@@ -84,19 +144,30 @@ func WithCapabilities(capabilities ...string) ApproverOption {
 // If no prefixes are added via WithPrefixes, then the returned approver
 // will not authorize any requests.
 func NewApprover(opts ...ApproverOption) (*Approver, error) {
-	a := Approver{}
-
-	var errs error
-	for _, o := range opts {
-		errs = multierr.Append(errs, o.apply(&a))
+	a := Approver{
+		cacheSize:    DefaultCacheSize,
+		allMethod:    DefaultAllMethod,
+		normalizeURL: urlIdentityFunc,
 	}
 
-	return &a, errs
+	var err error
+	for _, o := range opts {
+		err = multierr.Append(err, o.apply(&a))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	a.urlCache = newURLCache(a.cacheSize)
+
+	return &a, nil
 }
 
-// Approve attempts to match each capability to a configured prefix. Then, for any matched prefix,
-// the URL regexp and method in the capability must match the resource.  URLs are normalized
-// with a leading '/'.
+// Approve attempts to match each of the token's capabilities to a configured prefix.
+// Then, for any matched prefix, the URL regexp and method carried by that capability
+// must match the resource.  The request's path is normalized with a leading '/', and
+// the capability's URL regexp must match it from the beginning.
 //
 // This method returns success (i.e. a nil error) when the first matching capability is found.  If
 // the token provided no capabilities, or if none of the token's capabilities authorized the request,
@@ -105,11 +176,21 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 	capabilities, _ := bascule.GetCapabilities(token)
 	for _, matcher := range a.matchers {
 		for _, capability := range capabilities {
-			// Does the user capability match any of the expected capabilities?
+			substrings := matcher.FindStringSubmatch(capability)
+			if len(substrings) < 3 {
+				// no match
+				continue
+			}
+
 			// the format of capabilities is <prefix><url pattern>:<method>
-			// <url pattern> and <method> subcomponents be substrings
-			// TODO: this error should be added as an authorizer event metadata.
-			if matcher.MustMatchhCapability(resource, capability) == nil {
+			// <url pattern> and <method> are the last two subexpressions, after
+			// any the prefix itself contributed
+			err := a.approveURL(resource, substrings[len(substrings)-2])
+			if err == nil {
+				err = a.approveMethod(resource, substrings[len(substrings)-1])
+			}
+
+			if err == nil {
 				// success!
 				return nil
 			}
@@ -119,59 +200,52 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 	return bascule.ErrUnauthorized
 }
 
-// Approver is a bascule HTTP approver that authorizes tokens
-// with capabilities against requests.
-//
-// This approver expects capabilities in tokens to be of the form <prefix><endpoing regex>:<method>.
-//
-// The allowed prefixes must be set via one or more WithCapabilityPrefixes options.  Prefixes
-// may themselves contain colon delimiters and can be regular expressions without subexpressions.
-type Approver struct {
-	matchers  []matcher
-	allMethod string
-}
-
-type matcher struct {
-	capRegex *regexp.Regexp
-	urlRegex *regexp.Regexp
-	method   string
-}
-
-func (m matcher) MustMatchhCapability(req *http.Request, cap string) error {
-	substrings := m.capRegex.FindStringSubmatch(cap)
-	if len(substrings) < 4 {
-		// no match
-		return fmt.Errorf("the request capability `%s` does not match the expected `%s`", cap, m.capRegex.String())
-	}
-
-	return multierr.Combine(m.matchStrinhg(cap), m.approveURL(req),
-		m.approveMethod(req))
-}
-
-func (m matcher) matchStrinhg(cap string) error {
-	substrings := m.capRegex.FindStringSubmatch(cap)
-	if len(substrings) < 4 {
-		return fmt.Errorf("the request capability `%s` does not match the expected `%s`", cap, m.capRegex.String())
-	}
-
-	return nil
-}
-
-func (m matcher) approveMethod(resource *http.Request) error {
-	switch m.method {
-	case DefaultAllMethod, strings.ToLower(resource.Method):
+func (a *Approver) approveMethod(resource *http.Request, capabilityMethod string) error {
+	if a.allMethod == capabilityMethod {
 		return nil
-	default:
-		return fmt.Errorf("method does not match request method [%s]", resource.Method)
 	}
+
+	if capabilityMethod == strings.ToLower(resource.Method) {
+		return nil
+	}
+
+	return fmt.Errorf("method does not match request method [%s]", resource.Method)
 }
 
-func (m matcher) approveURL(resource *http.Request) error {
-	resourcePath := resource.URL.EscapedPath()
-	indices := m.urlRegex.FindStringIndex(urlPathNormalization(resourcePath))
-	if len(indices) < 1 || indices[0] != 0 {
-		return fmt.Errorf("url does not match request URL [%s]", resourcePath)
+func (a *Approver) approveURL(resource *http.Request, capabilityURL string) error {
+	// The pattern is anchored as a whole.  Grouping keeps a top-level
+	// alternation from escaping the anchor, and leaves the pattern itself
+	// untouched -- a leading '/' cannot be added to a regex safely.
+	re, err := a.urlCache.compile(capabilityURL)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	// The URL is passed by value, so a normalization that modifies what it is
+	// given cannot alter the request.
+	normalized := a.normalizeURL(*resource.URL)
+	path := normalized.EscapedPath()
+
+	rooted := path
+	if !strings.HasPrefix(rooted, "/") {
+		rooted = "/" + rooted
+	}
+	unrooted := strings.TrimPrefix(rooted, "/")
+
+	// Try the path both with and without its leading '/', so that a capability
+	// may be written either way.  A path beginning with '//' is tried only
+	// as-is, since dropping one slash would let /admin authorize //admin.
+	candidates := make([]string, 1, 2)
+	candidates[0] = rooted
+	if !strings.HasPrefix(unrooted, "/") {
+		candidates = append(candidates, unrooted)
+	}
+
+	for _, candidate := range candidates {
+		if indices := re.FindStringIndex(candidate); len(indices) > 0 && indices[0] == 0 {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("url does not match request URL [%s]", path)
 }

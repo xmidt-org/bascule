@@ -17,3 +17,15 @@ require (
 	github.com/valyala/fastjson v1.6.10 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 )
+
+// Versions v1.3.0 through v1.3.4 carry breaking changes that were not
+// intended, in the API and in what a token is authorized to reach:
+//
+//   - the WithPrefixes and WithAllMethod options were removed.
+//   - capability url patterns that do not begin with a '/' stopped matching
+//     any request, silently denying traffic that was previously approved.
+//   - a request is matched against the capability pattern supplied by
+//     configuration rather than the one carried by the token, so a token
+//     scoped to a single resource is authorized for every resource the
+//     configuration allows.
+retract [v1.3.0, v1.3.4]
