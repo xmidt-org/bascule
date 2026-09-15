@@ -54,10 +54,14 @@ func WithPrefixes(prefixes ...string) ApproverOption {
 }
 
 // WithCacheSize sets how many compiled capability url patterns an Approver
-// retains.  By default, DefaultCacheSize is used.
+// retains.  By default, DefaultCacheSize is used.  The size must be positive.
 //
-// Capability url patterns arrive on tokens, so this cache is bounded and evicts
-// its least recently used entries.  The size must be positive.
+// Capability url patterns arrive on tokens rather than from configuration, so
+// this cache is bounded.  Once it is full the entry added longest ago is
+// evicted; reading an entry does not protect it.  A token presenting a large
+// number of distinct patterns will therefore evict the patterns in everyday
+// use, costing each of those a recompile when it is next seen.  It cannot grow
+// the cache beyond this size.
 func WithCacheSize(size int) ApproverOption {
 	return approverOptionFunc(func(a *Approver) error {
 		if size < 1 {
