@@ -62,11 +62,27 @@ func WithPrefixes(prefixes ...string) ApproverOption {
 	})
 }
 
+// WithCacheSize sets how many compiled capability url patterns an Approver
+// retains.  By default, DefaultCacheSize is used.
+//
+// Capability url patterns arrive on tokens, so this cache is bounded and evicts
+// its least recently used entries.  The size must be positive.
+func WithCacheSize(size int) ApproverOption {
+	return approverOptionFunc(func(a *Approver) error {
+		if size < 1 {
+			return errors.New("the url cache size must be positive")
+		}
+
+		a.cacheSize = size
+		return nil
+	})
+}
+
 // WithAllMethod changes the value used to signal a match of all HTTP methods.
 // By default, DefaultAllMethod is used.
 func WithAllMethod(allMethod string) ApproverOption {
 	return approverOptionFunc(func(a *Approver) error {
-		if len(allMethod) == 0 {
+		if allMethod == "" {
 			return errors.New("the all method expression cannot be blank")
 		}
 
@@ -97,6 +113,12 @@ type matcher struct {
 type Approver struct {
 	matchers  []matcher
 	allMethod string
+	cacheSize int
+
+	// urlCache holds capability url patterns compiled by approveURL.  Patterns
+	// come from tokens rather than from configuration, so they cannot be
+	// compiled up front.
+	urlCache *urlCache
 }
 
 // NewApprover creates a Approver using the supplied options. At least (1) of the configured
@@ -104,23 +126,24 @@ type Approver struct {
 //
 // If no prefixes are added via WithPrefixes, then the returned approver
 // will not authorize any requests.
-func NewApprover(opts ...ApproverOption) (a *Approver, err error) {
-	a = new(Approver)
+func NewApprover(opts ...ApproverOption) (*Approver, error) {
+	a := Approver{
+		cacheSize: DefaultCacheSize,
+		allMethod: DefaultAllMethod,
+	}
+
+	var err error
 	for _, o := range opts {
-		err = multierr.Append(err, o.apply(a))
+		err = multierr.Append(err, o.apply(&a))
 	}
 
-	switch {
-	case err != nil:
-		a = nil
-
-	default:
-		if len(a.allMethod) == 0 {
-			a.allMethod = DefaultAllMethod
-		}
+	if err != nil {
+		return nil, err
 	}
 
-	return
+	a.urlCache = newURLCache(a.cacheSize)
+
+	return &a, nil
 }
 
 // Approve attempts to match each of the token's capabilities to a configured prefix.
@@ -159,25 +182,24 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 }
 
 func (a *Approver) approveMethod(resource *http.Request, capabilityMethod string) error {
-	switch {
-	case a.allMethod == capabilityMethod:
+	if a.allMethod == capabilityMethod {
 		return nil
-
-	case capabilityMethod == strings.ToLower(resource.Method):
-		return nil
-
-	default:
-		return fmt.Errorf("method does not match request method [%s]", resource.Method)
 	}
+
+	if capabilityMethod == strings.ToLower(resource.Method) {
+		return nil
+	}
+
+	return fmt.Errorf("method does not match request method [%s]", resource.Method)
 }
 
 func (a *Approver) approveURL(resource *http.Request, capabilityURL string) error {
 	resourcePath := resource.URL.EscapedPath()
 
-	// Anchor the capability's pattern as a whole.  Grouping keeps a top-level
+	// The pattern is anchored as a whole.  Grouping keeps a top-level
 	// alternation from escaping the anchor, and leaves the pattern itself
 	// untouched -- a leading '/' cannot be added to a regex safely.
-	re, err := regexp.Compile("^(?:" + capabilityURL + ")")
+	re, err := a.urlCache.compile(capabilityURL)
 	if err != nil {
 		return err
 	}
@@ -191,7 +213,8 @@ func (a *Approver) approveURL(resource *http.Request, capabilityURL string) erro
 	// Try the path both with and without its leading '/', so that a capability
 	// may be written either way.  A path beginning with '//' is tried only
 	// as-is, since dropping one slash would let /admin authorize //admin.
-	candidates := []string{rooted}
+	candidates := make([]string, 1, 2)
+	candidates[0] = rooted
 	if !strings.HasPrefix(unrooted, "/") {
 		candidates = append(candidates, unrooted)
 	}
