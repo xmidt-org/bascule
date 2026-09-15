@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/xmidt-org/bascule"
-	"go.uber.org/multierr"
 )
 
 const (
@@ -150,12 +149,14 @@ func NewApprover(opts ...ApproverOption) (*Approver, error) {
 		normalizeURL: urlIdentityFunc,
 	}
 
-	var err error
+	var errs []error
 	for _, o := range opts {
-		err = multierr.Append(err, o.apply(&a))
+		if err := o.apply(&a); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	if err != nil {
+	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
 

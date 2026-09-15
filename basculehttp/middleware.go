@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/xmidt-org/bascule"
-	"go.uber.org/multierr"
 )
 
 var (
@@ -139,32 +138,34 @@ type Middleware struct {
 //
 // Note that if no workflow components are configured, i.e. neither an authenticator nor
 // an authorizer are supplied, then the returned Middleware is a noop.
-func NewMiddleware(opts ...MiddlewareOption) (m *Middleware, err error) {
-	m = new(Middleware)
+func NewMiddleware(opts ...MiddlewareOption) (*Middleware, error) {
+	var m Middleware
+
+	var errs []error
 	for _, o := range opts {
-		err = multierr.Append(err, o.apply(m))
-	}
-
-	switch {
-	case err != nil:
-		m = nil
-
-	case m.authenticator == nil && m.authorizer != nil:
-		err = multierr.Append(err, ErrNoAuthenticator)
-		m = nil
-
-	default:
-		// cleanup after the options run
-		if m.errorStatusCoder == nil {
-			m.errorStatusCoder = DefaultErrorStatusCoder
-		}
-
-		if m.errorMarshaler == nil {
-			m.errorMarshaler = DefaultErrorMarshaler
+		if err := o.apply(&m); err != nil {
+			errs = append(errs, err)
 		}
 	}
 
-	return
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+
+	if m.authenticator == nil && m.authorizer != nil {
+		return nil, ErrNoAuthenticator
+	}
+
+	// cleanup after the options run
+	if m.errorStatusCoder == nil {
+		m.errorStatusCoder = DefaultErrorStatusCoder
+	}
+
+	if m.errorMarshaler == nil {
+		m.errorMarshaler = DefaultErrorMarshaler
+	}
+
+	return &m, nil
 }
 
 // Then produces an http.Handler that uses this Middleware's workflow to protected

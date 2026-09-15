@@ -5,8 +5,7 @@ package bascule
 
 import (
 	"context"
-
-	"go.uber.org/multierr"
+	"errors"
 )
 
 // Approver is a strategy for determining if a given token represents
@@ -71,17 +70,17 @@ type requireAny[R any] struct {
 // Approve returns nil at the first approver that returns nil, i.e. accepts the access.
 // Otherwise, this method returns an aggregate error of all the authorization errors.
 func (ra requireAny[R]) Approve(ctx context.Context, resource R, token Token) error {
-	var err error
+	var errs []error
 	for _, a := range ra.a {
 		authErr := a.Approve(ctx, resource, token)
 		if authErr == nil {
 			return nil
 		}
 
-		err = multierr.Append(err, authErr)
+		errs = append(errs, authErr)
 	}
 
-	return err
+	return errors.Join(errs...)
 }
 
 // Any returns an Approver which is a logical OR:  each approver is executed in
