@@ -162,10 +162,14 @@ func (suite *ApproversTestSuite) TestAny() {
 			}
 
 			anyAs := as.Any()
-			suite.Equal(
-				testCase.expectedErr,
-				anyAs.Approve(testCtx, placeholderResource, testToken),
-			)
+			err := anyAs.Approve(testCtx, placeholderResource, testToken)
+			if testCase.expectedErr != nil {
+				// the aggregate wraps each failure rather than being one of
+				// them, so identity is not the right question to ask
+				suite.ErrorIs(err, testCase.expectedErr)
+			} else {
+				suite.NoError(err)
+			}
 
 			if len(as) > 0 {
 				// the any instance should be distinct
@@ -176,10 +180,12 @@ func (suite *ApproversTestSuite) TestAny() {
 					},
 				)
 
-				suite.Equal(
-					testCase.expectedErr,
-					anyAs.Approve(testCtx, placeholderResource, testToken),
-				)
+				err = anyAs.Approve(testCtx, placeholderResource, testToken)
+				if testCase.expectedErr != nil {
+					suite.ErrorIs(err, testCase.expectedErr)
+				} else {
+					suite.NoError(err)
+				}
 			}
 		})
 	}

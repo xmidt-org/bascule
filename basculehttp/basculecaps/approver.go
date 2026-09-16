@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/xmidt-org/bascule"
-	"go.uber.org/multierr"
 )
 
 const (
@@ -150,12 +149,14 @@ func NewApprover(opts ...ApproverOption) (*Approver, error) {
 		normalizeURL: urlIdentityFunc,
 	}
 
-	var err error
+	var errs []error
 	for _, o := range opts {
-		err = multierr.Append(err, o.apply(&a))
+		if err := o.apply(&a); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	if err != nil {
+	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
 
@@ -171,9 +172,17 @@ func NewApprover(opts ...ApproverOption) (*Approver, error) {
 //
 // This method returns success (i.e. a nil error) when the first matching capability is found.  If
 // the token provided no capabilities, or if none of the token's capabilities authorized the request,
-// this method returns bascule.ErrUnauthorized.
+// this method returns an error joined with bascule.ErrUnauthorized.
+//
+// That error also says why.  A denial is always ErrNoMatchingCapability; when
+// the token carried no capabilities at all it is additionally ErrNoCapabilities,
+// so a caller may ask the broad question or the narrow one.
 func (a *Approver) Approve(_ context.Context, resource *http.Request, token bascule.Token) error {
 	capabilities, _ := bascule.GetCapabilities(token)
+	if len(capabilities) == 0 {
+		return errors.Join(bascule.ErrUnauthorized, ErrNoMatchingCapability, ErrNoCapabilities)
+	}
+
 	for _, matcher := range a.matchers {
 		for _, capability := range capabilities {
 			substrings := matcher.FindStringSubmatch(capability)
@@ -197,7 +206,7 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 		}
 	}
 
-	return bascule.ErrUnauthorized
+	return errors.Join(bascule.ErrUnauthorized, ErrNoMatchingCapability)
 }
 
 func (a *Approver) approveMethod(resource *http.Request, capabilityMethod string) error {
