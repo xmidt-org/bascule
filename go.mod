@@ -17,7 +17,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 )
 
-// Versions v1.3.0 through v1.3.4 carry breaking changes that were not
+// Versions v1.3.0 through v1.3.5 carry breaking changes that were not
 // intended, in the API and in what a token is authorized to reach:
 //
 //   - the WithPrefixes and WithAllMethod options were removed.
@@ -27,4 +27,4 @@ require (
 //     configuration rather than the one carried by the token, so a token
 //     scoped to a single resource is authorized for every resource the
 //     configuration allows.
-retract [v1.3.0, v1.3.4]
+retract [v1.3.0, v1.3.5]
