@@ -387,6 +387,96 @@ func (suite *MiddlewareTestSuite) TestBasicAuth() {
 	suite.Run("AuthorizerError", suite.testBasicAuthAuthorizerError)
 }
 
+// newWarningMiddleware creates a Middleware whose approver raises warnings and
+// returns approveErr.
+func (suite *MiddlewareTestSuite) newWarningMiddleware(approveErr error, opts ...MiddlewareOption) (*Middleware, *[]bascule.AuthorizeEvent[*http.Request]) {
+	events := new([]bascule.AuthorizeEvent[*http.Request])
+	m := suite.newMiddleware(append([]MiddlewareOption{
+		WithAuthenticator(
+			suite.newAuthenticator(
+				bascule.WithTokenParsers(
+					suite.newAuthorizationParser(WithBasic()),
+				),
+			),
+		),
+		WithAuthorizer(
+			suite.newAuthorizer(
+				bascule.WithApproverFuncs(
+					func(ctx context.Context, _ *http.Request, _ bascule.Token) error {
+						bascule.AddWarning(ctx, bascule.Warning{Reason: "first"})
+						bascule.AddWarning(ctx, bascule.Warning{
+							Reason: "second",
+							Attrs:  []bascule.WarningAttr{{Key: "cap", Value: `a"b`}},
+						})
+
+						return approveErr
+					},
+				),
+				bascule.WithAuthorizeListenerFuncs(
+					func(e bascule.AuthorizeEvent[*http.Request]) {
+						*events = append(*events, e)
+					},
+				),
+			),
+		),
+	}, opts...)...)
+
+	return m, events
+}
+
+func (suite *MiddlewareTestSuite) testWarningsAllowed() {
+	m, events := suite.newWarningMiddleware(nil, WithWarningHeader("X-Test-Warning"))
+	response := httptest.NewRecorder()
+	m.ThenFunc(suite.serveHTTPFunc).ServeHTTP(response, suite.newBasicAuthRequest())
+
+	suite.assertNormalResponse(response)
+	suite.Equal(
+		[]string{"first", `second; cap="a\"b"`},
+		response.Result().Header.Values("X-Test-Warning"),
+	)
+
+	suite.Require().Len(*events, 1)
+	suite.NoError((*events)[0].Err)
+	suite.Len((*events)[0].Warnings, 2)
+}
+
+func (suite *MiddlewareTestSuite) testWarningsRejected() {
+	m, events := suite.newWarningMiddleware(bascule.ErrUnauthorized, WithWarningHeader("X-Test-Warning"))
+	response := httptest.NewRecorder()
+	m.ThenFunc(suite.serveHTTPNoCall).ServeHTTP(response, suite.newBasicAuthRequest())
+
+	suite.Equal(http.StatusForbidden, response.Code)
+	suite.Equal(
+		[]string{"first", `second; cap="a\"b"`},
+		response.Result().Header.Values("X-Test-Warning"),
+	)
+
+	suite.Require().Len(*events, 1)
+	suite.ErrorIs((*events)[0].Err, bascule.ErrUnauthorized)
+	suite.Len((*events)[0].Warnings, 2)
+}
+
+func (suite *MiddlewareTestSuite) testWarningsNoHeader() {
+	m, events := suite.newWarningMiddleware(nil)
+	response := httptest.NewRecorder()
+	m.ThenFunc(suite.serveHTTPFunc).ServeHTTP(response, suite.newBasicAuthRequest())
+
+	suite.assertNormalResponse(response)
+	for name := range response.Result().Header {
+		suite.NotContains(name, "Warning")
+	}
+
+	// listeners still see the warnings
+	suite.Require().Len(*events, 1)
+	suite.Len((*events)[0].Warnings, 2)
+}
+
+func (suite *MiddlewareTestSuite) TestWarnings() {
+	suite.Run("Allowed", suite.testWarningsAllowed)
+	suite.Run("Rejected", suite.testWarningsRejected)
+	suite.Run("NoHeader", suite.testWarningsNoHeader)
+}
+
 func TestMiddleware(t *testing.T) {
 	suite.Run(t, new(MiddlewareTestSuite))
 }

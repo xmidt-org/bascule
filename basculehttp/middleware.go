@@ -4,6 +4,7 @@
 package basculehttp
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -99,6 +100,19 @@ func WithErrorMarshaler(em ErrorMarshaler) MiddlewareOption {
 	})
 }
 
+// WithWarningHeader sets the response header used to report warnings collected
+// while handling a request, e.g. by approvers that call bascule.AddWarning.  Each
+// warning is written as a separate header, on both rejected and allowed requests.
+//
+// If this option is omitted or name is blank, warnings are still collected and
+// passed to authorization listeners, but no header is written.
+func WithWarningHeader(name string) MiddlewareOption {
+	return middlewareOptionFunc(func(m *Middleware) error {
+		m.warningHeader = name
+		return nil
+	})
+}
+
 // Middleware is an immutable HTTP workflow that can decorate multiple handlers.
 //
 // A Middleware can have either or both of an Authenticator, which creates
@@ -128,6 +142,8 @@ type Middleware struct {
 
 	errorStatusCoder ErrorStatusCoder
 	errorMarshaler   ErrorMarshaler
+
+	warningHeader string
 }
 
 // NewMiddleware creates an immutable Middleware instance from a supplied set of options.
@@ -244,6 +260,17 @@ func (m *Middleware) writeWorkflowError(response http.ResponseWriter, request *h
 	}
 }
 
+// writeWarnings writes each warning collected in ctx as a response header.
+func (m *Middleware) writeWarnings(ctx context.Context, response http.ResponseWriter) {
+	if m.warningHeader == "" {
+		return
+	}
+
+	for _, w := range bascule.GetWarnings(ctx) {
+		response.Header().Add(m.warningHeader, w.String())
+	}
+}
+
 // frontDoor is the internal handler implementation that protects a handler
 // using the bascule workflow.
 type frontDoor struct {
@@ -253,13 +280,14 @@ type frontDoor struct {
 
 // ServeHTTP implements the bascule workflow, using the configured middleware.
 func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	ctx := request.Context()
+	ctx := bascule.WithWarnings(request.Context())
 
 	// an authenticator is is required if we are decorating
 	// if the authenticator was nil, a frontDoor won't get created
 	token, err := fd.authenticator.Authenticate(ctx, request)
 	if err != nil {
 		// by default, failing to parse a token is a malformed request
+		fd.writeWarnings(ctx, response)
 		fd.writeWorkflowError(response, request, http.StatusBadRequest, err)
 		return
 	}
@@ -270,10 +298,12 @@ func (fd *frontDoor) ServeHTTP(response http.ResponseWriter, request *http.Reque
 	if fd.authorizer != nil {
 		err = fd.authorizer.Authorize(ctx, request, token)
 		if err != nil {
+			fd.writeWarnings(ctx, response)
 			fd.writeWorkflowError(response, request, http.StatusForbidden, err)
 			return
 		}
 	}
 
+	fd.writeWarnings(ctx, response)
 	fd.protected.ServeHTTP(response, request.WithContext(ctx))
 }
