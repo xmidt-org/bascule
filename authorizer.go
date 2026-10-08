@@ -28,6 +28,13 @@ type AuthorizeEvent[R any] struct {
 	// Err is the error that resulted from authorization.  This field will be
 	// nil for a successful authorization..
 	Err error
+
+	// Warnings are the warnings collected in the context passed to Authorize,
+	// including those raised by its approvers.  An approver that only warns
+	// lets the request through, so Err may be nil even when this is not empty.
+	//
+	// This field is nil unless the context was prepared with WithWarnings.
+	Warnings []Warning
 }
 
 // AuthorizerOption is a configurable option for an Authorizer.
@@ -116,6 +123,7 @@ func (a *Authorizer[R]) Authorize(ctx context.Context, resource R, token Token) 
 		Resource: resource,
 		Token:    token,
 		Err:      err,
+		Warnings: GetWarnings(ctx),
 	})
 
 	return
