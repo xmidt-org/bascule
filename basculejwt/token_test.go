@@ -67,8 +67,8 @@ func (suite *TokenTestSuite) initializeClaims() {
 	suite.subject = "test-subject"
 
 	suite.capabilities = []string{
-		"x1:webpa:api:.*:all",
-		"x1:webpa:api:device/.*/config\\b:all",
+		"webpa-prefix-api:.*:all",
+		"webpa-prefix-api:device/.*/config\\b:all",
 	}
 
 	suite.allowedResources = make(map[string]any)

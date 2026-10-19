@@ -30,7 +30,7 @@ type approverOptionFunc func(*Approver) error
 func (aof approverOptionFunc) apply(a *Approver) error { return aof(a) }
 
 // WithPrefixLiterals adds prefixes used to select capabilities, e.g.
-// x1:webpa:foo:.  Each prefix is compared as written: every character,
+// webpa-prefix-foo:.  Each prefix is compared as written: every character,
 // including ones that are regular expression metacharacters, must appear in
 // the capability.  A prefix may be the empty string, which selects every
 // capability.  Multiple calls are cumulative.
@@ -71,7 +71,7 @@ func WithPrefixRegexes(prefixes ...string) ApproverOption {
 	})
 }
 
-// WithPrefixes adds several prefixes used to match capabilities, e.g. x1:webpa:foo:.
+// WithPrefixes adds several prefixes used to match capabilities, e.g. webpa-prefix-foo:.
 // If no prefixes are set via this option, the approver rejects all tokens.
 //
 // Each prefix is a regular expression, exactly as with WithPrefixRegexes.

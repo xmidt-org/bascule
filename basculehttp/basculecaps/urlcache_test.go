@@ -134,14 +134,14 @@ func TestURLCache(t *testing.T) {
 func TestApproverURLCacheSize(t *testing.T) {
 	t.Run("invalid", func(t *testing.T) {
 		for _, size := range []int{0, -1} {
-			if _, err := NewApprover(WithPrefixLiterals("x1:webpa:"), WithCacheSize(size)); err == nil {
+			if _, err := NewApprover(WithPrefixLiterals("webpa-prefix:"), WithCacheSize(size)); err == nil {
 				t.Errorf("expected an error for size %d", size)
 			}
 		}
 	})
 
 	t.Run("bounded", func(t *testing.T) {
-		a, err := NewApprover(WithPrefixLiterals("x1:webpa:"), WithCacheSize(2))
+		a, err := NewApprover(WithPrefixLiterals("webpa-prefix:"), WithCacheSize(2))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -151,7 +151,7 @@ func TestApproverURLCacheSize(t *testing.T) {
 			path := "/path/" + strconv.Itoa(i)
 			_ = a.Approve(context.Background(),
 				(&ApproverTestSuite{}).newRequest("GET", path),
-				&testToken{principal: "t", capabilities: []string{"x1:webpa:" + path + ":all"}})
+				&testToken{principal: "t", capabilities: []string{"webpa-prefix:" + path + ":all"}})
 		}
 
 		if got := a.urlCache.len(); got > 2 {

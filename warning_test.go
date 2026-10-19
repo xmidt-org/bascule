@@ -29,10 +29,10 @@ func TestWarningString(t *testing.T) {
 				Reason: "malformed",
 				Attrs: []WarningAttr{
 					{Key: "kind", Value: "cidr"},
-					{Key: "cap", Value: "x1:webpa:cidr:10.0.0.0/33"},
+					{Key: "cap", Value: "webpa-prefix-cidr:10.0.0.0/33"},
 				},
 			},
-			expected: `malformed; kind=cidr; cap="x1:webpa:cidr:10.0.0.0/33"`,
+			expected: `malformed; kind=cidr; cap="webpa-prefix-cidr:10.0.0.0/33"`,
 		},
 		{
 			name: "empty value",

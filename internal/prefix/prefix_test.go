@@ -18,16 +18,16 @@ func TestLiteral(t *testing.T) {
 		rest       string
 		ok         bool
 	}{
-		{name: "plain", prefix: "x1:webpa:api:", capability: "x1:webpa:api:/test:all", rest: "/test:all", ok: true},
+		{name: "plain", prefix: "webpa-prefix-api:", capability: "webpa-prefix-api:/test:all", rest: "/test:all", ok: true},
 		{name: "empty prefix", prefix: "", capability: "/test:all", rest: "/test:all", ok: true},
-		{name: "exact", prefix: "x1:", capability: "x1:", rest: "", ok: true},
-		{name: "not a prefix", prefix: "x1:", capability: "junk:x1:/test:all"},
-		{name: "shorter capability", prefix: "x1:webpa:", capability: "x1:"},
+		{name: "exact", prefix: "prefix:", capability: "prefix:", rest: "", ok: true},
+		{name: "not a prefix", prefix: "prefix:", capability: "junk:prefix-a:/test:all"},
+		{name: "shorter capability", prefix: "webpa-prefix:", capability: "prefix:"},
 		// regex metacharacters are taken as written
 		{name: "alternation bar", prefix: "foo-bar|", capability: "foo-bar|/test:all", rest: "/test:all", ok: true},
 		{name: "alternation bar is not an empty alternative", prefix: "foo-bar|", capability: "/test:all"},
-		{name: "dot", prefix: "x1.webpa:", capability: "x1Xwebpa:/test:all"},
-		{name: "paren", prefix: "x(1|2):", capability: "x(1|2):/test:all", rest: "/test:all", ok: true},
+		{name: "dot", prefix: "webpa.prefix:", capability: "webpaXprefix:/test:all"},
+		{name: "paren", prefix: "prefix-(a|b):", capability: "prefix-(a|b):/test:all", rest: "/test:all", ok: true},
 		{name: "unbalanced paren", prefix: "(a", capability: "(a/test:all", rest: "/test:all", ok: true},
 		{name: "star", prefix: "*", capability: "*/test:all", rest: "/test:all", ok: true},
 	}
@@ -49,16 +49,16 @@ func TestRegex(t *testing.T) {
 		rest       string
 		ok         bool
 	}{
-		{name: "plain", prefix: "x1:webpa:api:", capability: "x1:webpa:api:/test:all", rest: "/test:all", ok: true},
+		{name: "plain", prefix: "webpa-prefix-api:", capability: "webpa-prefix-api:/test:all", rest: "/test:all", ok: true},
 		{name: "empty prefix", prefix: "", capability: "/test:all", rest: "/test:all", ok: true},
-		{name: "not a prefix", prefix: "x1:", capability: "junk:x1:/test:all"},
-		{name: "dot", prefix: "x1.webpa:", capability: "x1Xwebpa:/test:all", rest: "/test:all", ok: true},
-		{name: "subexpression", prefix: "x(1|2):webpa:", capability: "x2:webpa:/test:all", rest: "/test:all", ok: true},
-		{name: "subexpression no match", prefix: "x(1|2):webpa:", capability: "x3:webpa:/test:all"},
-		{name: "top-level alternation first", prefix: "x1:|x2:", capability: "x1:/test:all", rest: "/test:all", ok: true},
-		{name: "top-level alternation second", prefix: "x1:|x2:", capability: "x2:/test:all", rest: "/test:all", ok: true},
+		{name: "not a prefix", prefix: "prefix:", capability: "junk:prefix-a:/test:all"},
+		{name: "dot", prefix: "webpa.prefix:", capability: "webpaXprefix:/test:all", rest: "/test:all", ok: true},
+		{name: "subexpression", prefix: "webpa-prefix-(a|b):", capability: "webpa-prefix-b:/test:all", rest: "/test:all", ok: true},
+		{name: "subexpression no match", prefix: "webpa-prefix-(a|b):", capability: "webpa-prefix-c:/test:all"},
+		{name: "top-level alternation first", prefix: "prefix-a:|prefix-b:", capability: "prefix-a:/test:all", rest: "/test:all", ok: true},
+		{name: "top-level alternation second", prefix: "prefix-a:|prefix-b:", capability: "prefix-b:/test:all", rest: "/test:all", ok: true},
 		// every alternative is anchored, not just the first
-		{name: "top-level alternation stays anchored", prefix: "x1:|x2:", capability: "junk:x2:/test:all"},
+		{name: "top-level alternation stays anchored", prefix: "prefix-a:|prefix-b:", capability: "junk:prefix-b:/test:all"},
 		{name: "empty alternative matches everything", prefix: "foo-bar|", capability: "/test:all", rest: "/test:all", ok: true},
 	}
 

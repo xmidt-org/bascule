@@ -17,7 +17,7 @@ import (
 	"github.com/xmidt-org/bascule"
 )
 
-const testCIDRPrefix = "x1:webpa:cidr:"
+const testCIDRPrefix = "webpa-prefix-cidr:"
 
 // capsToken is a token that carries capabilities.
 type capsToken []string
@@ -65,8 +65,8 @@ func TestNewCIDRApproverErrors(t *testing.T) {
 		{name: "no prefixes"},
 		{name: "empty literal prefixes", opts: []CIDRApproverOption{WithCIDRPrefixLiterals()}},
 		{name: "empty regex prefixes", opts: []CIDRApproverOption{WithCIDRPrefixRegexes()}},
-		{name: "bad prefix regex", opts: []CIDRApproverOption{WithCIDRPrefixRegexes("x1:(")}},
-		{name: "bad deprecated prefix regex", opts: []CIDRApproverOption{WithCIDRPrefixes("x1:(")}},
+		{name: "bad prefix regex", opts: []CIDRApproverOption{WithCIDRPrefixRegexes("prefix:(")}},
+		{name: "bad deprecated prefix regex", opts: []CIDRApproverOption{WithCIDRPrefixes("prefix:(")}},
 		{
 			name: "nil resolver",
 			opts: []CIDRApproverOption{WithCIDRPrefixLiterals(testCIDRPrefix), WithOriginResolver(nil)},
@@ -89,7 +89,7 @@ func TestNewCIDRApproverErrors(t *testing.T) {
 // TestCIDRApproverModes runs every row of the decision table in all four modes.
 func TestCIDRApproverModes(t *testing.T) {
 	const (
-		malformed33  = `malformed; kind=cidr; cap="x1:webpa:cidr:10.0.0.0/33"`
+		malformed33  = `malformed; kind=cidr; cap="webpa-prefix-cidr:10.0.0.0/33"`
 		noCapability = "would-reject; kind=cidr; reason=no-cidr-capability"
 		unknown      = "would-reject; kind=cidr; reason=unknown-origin"
 		notAllowed   = `would-reject; kind=cidr; reason=origin-not-allowed; origin=192.0.2.60`
@@ -121,7 +121,7 @@ func TestCIDRApproverModes(t *testing.T) {
 		{
 			name:          "only other prefixes",
 			remoteAddr:    "192.0.2.60:1234",
-			caps:          []string{"x1:webpa:api:.*:all", "x1:other:cidr:192.0.2.0/24"},
+			caps:          []string{"webpa-prefix-api:.*:all", "prefix:other:cidr:192.0.2.0/24"},
 			requiredErr:   ErrNoCIDRCapability,
 			rejectWarning: noCapability,
 		},
@@ -328,25 +328,25 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 		},
 		{
 			name:       "literal dot is not a wildcard",
-			prefixes:   []string{`x1.webpa:cidr:`},
+			prefixes:   []string{`webpa.prefix-cidr:`},
 			remoteAddr: "192.0.2.60:1234",
-			capability: "x1Xwebpa:cidr:198.51.100.0/24",
+			capability: "webpaXprefix-cidr:198.51.100.0/24",
 			allowed:    true, // not selected, so Unrestricted
 		},
 		{
 			name:       "regex prefix with subexpressions",
-			prefixes:   []string{`x1:(webpa|xmidt):(cidr|net):`},
+			prefixes:   []string{`(webpa|xmidt)-prefix-(cidr|net):`},
 			regex:      true,
 			remoteAddr: "192.0.2.60:1234",
-			capability: "x1:xmidt:net:192.0.2.0/24",
+			capability: "xmidt-prefix-net:192.0.2.0/24",
 			allowed:    true,
 		},
 		{
 			name:       "regex top-level alternation stays anchored",
-			prefixes:   []string{`x1:a:|x1:b:`},
+			prefixes:   []string{`prefix-a:|prefix-b:`},
 			regex:      true,
 			remoteAddr: "192.0.2.60:1234",
-			capability: "junk:x1:b:192.0.2.0/24",
+			capability: "junk:prefix-b:192.0.2.0/24",
 			allowed:    true, // not selected, so Unrestricted
 		},
 		{

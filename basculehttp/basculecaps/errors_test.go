@@ -40,19 +40,19 @@ func (suite *ErrorsTestSuite) TestDenials() {
 		}, {
 			// a capability for another service is still a capability
 			name:         "OnlyAnotherServicesCapabilities",
-			capabilities: []string{"x1:xmidt:api:/test:all"},
+			capabilities: []string{"xmidt-prefix-api:/test:all"},
 			method:       "GET",
 			target:       "/test",
 			expected:     ErrNoMatchingCapability,
 		}, {
 			name:         "WrongURL",
-			capabilities: []string{"x1:webpa:api:/other:all"},
+			capabilities: []string{"webpa-prefix-api:/other:all"},
 			method:       "GET",
 			target:       "/test",
 			expected:     ErrNoMatchingCapability,
 		}, {
 			name:         "WrongMethod",
-			capabilities: []string{"x1:webpa:api:/test:put"},
+			capabilities: []string{"webpa-prefix-api:/test:put"},
 			method:       "GET",
 			target:       "/test",
 			expected:     ErrNoMatchingCapability,
@@ -61,7 +61,7 @@ func (suite *ErrorsTestSuite) TestDenials() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase.name, func() {
-			ca, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"))
+			ca, err := NewApprover(WithPrefixLiterals("webpa-prefix-api:"))
 			suite.Require().NoError(err)
 
 			err = ca.Approve(
@@ -90,7 +90,7 @@ func (suite *ErrorsTestSuite) TestDenialsAreDistinct() {
 // additionally ErrNoCapabilities.  A caller counting denials broadly should not
 // have to know about the narrower case.
 func (suite *ErrorsTestSuite) TestNoCapabilitiesIsAlsoNoMatch() {
-	ca, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"))
+	ca, err := NewApprover(WithPrefixLiterals("webpa-prefix-api:"))
 	suite.Require().NoError(err)
 
 	err = ca.Approve(
@@ -106,13 +106,13 @@ func (suite *ErrorsTestSuite) TestNoCapabilitiesIsAlsoNoMatch() {
 }
 
 func (suite *ErrorsTestSuite) TestApproved() {
-	ca, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"))
+	ca, err := NewApprover(WithPrefixLiterals("webpa-prefix-api:"))
 	suite.Require().NoError(err)
 
 	suite.NoError(ca.Approve(
 		context.Background(),
 		suite.newRequest("GET", "/test"),
-		&testToken{principal: "test", capabilities: []string{"x1:webpa:api:/test:all"}},
+		&testToken{principal: "test", capabilities: []string{"webpa-prefix-api:/test:all"}},
 	))
 }
 
