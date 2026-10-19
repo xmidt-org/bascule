@@ -3,7 +3,7 @@
 Authentication and authorization for Go services, with first-class HTTP support.
 
 [![Build Status](https://github.com/xmidt-org/bascule/actions/workflows/ci.yml/badge.svg)](https://github.com/xmidt-org/bascule/actions/workflows/ci.yml)
-[![codecov.io](http://codecov.io/github/xmidt-org/bascule/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/bascule?branch=main)
+[![codecov](https://codecov.io/gh/xmidt-org/bascule/branch/main/graph/badge.svg)](https://app.codecov.io/gh/xmidt-org/bascule/tree/main)
 [![Apache V2 License](http://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/xmidt-org/bascule/blob/main/LICENSE)
 [![GitHub Release](https://img.shields.io/github/release/xmidt-org/bascule.svg)](https://github.com/xmidt-org/bascule/releases)
 [![GoDoc](https://pkg.go.dev/badge/github.com/xmidt-org/bascule)](https://pkg.go.dev/github.com/xmidt-org/bascule)
