@@ -191,11 +191,13 @@ func (suite *ErrorsTestSuite) TestUnderlyingErrorRemains() {
 // TestNotFromParse verifies a failure that did not come from jwt.Parse is
 // returned unchanged, rather than being described as a malformed token.
 func (suite *ErrorsTestSuite) TestNotFromParse() {
-	original := context.Canceled
+	original := errors.New("the key provider is unavailable")
 
 	got := translate(original)
 	suite.Require().Error(got)
 	suite.Same(original, got)
+	suite.Require().NotErrorIs(got, bascule.ErrBadCredentials)
+	suite.Require().NotErrorIs(got, bascule.ErrInvalidCredentials)
 
 	suite.NoError(translate(nil))
 }
