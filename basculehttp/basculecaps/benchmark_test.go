@@ -88,7 +88,7 @@ func BenchmarkCacheMiss(b *testing.B) {
 // BenchmarkApprove measures an entire authorization, so that the cache can be
 // kept in proportion to what surrounds it.
 func BenchmarkApprove(b *testing.B) {
-	a, err := NewApprover(WithPrefixes("x1:webpa:api:"))
+	a, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"))
 	if err != nil {
 		b.Fatal(err)
 	}

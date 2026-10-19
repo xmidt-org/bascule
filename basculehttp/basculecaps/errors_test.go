@@ -60,7 +60,7 @@ func (suite *ErrorsTestSuite) TestDenials() {
 
 	for _, testCase := range testCases {
 		suite.Run(testCase.name, func() {
-			ca, err := NewApprover(WithPrefixes("x1:webpa:api:"))
+			ca, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"))
 			suite.Require().NoError(err)
 
 			err = ca.Approve(
@@ -89,7 +89,7 @@ func (suite *ErrorsTestSuite) TestDenialsAreDistinct() {
 // additionally ErrNoCapabilities.  A caller counting denials broadly should not
 // have to know about the narrower case.
 func (suite *ErrorsTestSuite) TestNoCapabilitiesIsAlsoNoMatch() {
-	ca, err := NewApprover(WithPrefixes("x1:webpa:api:"))
+	ca, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"))
 	suite.Require().NoError(err)
 
 	err = ca.Approve(
@@ -105,7 +105,7 @@ func (suite *ErrorsTestSuite) TestNoCapabilitiesIsAlsoNoMatch() {
 }
 
 func (suite *ErrorsTestSuite) TestApproved() {
-	ca, err := NewApprover(WithPrefixes("x1:webpa:api:"))
+	ca, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"))
 	suite.Require().NoError(err)
 
 	suite.NoError(ca.Approve(

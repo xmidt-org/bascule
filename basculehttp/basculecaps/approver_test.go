@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/xmidt-org/bascule"
 )
@@ -68,7 +69,7 @@ func stripAPIVersion(u url.URL) url.URL {
 	return u
 }
 
-func (suite *ApproverTestSuite) TestInvalidPrefix() {
+func (suite *ApproverTestSuite) TestInvalidPrefixRegex() {
 	invalidPrefixes := []string{
 		"(?!foo)", // RE2 has no negative lookahead
 		"(a",      // unbalanced
@@ -77,12 +78,11 @@ func (suite *ApproverTestSuite) TestInvalidPrefix() {
 
 	for i, invalid := range invalidPrefixes {
 		suite.Run(strconv.Itoa(i), func() {
-			ca, err := NewApprover(
-				WithPrefixes(invalid),
-			)
-
-			suite.Error(err)
-			suite.Nil(ca)
+			for _, option := range []func(...string) ApproverOption{WithPrefixRegexes, WithPrefixes} {
+				ca, err := NewApprover(option(invalid))
+				suite.Error(err)
+				suite.Nil(ca)
+			}
 		})
 	}
 }
@@ -112,21 +112,21 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			capabilities: []string{"x1:webpa:api:.*:all"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithPrefixLiterals("x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:device/.*/config:all"},
 			request:      suite.newRequest("GET", "/device/DEADBEEF/config"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:/test/.*:put"},
 			request:      suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
 			},
 		},
 		{
@@ -138,14 +138,14 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			},
 			request: suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:/test/.*:custom"},
 			request:      suite.newRequest("PATCH", "/test/foo"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
 				WithAllMethod("custom"),
 			},
 		},
@@ -157,7 +157,7 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			},
 			request: suite.newRequest("PUT", "/api/v1/test/foo"),
 			options: []ApproverOption{
-				WithPrefixes("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
 				WithURLNormalizeFunc(stripAPIVersion),
 			},
 		},
@@ -192,21 +192,21 @@ func (suite *ApproverTestSuite) testApproveUnauthorized() {
 			capabilities: []string{"x1:webpa:api:.*:put"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithPrefixLiterals("x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:/doesnotmatch:get"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithPrefixLiterals("x1:webpa:api:"),
 			},
 		},
 		{
 			capabilities: []string{"x1:webpa:api:(?!foo):put"}, // bad expression
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixes("x1:webpa:api:"),
+				WithPrefixLiterals("x1:webpa:api:"),
 			},
 		},
 	}
@@ -451,7 +451,7 @@ func (suite *ApproverTestSuite) testApproveCapabilityURL() {
 
 	for _, testCase := range testCases {
 		suite.Run(fmt.Sprintf("'%s' + '%s' -> %t", testCase.capability, testCase.target, testCase.approved), func() {
-			err := suite.newApprover(WithPrefixes(prefix)).Approve(
+			err := suite.newApprover(WithPrefixLiterals(prefix)).Approve(
 				context.Background(),
 				suite.newRequest("GET", testCase.target),
 				suite.newToken(testCase.capability),
@@ -467,62 +467,147 @@ func (suite *ApproverTestSuite) testApproveCapabilityURL() {
 }
 
 // testApproveConfiguredPrefix documents how the configured prefix selects which
-// of a token's capabilities are honored.
+// of a token's capabilities are honored, and how the literal and regex options
+// read the same prefix differently.
 func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 	testCases := []struct {
+		option     func(...string) ApproverOption
 		prefix     string
 		capability string
 		target     string
 		approved   bool
 	}{
+		// literal prefixes
 		{
-			// a plain literal prefix
+			option:     WithPrefixLiterals,
+			prefix:     "x1:webpa:api:",
+			capability: "x1:webpa:api:/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			// a literal prefix may be empty
+			option:     WithPrefixLiterals,
+			prefix:     "",
+			capability: "/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			// a selected capability still needs a url pattern and a method
+			option:     WithPrefixLiterals,
+			prefix:     "x1:webpa:api:",
+			capability: "x1:webpa:api:/test",
+			target:     "/test",
+			approved:   false,
+		}, {
+			// a literal prefix must appear in full
+			option:     WithPrefixLiterals,
+			prefix:     "x1:webpa:api:",
+			capability: "x1:xmidt:api:/test:all",
+			target:     "/test",
+			approved:   false,
+		}, {
+			// regex metacharacters are taken as written
+			option:     WithPrefixLiterals,
+			prefix:     "foo-bar|",
+			capability: "foo-bar|/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			// ... so a trailing '|' is not an empty alternative that matches everything
+			option:     WithPrefixLiterals,
+			prefix:     "foo-bar|",
+			capability: "/test:all",
+			target:     "/test",
+			approved:   false,
+		}, {
+			// ... a '.' is not a wildcard
+			option:     WithPrefixLiterals,
+			prefix:     "x1.webpa:",
+			capability: "x1Xwebpa:/test:all",
+			target:     "/test",
+			approved:   false,
+		}, {
+			// ... and what would not compile as a regex is a fine literal
+			option:     WithPrefixLiterals,
+			prefix:     "(a",
+			capability: "(a/test:all",
+			target:     "/test",
+			approved:   true,
+		},
+
+		// regex prefixes
+		{
+			option:     WithPrefixRegexes,
 			prefix:     "x1:webpa:api:",
 			capability: "x1:webpa:api:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
 			// every alternative of a prefix is anchored, not just the first
+			option:     WithPrefixRegexes,
 			prefix:     "x1:webpa:|x2:webpa:",
 			capability: "x1:webpa:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
+			option:     WithPrefixRegexes,
 			prefix:     "x1:webpa:|x2:webpa:",
 			capability: "x2:webpa:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
+			option:     WithPrefixRegexes,
 			prefix:     "x1:webpa:|x2:webpa:",
 			capability: "x3:webpa:/test:all",
 			target:     "/test",
 			approved:   false,
 		}, {
 			// a prefix may contain subexpressions of its own
+			option:     WithPrefixRegexes,
 			prefix:     "x(1|2):webpa:",
 			capability: "x1:webpa:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
+			option:     WithPrefixRegexes,
 			prefix:     "x(1|2):webpa:",
 			capability: "x2:webpa:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
+			option:     WithPrefixRegexes,
 			prefix:     "x(1|2):webpa:",
 			capability: "x3:webpa:/test:all",
 			target:     "/test",
 			approved:   false,
 		}, {
-			// nested and repeated subexpressions shift the url and method too
+			// nested and repeated subexpressions do not disturb the url and method
+			option:     WithPrefixRegexes,
 			prefix:     "(a)(b)((c)):",
 			capability: "abc:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
-			// a prefix may be empty
+			// a regex prefix may be empty
+			option:     WithPrefixRegexes,
 			prefix:     "",
 			capability: "/test:all",
+			target:     "/test",
+			approved:   true,
+		}, {
+			// a trailing '|' is an empty alternative, which selects everything
+			option:     WithPrefixRegexes,
+			prefix:     "foo-bar|",
+			capability: "/test:all",
+			target:     "/test",
+			approved:   true,
+		},
+
+		// the deprecated option reads its prefixes as regexes
+		{
+			option:     WithPrefixes,
+			prefix:     "x(1|2):webpa:",
+			capability: "x2:webpa:/test:all",
 			target:     "/test",
 			approved:   true,
 		},
@@ -530,11 +615,8 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 
 	for _, testCase := range testCases {
 		suite.Run(fmt.Sprintf("'%s' + '%s' -> %t", testCase.prefix, testCase.capability, testCase.approved), func() {
-			ca, err := NewApprover(WithPrefixes(testCase.prefix))
-			if err != nil {
-				suite.False(testCase.approved, "prefix was rejected: %s", err)
-				return
-			}
+			ca, err := NewApprover(testCase.option(testCase.prefix))
+			suite.Require().NoError(err)
 
 			err = ca.Approve(
 				context.Background(),
@@ -559,7 +641,7 @@ func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
 	suite.Run("Normalized", func() {
 		request := suite.newRequest("PUT", "/api/v2/test/foo")
 		ca := suite.newApprover(
-			WithPrefixes("x1:webpa:api:"),
+			WithPrefixLiterals("x1:webpa:api:"),
 			WithURLNormalizeFunc(stripAPIVersion),
 		)
 
@@ -570,7 +652,7 @@ func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
 	})
 
 	suite.Run("WithoutTheOption", func() {
-		ca := suite.newApprover(WithPrefixes("x1:webpa:api:"))
+		ca := suite.newApprover(WithPrefixLiterals("x1:webpa:api:"))
 
 		suite.ErrorIs(
 			ca.Approve(context.Background(),
@@ -581,7 +663,7 @@ func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
 	})
 
 	suite.Run("Nil", func() {
-		_, err := NewApprover(WithPrefixes("x1:webpa:api:"), WithURLNormalizeFunc(nil))
+		_, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"), WithURLNormalizeFunc(nil))
 		suite.Error(err)
 	})
 }
@@ -597,4 +679,34 @@ func (suite *ApproverTestSuite) TestApprove() {
 
 func TestApprover(t *testing.T) {
 	suite.Run(t, new(ApproverTestSuite))
+}
+
+func TestSplitCapability(t *testing.T) {
+	tests := []struct {
+		rest   string
+		url    string
+		method string
+		ok     bool
+	}{
+		{rest: "/test:all", url: "/test", method: "all", ok: true},
+		{rest: "/test:get", url: "/test", method: "get", ok: true},
+		// the url pattern may contain colons; the split is at the last one
+		{rest: "/a:b/c:get", url: "/a:b/c", method: "get", ok: true},
+		// a trailing colon belongs to the method, which is never empty
+		{rest: "/test:get:", url: "/test", method: "get:", ok: true},
+		{rest: ""},
+		{rest: ":"},
+		{rest: "/test"},
+		{rest: "/test:"},
+		{rest: ":get"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.rest, func(t *testing.T) {
+			url, method, ok := splitCapability(tc.rest)
+			assert.Equal(t, tc.ok, ok)
+			assert.Equal(t, tc.url, url)
+			assert.Equal(t, tc.method, method)
+		})
+	}
 }

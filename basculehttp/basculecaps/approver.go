@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/xmidt-org/bascule"
+	"github.com/xmidt-org/bascule/internal/prefix"
 )
 
 const (
@@ -29,28 +29,57 @@ type approverOptionFunc func(*Approver) error
 
 func (aof approverOptionFunc) apply(a *Approver) error { return aof(a) }
 
-// WithPrefixes adds several prefixes used to match capabilities, e.g. x1:webpa:foo:.
-// If no prefixes are set via this option, the approver rejects all tokens.
+// WithPrefixLiterals adds prefixes used to select capabilities, e.g.
+// x1:webpa:foo:.  Each prefix is compared as written: every character,
+// including ones that are regular expression metacharacters, must appear in
+// the capability.  A prefix may be the empty string, which selects every
+// capability.  Multiple calls are cumulative.
 //
-// Note that a prefix can itself be a regular expression, and may contain
-// subexpressions.
-func WithPrefixes(prefixes ...string) ApproverOption {
+// If no prefixes are set, the approver rejects all tokens.
+func WithPrefixLiterals(prefixes ...string) ApproverOption {
 	return approverOptionFunc(func(a *Approver) error {
 		for _, p := range prefixes {
-			// Group the prefix so that a top-level alternation cannot escape
-			// the anchor or the subexpressions that follow it.  The prefix may
-			// contain subexpressions of its own; since they are all opened
-			// before the two below, the url and method are always the last two.
-			re, err := regexp.Compile("^(?:" + p + ")(.+):(.+?)$")
-			if err != nil {
-				return fmt.Errorf("Unable to compile capability prefix [%s]: %s", p, err)
-			}
-
-			a.matchers = append(a.matchers, re)
+			a.matchers = append(a.matchers, prefix.Literal(p))
 		}
 
 		return nil
 	})
+}
+
+// WithPrefixRegexes adds prefixes used to select capabilities, each a regular
+// expression anchored at the start of the capability.  An expression may
+// contain subexpressions and top-level alternation.  Multiple calls are
+// cumulative.
+//
+// Prefer WithPrefixLiterals unless an open-ended family of prefixes must be
+// selected.  A literal prefix that happens to contain a metacharacter, such as
+// foo-bar|, means something quite different as a regular expression.
+//
+// If no prefixes are set, the approver rejects all tokens.
+func WithPrefixRegexes(prefixes ...string) ApproverOption {
+	return approverOptionFunc(func(a *Approver) error {
+		for _, p := range prefixes {
+			m, err := prefix.Regex(p)
+			if err != nil {
+				return err
+			}
+
+			a.matchers = append(a.matchers, m)
+		}
+
+		return nil
+	})
+}
+
+// WithPrefixes adds several prefixes used to match capabilities, e.g. x1:webpa:foo:.
+// If no prefixes are set via this option, the approver rejects all tokens.
+//
+// Each prefix is a regular expression, exactly as with WithPrefixRegexes.
+//
+// Deprecated: use WithPrefixLiterals for prefixes that should be matched as
+// written, or WithPrefixRegexes for prefixes that are regular expressions.
+func WithPrefixes(prefixes ...string) ApproverOption {
+	return WithPrefixRegexes(prefixes...)
 }
 
 // WithCacheSize sets how many compiled capability url patterns an Approver
@@ -119,11 +148,10 @@ func urlIdentityFunc(u url.URL) url.URL {
 //
 // This approver expects capabilities in tokens to be of the form <prefix><endpoint regex>:<method>.
 //
-// The allowed prefixes must be set via one or more WithPrefixes options.  Prefixes
-// may themselves contain colon delimiters, and can be regular expressions that
-// contain subexpressions.
+// The allowed prefixes must be set via one or more WithPrefixLiterals or
+// WithPrefixRegexes options.  Prefixes may themselves contain colon delimiters.
 type Approver struct {
-	matchers  []*regexp.Regexp
+	matchers  []prefix.Matcher
 	allMethod string
 	cacheSize int
 
@@ -140,8 +168,8 @@ type Approver struct {
 // NewApprover creates a Approver using the supplied options. At least (1) of the configured
 // prefixes must match an HTTP request's URL in ordered for a token to be authorized.
 //
-// If no prefixes are added via WithPrefixes, then the returned approver
-// will not authorize any requests.
+// If no prefixes are added via WithPrefixLiterals or WithPrefixRegexes, then
+// the returned approver will not authorize any requests.
 func NewApprover(opts ...ApproverOption) (*Approver, error) {
 	a := Approver{
 		cacheSize:    DefaultCacheSize,
@@ -185,18 +213,19 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 
 	for _, matcher := range a.matchers {
 		for _, capability := range capabilities {
-			substrings := matcher.FindStringSubmatch(capability)
-			if len(substrings) < 3 {
-				// no match
+			rest, ok := matcher.Match(capability)
+			if !ok {
 				continue
 			}
 
-			// the format of capabilities is <prefix><url pattern>:<method>
-			// <url pattern> and <method> are the last two subexpressions, after
-			// any the prefix itself contributed
-			err := a.approveURL(resource, substrings[len(substrings)-2])
+			capabilityURL, capabilityMethod, ok := splitCapability(rest)
+			if !ok {
+				continue
+			}
+
+			err := a.approveURL(resource, capabilityURL)
 			if err == nil {
-				err = a.approveMethod(resource, substrings[len(substrings)-1])
+				err = a.approveMethod(resource, capabilityMethod)
 			}
 
 			if err == nil {
@@ -207,6 +236,24 @@ func (a *Approver) Approve(_ context.Context, resource *http.Request, token basc
 	}
 
 	return errors.Join(bascule.ErrUnauthorized, ErrNoMatchingCapability)
+}
+
+// splitCapability divides what follows a prefix, <url pattern>:<method>, at
+// its last colon.  Both parts must be nonempty.  A url pattern may itself
+// contain colons; the method, being last, may not except as a trailing
+// character.
+func splitCapability(rest string) (capabilityURL, capabilityMethod string, ok bool) {
+	if len(rest) == 0 {
+		return "", "", false
+	}
+
+	// Exclude the final character so that the method is never empty.
+	i := strings.LastIndex(rest[:len(rest)-1], ":")
+	if i < 1 {
+		return "", "", false
+	}
+
+	return rest[:i], rest[i+1:], true
 }
 
 func (a *Approver) approveMethod(resource *http.Request, capabilityMethod string) error {

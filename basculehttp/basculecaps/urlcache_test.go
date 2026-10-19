@@ -133,14 +133,14 @@ func TestURLCache(t *testing.T) {
 func TestApproverURLCacheSize(t *testing.T) {
 	t.Run("invalid", func(t *testing.T) {
 		for _, size := range []int{0, -1} {
-			if _, err := NewApprover(WithPrefixes("x1:webpa:"), WithCacheSize(size)); err == nil {
+			if _, err := NewApprover(WithPrefixLiterals("x1:webpa:"), WithCacheSize(size)); err == nil {
 				t.Errorf("expected an error for size %d", size)
 			}
 		}
 	})
 
 	t.Run("bounded", func(t *testing.T) {
-		a, err := NewApprover(WithPrefixes("x1:webpa:"), WithCacheSize(2))
+		a, err := NewApprover(WithPrefixLiterals("x1:webpa:"), WithCacheSize(2))
 		if err != nil {
 			t.Fatal(err)
 		}

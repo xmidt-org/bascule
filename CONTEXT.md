@@ -20,7 +20,7 @@ One flat string carried by a **Token** that grants or limits access. A Token's c
 _Avoid_: permission, scope, claim
 
 **Capability Prefix**:
-A configured string or regular expression that selects which of a **Token**'s **Capabilities** an **Approver** honors. Nothing is built in; capabilities matching no prefix are ignored silently.
+A configured string that selects which of a **Token**'s **Capabilities** an **Approver** honors. A prefix is matched literally, every character as written; a regular expression is a separate, opt-in choice. Nothing is built in; capabilities matching no prefix are ignored silently.
 _Avoid_: namespace
 
 **Approver**:

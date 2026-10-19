@@ -61,15 +61,17 @@ func TestNewCIDRApproverErrors(t *testing.T) {
 		opts []CIDRApproverOption
 	}{
 		{name: "no prefixes"},
-		{name: "empty prefixes", opts: []CIDRApproverOption{WithCIDRPrefixes()}},
-		{name: "bad prefix regex", opts: []CIDRApproverOption{WithCIDRPrefixes("x1:(")}},
+		{name: "empty literal prefixes", opts: []CIDRApproverOption{WithCIDRPrefixLiterals()}},
+		{name: "empty regex prefixes", opts: []CIDRApproverOption{WithCIDRPrefixRegexes()}},
+		{name: "bad prefix regex", opts: []CIDRApproverOption{WithCIDRPrefixRegexes("x1:(")}},
+		{name: "bad deprecated prefix regex", opts: []CIDRApproverOption{WithCIDRPrefixes("x1:(")}},
 		{
 			name: "nil resolver",
-			opts: []CIDRApproverOption{WithCIDRPrefixes(testCIDRPrefix), WithOriginResolver(nil)},
+			opts: []CIDRApproverOption{WithCIDRPrefixLiterals(testCIDRPrefix), WithOriginResolver(nil)},
 		},
 		{
 			name: "zero cache size",
-			opts: []CIDRApproverOption{WithCIDRPrefixes(testCIDRPrefix), WithCIDRCacheSize(0)},
+			opts: []CIDRApproverOption{WithCIDRPrefixLiterals(testCIDRPrefix), WithCIDRCacheSize(0)},
 		},
 	}
 
@@ -173,7 +175,7 @@ func TestCIDRApproverModes(t *testing.T) {
 
 	for _, mode := range modes {
 		a := newCIDRApprover(t,
-			WithCIDRPrefixes(testCIDRPrefix),
+			WithCIDRPrefixLiterals(testCIDRPrefix),
 			WithOriginResolver(resolver),
 			mode.option,
 		)
@@ -206,7 +208,7 @@ func TestCIDRApproverModes(t *testing.T) {
 }
 
 func TestCIDRApproverDefaultMode(t *testing.T) {
-	a := newCIDRApprover(t, WithCIDRPrefixes(testCIDRPrefix))
+	a := newCIDRApprover(t, WithCIDRPrefixLiterals(testCIDRPrefix))
 
 	// Correct If Present: a token without a CIDR capability is Unrestricted ...
 	err, warnings := approveCIDR(t, a, "192.0.2.60:1234")
@@ -220,7 +222,7 @@ func TestCIDRApproverDefaultMode(t *testing.T) {
 
 func TestCIDRApproverLastModeWins(t *testing.T) {
 	a := newCIDRApprover(t,
-		WithCIDRPrefixes(testCIDRPrefix),
+		WithCIDRPrefixLiterals(testCIDRPrefix),
 		WithCIDRPermissiveRequired(),
 		WithCIDRRequired(),
 	)
@@ -230,7 +232,7 @@ func TestCIDRApproverLastModeWins(t *testing.T) {
 	assert.Empty(t, warnings)
 
 	a = newCIDRApprover(t,
-		WithCIDRPrefixes(testCIDRPrefix),
+		WithCIDRPrefixLiterals(testCIDRPrefix),
 		WithCIDRRequired(),
 		WithCIDRPermissiveCorrectIfPresent(),
 	)
@@ -244,6 +246,7 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 	tests := []struct {
 		name       string
 		prefixes   []string
+		regex      bool
 		remoteAddr string
 		capability string
 		allowed    bool
@@ -308,18 +311,49 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 			allowed:    true,
 		},
 		{
+			name:       "literal prefix with metacharacters",
+			prefixes:   []string{`foo-bar|`},
+			remoteAddr: "192.0.2.60:1234",
+			capability: "foo-bar|198.51.100.0/24",
+			allowed:    false,
+		},
+		{
+			name:       "literal trailing bar is not an empty alternative",
+			prefixes:   []string{`foo-bar|`},
+			remoteAddr: "192.0.2.60:1234",
+			capability: "198.51.100.0/24",
+			allowed:    true, // not selected, so Unrestricted
+		},
+		{
+			name:       "literal dot is not a wildcard",
+			prefixes:   []string{`x1.webpa:cidr:`},
+			remoteAddr: "192.0.2.60:1234",
+			capability: "x1Xwebpa:cidr:198.51.100.0/24",
+			allowed:    true, // not selected, so Unrestricted
+		},
+		{
 			name:       "regex prefix with subexpressions",
 			prefixes:   []string{`x1:(webpa|xmidt):(cidr|net):`},
+			regex:      true,
 			remoteAddr: "192.0.2.60:1234",
 			capability: "x1:xmidt:net:192.0.2.0/24",
 			allowed:    true,
 		},
 		{
-			name:       "top-level alternation stays anchored",
+			name:       "regex top-level alternation stays anchored",
 			prefixes:   []string{`x1:a:|x1:b:`},
+			regex:      true,
 			remoteAddr: "192.0.2.60:1234",
 			capability: "junk:x1:b:192.0.2.0/24",
 			allowed:    true, // not selected, so Unrestricted
+		},
+		{
+			name:       "regex trailing bar is an empty alternative",
+			prefixes:   []string{`foo-bar|`},
+			regex:      true,
+			remoteAddr: "192.0.2.60:1234",
+			capability: "198.51.100.0/24",
+			allowed:    false,
 		},
 	}
 
@@ -330,7 +364,12 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 				prefixes = []string{testCIDRPrefix}
 			}
 
-			a := newCIDRApprover(t, WithCIDRPrefixes(prefixes...))
+			option := WithCIDRPrefixLiterals
+			if tc.regex {
+				option = WithCIDRPrefixRegexes
+			}
+
+			a := newCIDRApprover(t, option(prefixes...))
 			err, warnings := approveCIDR(t, a, tc.remoteAddr, tc.capability)
 			if tc.allowed {
 				assert.NoError(t, err)
@@ -351,7 +390,7 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 
 func TestCIDRApproverNoWarningCollector(t *testing.T) {
 	a := newCIDRApprover(t,
-		WithCIDRPrefixes(testCIDRPrefix),
+		WithCIDRPrefixLiterals(testCIDRPrefix),
 		WithCIDRPermissiveRequired(),
 	)
 
@@ -363,7 +402,7 @@ func TestCIDRApproverNoWarningCollector(t *testing.T) {
 
 func TestCIDRApproverCache(t *testing.T) {
 	a := newCIDRApprover(t,
-		WithCIDRPrefixes(testCIDRPrefix),
+		WithCIDRPrefixLiterals(testCIDRPrefix),
 		WithCIDRCacheSize(2),
 	)
 

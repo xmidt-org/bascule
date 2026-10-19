@@ -86,9 +86,10 @@ Use `net/netip` throughout.
 `{prefix}<network>/<bits>`, e.g. `prefix:cidr:96.44.169.0/24`,
 `prefix:cidr:2001:db8::/32`.
 
-- The prefix works exactly like `basculecaps.WithPrefixes`: a string or
-  regular expression, which may contain subexpressions. The remainder after
-  the prefix is the network.
+- The prefix works exactly like `basculecaps.WithPrefixLiterals` and
+  `basculecaps.WithPrefixRegexes`: a literal matched as written, or, by
+  opting in, a regular expression that may contain subexpressions. The
+  remainder after the prefix is the network.
 - The remainder must parse with `netip.ParsePrefix`. A bare address (no
   `/bits`) is **malformed**: a single host must be written `/32` or `/128`.
 - IPv4-mapped IPv6 prefixes are normalized like origins.
@@ -138,7 +139,9 @@ Then:
 ```go
 func NewCIDRApprover(opts ...CIDRApproverOption) (*CIDRApprover, error)
 
-func WithCIDRPrefixes(prefixes ...string) CIDRApproverOption // required; none = error from New
+func WithCIDRPrefixLiterals(prefixes ...string) CIDRApproverOption // at least one prefix is required; none = error from New
+func WithCIDRPrefixRegexes(prefixes ...string) CIDRApproverOption  // opt-in regular expressions
+func WithCIDRPrefixes(prefixes ...string) CIDRApproverOption       // deprecated; same as WithCIDRPrefixRegexes
 func WithOriginResolver(*OriginResolver) CIDRApproverOption // default: RemoteAddr only
 func WithCIDRCacheSize(size int) CIDRApproverOption         // default: DefaultCIDRCacheSize
 
@@ -238,6 +241,8 @@ CIDR Approver: every row of the decision table in all four modes, plus:
 - A bare IP → malformed.
 - IPv4 origin against an IPv6 prefix, and the reverse → no match.
 - Capabilities with other prefixes are ignored and produce no warning.
+- A literal prefix containing regex metacharacters, such as `foo-bar|`, is
+  matched as written.
 - A regex prefix with subexpressions still yields the right network.
 
 Warnings: emitted on a `403` and on a `200`; no header written when no

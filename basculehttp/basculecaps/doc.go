@@ -5,9 +5,12 @@
 // context of HTTP-based workflow.  Capabilities handled by this package are
 // expected to be of the format {prefix}{url pattern}:{method}.
 //
-// The prefix decides which of a token's capabilities this package honors.  It
-// can be a string literal or a regular expression, and it may contain
-// subexpressions.  A prefix may also be the empty string.
+// The prefix decides which of a token's capabilities this package honors.  A
+// prefix given to WithPrefixLiterals is matched as written, every character
+// included.  A prefix given to WithPrefixRegexes is a regular expression
+// anchored at the start of the capability, and may contain subexpressions.  A
+// prefix of either kind may be the empty string, which selects every
+// capability.
 //
 // The url pattern is carried by the token and describes the request URLs that
 // the token is authorized to access.  It is a regular expression, though it may

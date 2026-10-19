@@ -6,13 +6,12 @@ package basculehttp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/netip"
-	"regexp"
 
 	"github.com/xmidt-org/bascule"
 	"github.com/xmidt-org/bascule/internal/boundedcache"
+	"github.com/xmidt-org/bascule/internal/prefix"
 )
 
 // The errors CIDRApprover.Approve returns.  Each is joined with
@@ -52,28 +51,58 @@ type cidrApproverOptionFunc func(*CIDRApprover) error
 
 func (caof cidrApproverOptionFunc) apply(a *CIDRApprover) error { return caof(a) }
 
-// WithCIDRPrefixes adds the prefixes that select a token's CIDR capabilities,
-// e.g. x1:webpa:cidr:.  A prefix may be a regular expression, and may contain
-// subexpressions.  The remainder of a capability after its prefix is the
-// network.  Multiple calls are cumulative.
+// WithCIDRPrefixLiterals adds the prefixes that select a token's CIDR
+// capabilities, e.g. x1:webpa:cidr:.  Each prefix is compared as written:
+// every character, including ones that are regular expression metacharacters,
+// must appear in the capability.  The remainder of a capability after its
+// prefix is the network.  Multiple calls are cumulative.
 //
 // At least one prefix is required.  Capabilities matching no prefix are ignored.
-func WithCIDRPrefixes(prefixes ...string) CIDRApproverOption {
+func WithCIDRPrefixLiterals(prefixes ...string) CIDRApproverOption {
 	return cidrApproverOptionFunc(func(a *CIDRApprover) error {
 		for _, p := range prefixes {
-			// Group the prefix so that a top-level alternation cannot escape the
-			// anchor.  Any subexpressions of the prefix are opened before the
-			// network's, so the network is always the last.
-			re, err := regexp.Compile("^(?:" + p + ")(.+)$")
-			if err != nil {
-				return fmt.Errorf("Unable to compile cidr capability prefix [%s]: %s", p, err)
-			}
-
-			a.matchers = append(a.matchers, re)
+			a.matchers = append(a.matchers, prefix.Literal(p))
 		}
 
 		return nil
 	})
+}
+
+// WithCIDRPrefixRegexes adds the prefixes that select a token's CIDR
+// capabilities, each a regular expression anchored at the start of the
+// capability.  An expression may contain subexpressions and top-level
+// alternation.  The remainder of a capability after its prefix is the network.
+// Multiple calls are cumulative.
+//
+// Prefer WithCIDRPrefixLiterals unless an open-ended family of prefixes must
+// be selected.  A literal prefix that happens to contain a metacharacter, such
+// as foo-bar|, means something quite different as a regular expression.
+//
+// At least one prefix is required.  Capabilities matching no prefix are ignored.
+func WithCIDRPrefixRegexes(prefixes ...string) CIDRApproverOption {
+	return cidrApproverOptionFunc(func(a *CIDRApprover) error {
+		for _, p := range prefixes {
+			m, err := prefix.Regex(p)
+			if err != nil {
+				return err
+			}
+
+			a.matchers = append(a.matchers, m)
+		}
+
+		return nil
+	})
+}
+
+// WithCIDRPrefixes adds the prefixes that select a token's CIDR capabilities,
+// e.g. x1:webpa:cidr:.  Each prefix is a regular expression, exactly as with
+// WithCIDRPrefixRegexes.
+//
+// Deprecated: use WithCIDRPrefixLiterals for prefixes that should be matched
+// as written, or WithCIDRPrefixRegexes for prefixes that are regular
+// expressions.
+func WithCIDRPrefixes(prefixes ...string) CIDRApproverOption {
+	return WithCIDRPrefixRegexes(prefixes...)
 }
 
 // WithOriginResolver sets how the Caller Origin of a request is found.  By
@@ -161,7 +190,7 @@ func withCIDRMode(required, permissive bool) CIDRApproverOption {
 // matches nothing.  Every malformed capability raises a warning, whether or not
 // the request is allowed.
 type CIDRApprover struct {
-	matchers   []*regexp.Regexp
+	matchers   []prefix.Matcher
 	resolver   *OriginResolver
 	required   bool
 	permissive bool
@@ -173,7 +202,8 @@ type CIDRApprover struct {
 }
 
 // NewCIDRApprover creates a CIDRApprover from the supplied options.  At least
-// one prefix must be supplied with WithCIDRPrefixes.
+// one prefix must be supplied with WithCIDRPrefixLiterals or
+// WithCIDRPrefixRegexes.
 func NewCIDRApprover(opts ...CIDRApproverOption) (*CIDRApprover, error) {
 	a := CIDRApprover{
 		resolver:  new(OriginResolver),
@@ -289,13 +319,13 @@ func (a *CIDRApprover) parse(capability string) cidrCapability {
 
 	var parsed cidrCapability
 	for _, matcher := range a.matchers {
-		substrings := matcher.FindStringSubmatch(capability)
-		if len(substrings) < 2 {
+		rest, ok := matcher.Match(capability)
+		if !ok || rest == "" {
 			continue
 		}
 
 		parsed.selected = true
-		if network, err := netip.ParsePrefix(substrings[len(substrings)-1]); err == nil {
+		if network, err := netip.ParsePrefix(rest); err == nil {
 			parsed.network = normalizePrefix(network)
 		}
 
