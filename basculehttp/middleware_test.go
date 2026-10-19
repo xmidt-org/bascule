@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -54,7 +55,7 @@ func (suite *MiddlewareTestSuite) TestUseAuthenticatorError() {
 		),
 	)
 
-	suite.ErrorIs(err, bascule.ErrNoTokenParsers)
+	suite.Require().ErrorIs(err, bascule.ErrNoTokenParsers)
 	suite.Nil(m)
 }
 
@@ -71,7 +72,7 @@ func (suite *MiddlewareTestSuite) TestUseAuthorizerError() {
 		UseAuthorizer(nil, expectedErr),
 	)
 
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 	suite.Nil(m)
 }
 
@@ -161,7 +162,7 @@ func (suite *MiddlewareTestSuite) TestCustomErrorRendering() {
 			),
 			WithErrorStatusCoder(
 				func(request *http.Request, err error) int {
-					suite.Equal(request.URL.String(), "/test")
+					suite.Equal("/test", request.URL.String())
 					return 567
 				},
 			),
@@ -200,7 +201,7 @@ func (suite *MiddlewareTestSuite) TestMarshalError() {
 			),
 			WithErrorStatusCoder(
 				func(request *http.Request, err error) int {
-					suite.Equal(request.URL.String(), "/test")
+					suite.Equal("/test", request.URL.String())
 					return 567
 				},
 			),
@@ -292,7 +293,7 @@ func (suite *MiddlewareTestSuite) testBasicAuthChallenge() {
 					bascule.WithAuthenticateListenerFuncs(
 						func(e bascule.AuthenticateEvent[*http.Request]) {
 							suite.assertBasicAuthRequest(e.Source)
-							suite.ErrorIs(bascule.ErrMissingCredentials, e.Err)
+							suite.Require().ErrorIs(bascule.ErrMissingCredentials, e.Err)
 							suite.Nil(e.Token)
 							authenticateEvent = true
 						},
@@ -436,7 +437,7 @@ func (suite *MiddlewareTestSuite) testWarningsAllowed() {
 	)
 
 	suite.Require().Len(*events, 1)
-	suite.NoError((*events)[0].Err)
+	suite.Require().NoError((*events)[0].Err)
 	suite.Len((*events)[0].Warnings, 2)
 }
 
@@ -452,7 +453,7 @@ func (suite *MiddlewareTestSuite) testWarningsRejected() {
 	)
 
 	suite.Require().Len(*events, 1)
-	suite.ErrorIs((*events)[0].Err, bascule.ErrUnauthorized)
+	suite.Require().ErrorIs((*events)[0].Err, bascule.ErrUnauthorized)
 	suite.Len((*events)[0].Warnings, 2)
 }
 

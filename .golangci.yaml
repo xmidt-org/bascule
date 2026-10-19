@@ -1,43 +1,168 @@
 ---
 version: "2"
 
+# bascule is an authentication and authorization library.  The linters below
+# are chosen to catch bugs that matter in that setting: unchecked errors,
+# nil dereferences, mishandled contexts, panics on untrusted input, and tests
+# that pass without asserting anything.  Style-only linters are kept to the
+# few the codebase already follows.
+
 linters:
+  default: none
+  enable:
+    # Correctness: the standard set, which must never be disabled.
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Correctness: errors and nil handling.
+    - errname
+    - errorlint
+    - nilerr
+    - nilnil
+    - wastedassign
+
+    # Correctness: HTTP, contexts and concurrency.
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - fatcontext
+    - noctx
+    - usestdlibvars
+
+    # Correctness: misuse that compiles.
+    - asasalint
+    - bidichk
+    - exhaustive
+    - gocheckcompilerdirectives
+    - gocritic
+    - gosec
+    - makezero
+    - predeclared
+    - reassign
+    - recvcheck
+    - unparam
+
+    # Tests: a test that cannot fail, or fails for the wrong reason, is worse
+    # than no test.
+    - testableexamples
+    - testifylint
+    - thelper
+    - tparallel
+    - usetesting
+
+    # Hygiene: keeps lint suppressions honest and the code idiomatic.
+    - dupl
+    - funlen
+    - goconst
+    - intrange
+    - misspell
+    - nolintlint
+    - perfsprint
+    - prealloc
+    - revive
+    - unconvert
+
   settings:
-    misspell:
-      locale: US
+    errcheck:
+      exclude-functions:
+        # A failed write to a response cannot be reported to the client.
+        - (net/http.ResponseWriter).Write
+
     errorlint:
       # Report non-wrapping error creation using fmt.Errorf
       errorf: false
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    funlen:
+      lines: 80
+      statements: 50
+
     gosec:
-      # Disable G104: Errors unhandled (similar to errcheck which is disabled)
       excludes:
+        # G104 duplicates errcheck.
         - G104
-  enable:
-    - dupl
-    - errorlint
-    - goconst
-    - gosec
-    - misspell
-    - unconvert
-    - prealloc
-  disable:
-    - errcheck
-    - ineffassign
-    # Disable default-enabled linters
-    - govet
-    - staticcheck
-    - unused
+
+    govet:
+      enable:
+        - nilness
+        - reflectvaluecompare
+        - shadow
+        - unusedwrite
+
+    misspell:
+      locale: US
+
+    nolintlint:
+      # Every suppression names its linter and says why.
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    revive:
+      rules:
+        - name: atomic
+        - name: blank-imports
+        - name: confusing-results
+        - name: constant-logical-expr
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: datarace
+        - name: defer
+        - name: dot-imports
+        - name: early-return
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: identical-branches
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: modifies-value-receiver
+        - name: package-comments
+        - name: range
+        - name: range-val-address
+        - name: range-val-in-closure
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: string-of-int
+        - name: superfluous-else
+        - name: time-equal
+        - name: time-naming
+        - name: unconditional-recursion
+        - name: unexported-return
+        - name: unreachable-code
+        - name: useless-break
+        - name: var-declaration
+        - name: var-naming
+        - name: waitgroup-by-value
+
   exclusions:
+    generated: lax
     rules:
-      # Test files often repeat literals for readability.
+      # Tests repeat literals and grow long for readability, and build
+      # requests without a context on purpose.
       - path: _test\.go
         linters:
+          - dupl
+          - funlen
           - goconst
+          - noctx
 
 formatters:
   enable:
     - gofmt
     - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/xmidt-org
 
 issues:
   max-issues-per-linter: 0

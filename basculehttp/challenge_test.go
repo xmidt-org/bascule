@@ -111,7 +111,7 @@ func (suite *ChallengeTestSuite) testChallengeParametersDuplicate() {
 func (suite *ChallengeTestSuite) testChallengeParametersSetRealm() {
 	suite.Run("Invalid", func() {
 		var cp ChallengeParameters
-		suite.Error(cp.SetRealm("embedded whitespace"))
+		suite.Require().Error(cp.SetRealm("embedded whitespace"))
 		suite.Zero(cp.Len())
 
 		var o strings.Builder
@@ -122,7 +122,7 @@ func (suite *ChallengeTestSuite) testChallengeParametersSetRealm() {
 
 	suite.Run("Valid", func() {
 		var cp ChallengeParameters
-		suite.NoError(cp.SetRealm("myrealm"))
+		suite.Require().NoError(cp.SetRealm("myrealm"))
 		suite.Equal(1, cp.Len())
 
 		var o strings.Builder
@@ -135,7 +135,7 @@ func (suite *ChallengeTestSuite) testChallengeParametersSetRealm() {
 func (suite *ChallengeTestSuite) testChallengeParametersSetCharset() {
 	suite.Run("Invalid", func() {
 		var cp ChallengeParameters
-		suite.Error(cp.SetCharset("embedded whitespace"))
+		suite.Require().Error(cp.SetCharset("embedded whitespace"))
 		suite.Zero(cp.Len())
 
 		var o strings.Builder
@@ -146,7 +146,7 @@ func (suite *ChallengeTestSuite) testChallengeParametersSetCharset() {
 
 	suite.Run("Valid", func() {
 		var cp ChallengeParameters
-		suite.NoError(cp.SetCharset("UTF-8"))
+		suite.Require().NoError(cp.SetCharset("UTF-8"))
 		suite.Equal(1, cp.Len())
 
 		var o strings.Builder
@@ -158,7 +158,7 @@ func (suite *ChallengeTestSuite) testChallengeParametersSetCharset() {
 
 func (suite *ChallengeTestSuite) testChallengeParametersOddParameterCount() {
 	cp, err := NewChallengeParameters("1", "2", "3")
-	suite.Error(err)
+	suite.Require().Error(err)
 	suite.Zero(cp.Len())
 }
 
@@ -219,7 +219,7 @@ func (suite *ChallengeTestSuite) testChallengeValid() {
 	for i, testCase := range testCases {
 		suite.Run(strconv.Itoa(i), func() {
 			var o strings.Builder
-			suite.NoError(testCase.challenge.Write(&o))
+			suite.Require().NoError(testCase.challenge.Write(&o))
 			suite.Equal(testCase.expectedFormat, o.String())
 		})
 	}
@@ -292,13 +292,13 @@ func (suite *ChallengeTestSuite) testChallengesValid() {
 		suite.Run(strconv.Itoa(i), func() {
 			suite.Run("DefaultHeader", func() {
 				header := make(http.Header)
-				suite.NoError(testCase.challenges.WriteHeader(header))
+				suite.Require().NoError(testCase.challenges.WriteHeader(header))
 				suite.ElementsMatch(testCase.expected, header.Values(WWWAuthenticateHeader))
 			})
 
 			suite.Run("CustomHeader", func() {
 				header := make(http.Header)
-				suite.NoError(testCase.challenges.WriteHeaderCustom(header, "Custom"))
+				suite.Require().NoError(testCase.challenges.WriteHeaderCustom(header, "Custom"))
 				suite.ElementsMatch(testCase.expected, header.Values("Custom"))
 			})
 		})
@@ -321,7 +321,7 @@ func (suite *ChallengeTestSuite) testChallengesInvalid() {
 	for i, bad := range badChallenges {
 		suite.Run(strconv.Itoa(i), func() {
 			header := make(http.Header)
-			suite.Error(bad.WriteHeader(header))
+			suite.Require().Error(bad.WriteHeader(header))
 			suite.Error(bad.WriteHeaderCustom(header, "Custom"))
 		})
 	}

@@ -5,6 +5,7 @@ package basculehttp
 
 import (
 	"maps"
+	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"testing"
@@ -15,7 +16,7 @@ import (
 
 func TestNewOriginResolverInvalidProxy(t *testing.T) {
 	r, err := NewOriginResolver(WithTrustedProxies(netip.Prefix{}))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, r)
 }
 
@@ -232,7 +233,7 @@ func TestOriginResolverOrigin(t *testing.T) {
 			r, err := NewOriginResolver(WithTrustedProxies(tc.trusted...))
 			require.NoError(t, err)
 
-			request := httptest.NewRequest("GET", "/", nil)
+			request := httptest.NewRequest(http.MethodGet, "/", nil)
 			request.RemoteAddr = tc.remoteAddr
 			maps.Copy(request.Header, tc.headers)
 
@@ -251,7 +252,7 @@ func TestOriginResolverOrigin(t *testing.T) {
 
 func TestOriginResolverZeroValue(t *testing.T) {
 	var r OriginResolver
-	request := httptest.NewRequest("GET", "/", nil)
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.RemoteAddr = "198.51.100.7:1234"
 	request.Header.Set("Forwarded", "for=192.0.2.60")
 

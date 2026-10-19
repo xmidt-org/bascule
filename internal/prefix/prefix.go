@@ -46,7 +46,7 @@ func Regex(p string) (Matcher, error) {
 	// anchor.
 	re, err := regexp.Compile("^(?:" + p + ")")
 	if err != nil {
-		return nil, fmt.Errorf("Unable to compile capability prefix [%s]: %w", p, err)
+		return nil, fmt.Errorf("unable to compile capability prefix [%s]: %w", p, err)
 	}
 
 	return regex{re: re}, nil

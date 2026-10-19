@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -67,7 +68,7 @@ func (suite *AuthorizationTestSuite) TestParseAuthorization() {
 				return
 			}
 
-			suite.NoError(err)
+			suite.Require().NoError(err)
 			suite.NotEmpty(s)
 			suite.NotEmpty(v)
 		})
@@ -85,7 +86,7 @@ func (suite *AuthorizationTestSuite) TestBasicAuthSuccess() {
 		)
 
 		token, err := ap.Parse(context.Background(), request)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.assertBasicToken(token)
 	})
 
@@ -101,7 +102,7 @@ func (suite *AuthorizationTestSuite) TestBasicAuthSuccess() {
 
 		request.Header.Set("Auth-Custom", "Custom "+suite.basicAuth())
 		token, err := ap.Parse(context.Background(), request)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.assertBasicToken(token)
 	})
 }
@@ -116,7 +117,7 @@ func (suite *AuthorizationTestSuite) TestMissingCredentials() {
 	)
 
 	token, err := ap.Parse(context.Background(), request)
-	suite.ErrorIs(err, bascule.ErrMissingCredentials)
+	suite.Require().ErrorIs(err, bascule.ErrMissingCredentials)
 	suite.Nil(token)
 }
 
@@ -131,7 +132,7 @@ func (suite *AuthorizationTestSuite) TestInvalidCredentials() {
 
 	request.Header.Set(DefaultAuthorizationHeader, "\t")
 	token, err := ap.Parse(context.Background(), request)
-	suite.ErrorIs(err, bascule.ErrInvalidCredentials)
+	suite.Require().ErrorIs(err, bascule.ErrInvalidCredentials)
 	suite.Nil(token)
 }
 
@@ -156,7 +157,7 @@ func (suite *AuthorizationTestSuite) TestUnsupportedScheme() {
 func (suite *AuthorizationTestSuite) TestOptionError() {
 	expectedErr := errors.New("expected")
 	ap, err := NewAuthorizationParser(withAuthorizationParserOptionErr(expectedErr))
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 	suite.Nil(ap)
 }
 

@@ -49,27 +49,27 @@ func (suite *RunTestSuite) testBcryptSubcommandInvalidParameters() {
 		args []string
 	}{
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt"},
 		},
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", "--cost", "123", "plaintext"},
 		},
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", "-c", "123", "plaintext"},
 		},
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", "--cost", "1", "plaintext"},
 		},
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", "-c", "1", "plaintext"},
 		},
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", "this plaintext is way to long ... asdfoiuwelrkjhsldkjfp983yu5pkljheflkajsodifuypwieuyrtplkahjsdflkajhsdf"},
 		},
 	}
@@ -79,8 +79,8 @@ func (suite *RunTestSuite) testBcryptSubcommandInvalidParameters() {
 			run(testCase.args, suite.kongOptions...)
 
 			suite.NotEqual(0, suite.exitCode)
-			suite.Greater(suite.stdout.Len(), 0) // the usage on error goes to stdout
-			suite.Greater(suite.stderr.Len(), 0)
+			suite.Positive(suite.stdout.Len()) // the usage on error goes to stdout
+			suite.Positive(suite.stderr.Len())
 		})
 	}
 }
@@ -92,15 +92,15 @@ func (suite *RunTestSuite) testBcryptSubcommandSuccess() {
 		args []string
 	}{
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", plaintext},
 		},
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", "-c", "5", plaintext},
 		},
 		{
-			// nolint: goconst
+
 			args: []string{"bcrypt", "--cost", "9", plaintext},
 		},
 	}
@@ -110,7 +110,7 @@ func (suite *RunTestSuite) testBcryptSubcommandSuccess() {
 			run(testCase.args, suite.kongOptions...)
 
 			suite.Zero(suite.exitCode)
-			suite.Greater(suite.stdout.Len(), 0)
+			suite.Positive(suite.stdout.Len())
 			suite.Zero(suite.stderr.Len())
 
 			// what's written to stdout should be parseable as a bcrypt hash

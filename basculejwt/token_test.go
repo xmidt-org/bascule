@@ -14,6 +14,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -141,7 +142,7 @@ func (suite *TokenTestSuite) TestTokenParser() {
 		suite.Require().NotNil(tp)
 
 		token, err := tp.Parse(context.Background(), string(suite.signedJWT))
-		suite.Error(err)
+		suite.Require().Error(err)
 		suite.Nil(token)
 	})
 }

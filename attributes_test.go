@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -66,7 +67,7 @@ func (suite *AttributesTestSuite) TestGetAttribute() {
 			keys: nil,
 		},
 		{
-			// nolint: goconst
+
 			keys: []string{"missing"},
 		},
 		{

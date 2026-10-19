@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -70,7 +71,7 @@ func (suite *ErrorsTestSuite) TestDenials() {
 			)
 
 			suite.Require().Error(err)
-			suite.ErrorIs(err, testCase.expected)
+			suite.Require().ErrorIs(err, testCase.expected)
 			suite.ErrorIs(err, bascule.ErrUnauthorized,
 				"every denial must still satisfy the general case")
 		})
@@ -80,7 +81,7 @@ func (suite *ErrorsTestSuite) TestDenials() {
 // TestDenialsAreDistinct verifies the two errors are not interchangeable, so
 // that a caller asking for one is not silently given the other.
 func (suite *ErrorsTestSuite) TestDenialsAreDistinct() {
-	suite.NotErrorIs(ErrNoCapabilities, ErrNoMatchingCapability)
+	suite.Require().NotErrorIs(ErrNoCapabilities, ErrNoMatchingCapability)
 	suite.NotErrorIs(ErrNoMatchingCapability, ErrNoCapabilities)
 }
 
@@ -99,8 +100,8 @@ func (suite *ErrorsTestSuite) TestNoCapabilitiesIsAlsoNoMatch() {
 	)
 
 	suite.Require().Error(err)
-	suite.ErrorIs(err, ErrNoCapabilities)
-	suite.ErrorIs(err, ErrNoMatchingCapability)
+	suite.Require().ErrorIs(err, ErrNoCapabilities)
+	suite.Require().ErrorIs(err, ErrNoMatchingCapability)
 	suite.ErrorIs(err, bascule.ErrUnauthorized)
 }
 

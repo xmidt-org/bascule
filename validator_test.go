@@ -313,7 +313,7 @@ func (suite *ValidatorsTestSuite) TestValidate() {
 				vs := suite.newValidators(count)
 				actualToken, actualErr := Validate(suite.expectedCtx, suite.expectedSource, suite.inputToken, vs...)
 				suite.Equal(suite.inputToken, actualToken)
-				suite.NoError(actualErr)
+				suite.Require().NoError(actualErr)
 				assertValidators(suite.T(), vs...)
 			})
 		}
@@ -338,7 +338,7 @@ func (suite *ValidatorsTestSuite) TestCompositeValidators() {
 			vs = vs.Append(v)
 			actualToken, actualErr := vs.Validate(suite.expectedCtx, suite.expectedSource, suite.inputToken)
 			suite.Equal(suite.outputToken, actualToken)
-			suite.NoError(actualErr)
+			suite.Require().NoError(actualErr)
 			assertValidators(suite.T(), v)
 		})
 
@@ -355,7 +355,7 @@ func (suite *ValidatorsTestSuite) TestCompositeValidators() {
 			vs = vs.Append(v1, v2)
 			actualToken, actualErr := vs.Validate(suite.expectedCtx, suite.expectedSource, suite.inputToken)
 			suite.Equal(suite.inputToken, actualToken) // the token should be unchanged
-			suite.NoError(actualErr)
+			suite.Require().NoError(actualErr)
 			assertValidators(suite.T(), v1, v2)
 		})
 	})

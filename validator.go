@@ -223,11 +223,11 @@ func AsValidator[S any, F ValidatorFunc[S]](f F) Validator[S] {
 		return asValidatorSimple[S](
 			fVal.Convert(ft).Interface().(func(context.Context, S, Token) error),
 		)
-	} else {
-		// we know this can be converted to this final type
-		ft := reflect.TypeOf((func(context.Context, S, Token) (Token, error))(nil))
-		return asValidatorSimple[S](
-			fVal.Convert(ft).Interface().(func(context.Context, S, Token) (Token, error)),
-		)
 	}
+
+	// we know this can be converted to this final type
+	ft := reflect.TypeOf((func(context.Context, S, Token) (Token, error))(nil))
+	return asValidatorSimple[S](
+		fVal.Convert(ft).Interface().(func(context.Context, S, Token) (Token, error)),
+	)
 }

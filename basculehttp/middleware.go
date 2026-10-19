@@ -15,7 +15,7 @@ import (
 var (
 	// ErrNoAuthenticator is returned by NewMiddleware to indicate that an Authorizer
 	// was configured without an Authenticator.
-	ErrNoAuthenticator = errors.New("An Authenticator is required if an Authorizer is configured")
+	ErrNoAuthenticator = errors.New("an Authenticator is required if an Authorizer is configured")
 )
 
 // MiddlewareOption is a functional option for tailoring a Middleware.
@@ -220,7 +220,7 @@ func (m *Middleware) writeRawError(response http.ResponseWriter, err error) {
 	errBody := []byte(err.Error())
 	response.Header().Set("Content-Length", strconv.Itoa(len(errBody)))
 	response.WriteHeader(http.StatusInternalServerError)
-	response.Write(errBody) //nolint:gosec // G705: False positive - error is from internal package validation, not user input
+	response.Write(errBody)
 }
 
 // writeWorkflowError handles writing an error that came from the bascule workflow to an HTTP request.

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -99,8 +100,8 @@ func (suite *ErrorTestSuite) TestUseStatusCode() {
 		wrapperErr = UseStatusCode(511, err)
 	)
 
-	suite.Error(wrapperErr)
-	suite.ErrorIs(wrapperErr, err)
+	suite.Require().Error(wrapperErr)
+	suite.Require().ErrorIs(wrapperErr, err)
 
 	type statusCoder interface {
 		StatusCode() int

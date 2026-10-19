@@ -94,7 +94,7 @@ func (suite *AuthorizerTestSuite) TestFullSuccess() {
 	})
 
 	err := a.Authorize(expectedCtx, expectedResource, expectedToken)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	listener1.AssertExpectations(suite.T())
 	listener2.AssertExpectations(suite.T())
@@ -131,7 +131,7 @@ func (suite *AuthorizerTestSuite) TestFullFirstApproverFail() {
 	})
 
 	err := a.Authorize(expectedCtx, expectedResource, expectedToken)
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 
 	listener.AssertExpectations(suite.T())
 	approver1.AssertExpectations(suite.T())
@@ -168,7 +168,7 @@ func (suite *AuthorizerTestSuite) TestFullSecondApproverFail() {
 	})
 
 	err := a.Authorize(expectedCtx, expectedResource, expectedToken)
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 
 	listener.AssertExpectations(suite.T())
 	approver1.AssertExpectations(suite.T())

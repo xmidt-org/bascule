@@ -13,7 +13,7 @@ func fastIsSpace(b byte) bool {
 // fastContainsSpace uses fastIsSpace on each character in a string
 // until it finds a space.
 func fastContainsSpace(v string) bool {
-	for i := 0; i < len(v); i++ {
+	for i := range len(v) {
 		if fastIsSpace(v[i]) {
 			return true
 		}

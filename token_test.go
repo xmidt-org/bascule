@@ -291,7 +291,7 @@ func (suite *TokenParserSuite) testAsTokenParserSource() {
 
 	suite.Run("CustomType", func() {
 		type Custom func(int) (Token, error)
-		var cf Custom = Custom(suite.validateSource)
+		var cf = Custom(suite.validateSource)
 
 		suite.assertParserResult(
 			AsTokenParser[int](cf).
@@ -310,7 +310,7 @@ func (suite *TokenParserSuite) testAsTokenParserContextSource() {
 
 	suite.Run("CustomType", func() {
 		type Custom func(context.Context, int) (Token, error)
-		var cf Custom = Custom(suite.validateContextSource)
+		var cf = Custom(suite.validateContextSource)
 
 		suite.assertParserResult(
 			AsTokenParser[int](cf).
@@ -385,7 +385,7 @@ func (suite *TokenParserSuite) appendNoCall(tps TokenParsers[int], count int) To
 func (suite *TokenParserSuite) assertTokenParsersSuccess(tps TokenParsers[int]) {
 	actualToken, actualErr := tps.Parse(suite.expectedCtx, suite.expectedSource)
 	suite.Equal(suite.expectedToken, actualToken)
-	suite.NoError(actualErr)
+	suite.Require().NoError(actualErr)
 	assertTokenParsers(suite.T(), tps...)
 }
 
@@ -394,7 +394,7 @@ func (suite *TokenParserSuite) assertTokenParsersSuccess(tps TokenParsers[int]) 
 func (suite *TokenParserSuite) assertTokenParsersFail(tps TokenParsers[int]) {
 	actualToken, actualErr := tps.Parse(suite.expectedCtx, suite.expectedSource)
 	suite.Nil(actualToken)
-	suite.ErrorIs(actualErr, suite.expectedErr)
+	suite.Require().ErrorIs(actualErr, suite.expectedErr)
 	assertTokenParsers(suite.T(), tps...)
 }
 

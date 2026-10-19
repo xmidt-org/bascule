@@ -166,9 +166,9 @@ func (suite *ApproversTestSuite) TestAny() {
 			if testCase.expectedErr != nil {
 				// the aggregate wraps each failure rather than being one of
 				// them, so identity is not the right question to ask
-				suite.ErrorIs(err, testCase.expectedErr)
+				suite.Require().ErrorIs(err, testCase.expectedErr)
 			} else {
-				suite.NoError(err)
+				suite.Require().NoError(err)
 			}
 
 			if len(as) > 0 {

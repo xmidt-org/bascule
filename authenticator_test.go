@@ -86,7 +86,7 @@ func (suite *AuthenticatorTestSuite) TestFullSuccess() {
 
 	actualToken, err := a.Authenticate(expectedCtx, expectedSource)
 	suite.Equal(expectedToken, actualToken)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	parser.AssertExpectations(suite.T())
 	validator.AssertExpectations(suite.T())
@@ -122,7 +122,7 @@ func (suite *AuthenticatorTestSuite) TestFullTokenParserFail() {
 
 	// we don't actually care what is returned for the token
 	_, err := a.Authenticate(expectedCtx, expectedSource)
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 
 	parser.AssertExpectations(suite.T())
 	validator.AssertExpectations(suite.T())
@@ -161,7 +161,7 @@ func (suite *AuthenticatorTestSuite) TestFullValidatorFail() {
 
 	// we don't actually care what is returned for the token
 	_, err := a.Authenticate(expectedCtx, expectedSource)
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 
 	parser.AssertExpectations(suite.T())
 	validator.AssertExpectations(suite.T())

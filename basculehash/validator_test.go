@@ -10,8 +10,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/xmidt-org/bascule"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/xmidt-org/bascule"
 )
 
 type validatorTestToken struct {
@@ -36,7 +37,7 @@ func (suite *ValidatorTestSuite) SetupSubTest() {
 func (suite *ValidatorTestSuite) SetupTest() {
 	suite.TestSuite.SetupTest()
 	suite.testCtx = context.Background()
-	suite.request = httptest.NewRequest("GET", "/", nil)
+	suite.request = httptest.NewRequest(http.MethodGet, "/", nil)
 }
 
 // newDefaultToken creates a password token using this suite's default plaintext.
@@ -50,7 +51,7 @@ func (suite *ValidatorTestSuite) newDefaultToken(principal string) bascule.Token
 // newCredentials builds a standard set of credentials using the given hasher.
 func (suite *ValidatorTestSuite) newCredentials(h Hasher) Credentials {
 	return Principals{
-		// nolint: goconst
+
 		"joe":  suite.goodHash(h.Hash(suite.plaintext)),
 		"fred": suite.goodHash(h.Hash(suite.plaintext)),
 	}

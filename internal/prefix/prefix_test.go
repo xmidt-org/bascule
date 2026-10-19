@@ -82,7 +82,7 @@ func TestRegexInvalid(t *testing.T) {
 	} {
 		t.Run(invalid, func(t *testing.T) {
 			m, err := Regex(invalid)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Nil(t, m)
 		})
 	}

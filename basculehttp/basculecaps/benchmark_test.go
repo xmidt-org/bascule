@@ -5,6 +5,7 @@ package basculecaps
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"strconv"
@@ -38,11 +39,11 @@ func BenchmarkCompileUncached(b *testing.B) {
 // what a deployment does almost all of the time.
 func BenchmarkCacheHit(b *testing.B) {
 	c := newURLCache(DefaultCacheSize)
-	c.compile(benchPattern)
+	_, _ = c.compile(benchPattern)
 
 	b.ResetTimer()
 	for b.Loop() {
-		c.compile(benchPattern)
+		_, _ = c.compile(benchPattern)
 	}
 }
 
@@ -55,14 +56,14 @@ func BenchmarkCacheHitParallel(b *testing.B) {
 	c := newURLCache(DefaultCacheSize)
 	patterns := benchPatterns(distinct)
 	for _, p := range patterns {
-		c.compile(p)
+		_, _ = c.compile(p)
 	}
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		var i int
 		for pb.Next() {
-			c.compile(patterns[i%distinct])
+			_, _ = c.compile(patterns[i%distinct])
 			i++
 		}
 	})
@@ -74,13 +75,13 @@ func BenchmarkCacheHitParallel(b *testing.B) {
 func BenchmarkCacheMiss(b *testing.B) {
 	c := newURLCache(DefaultCacheSize)
 	for _, p := range benchPatterns(DefaultCacheSize) {
-		c.compile(p)
+		_, _ = c.compile(p)
 	}
 
 	b.ResetTimer()
 	var i int
 	for b.Loop() {
-		c.compile(benchPattern + "miss" + strconv.Itoa(i))
+		_, _ = c.compile(benchPattern + "miss" + strconv.Itoa(i))
 		i++
 	}
 }
@@ -99,7 +100,7 @@ func BenchmarkApprove(b *testing.B) {
 			capabilities: []string{"x1:webpa:api:" + benchPattern + ":all"},
 		}
 
-		request = httptest.NewRequest("GET", "/device/deadbeef/config/wifi", nil)
+		request = httptest.NewRequest(http.MethodGet, "/device/deadbeef/config/wifi", nil)
 		ctx     = context.Background()
 	)
 

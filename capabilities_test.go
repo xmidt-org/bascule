@@ -41,11 +41,11 @@ func (suite *CapabilitiesTestSuite) testGetCapabilitiesAccessor() {
 
 	suite.Run("HasCapabilities", func() {
 		mt := new(mockTokenWithCapabilities)
-		// nolint: goconst
+
 		mt.ExpectCapabilities("one", "two", "three").Once()
 		caps, ok := GetCapabilities(mt)
 		suite.Require().True(ok)
-		// nolint: goconst
+
 		suite.Equal([]string{"one", "two", "three"}, caps)
 
 		mt.AssertExpectations(suite.T())

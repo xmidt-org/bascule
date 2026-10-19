@@ -29,7 +29,7 @@ func (suite *BcryptTestSuite) TestHash() {
 	})
 
 	suite.Run("CostTooHigh", func() {
-		suite.badHash(
+		_, _ = suite.badHash(
 			Bcrypt{Cost: bcrypt.MaxCost + 100}.Hash(suite.plaintext),
 		)
 	})

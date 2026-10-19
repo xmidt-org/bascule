@@ -16,6 +16,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -160,16 +161,16 @@ func (suite *ErrorsTestSuite) TestGeneralErrors() {
 
 		err := suite.parse(value, jwt.WithKeySet(suite.keys))
 
-		suite.ErrorIs(err, bascule.ErrBadCredentials)
-		suite.NotErrorIs(err, bascule.ErrInvalidCredentials)
+		suite.Require().ErrorIs(err, bascule.ErrBadCredentials)
+		suite.Require().NotErrorIs(err, bascule.ErrInvalidCredentials)
 		suite.ErrorIs(err, ErrExpired, "the specific error is still reachable")
 	})
 
 	suite.Run("CouldNotBeRead", func() {
 		err := suite.parse("this is not a jwt", jwt.WithVerify(false))
 
-		suite.ErrorIs(err, bascule.ErrInvalidCredentials)
-		suite.NotErrorIs(err, bascule.ErrBadCredentials)
+		suite.Require().ErrorIs(err, bascule.ErrInvalidCredentials)
+		suite.Require().NotErrorIs(err, bascule.ErrBadCredentials)
 		suite.ErrorIs(err, ErrMalformed, "the specific error is still reachable")
 	})
 }
@@ -183,7 +184,7 @@ func (suite *ErrorsTestSuite) TestUnderlyingErrorRemains() {
 
 	err := suite.parse(value, jwt.WithKeySet(suite.keys))
 
-	suite.ErrorIs(err, ErrExpired)
+	suite.Require().ErrorIs(err, ErrExpired)
 	suite.ErrorIs(err, jwt.TokenExpiredError{}, "the jwx error must still be reachable")
 }
 
@@ -193,10 +194,10 @@ func (suite *ErrorsTestSuite) TestNotFromParse() {
 	original := context.Canceled
 
 	got := translate(original)
-	suite.Require().NotNil(got)
+	suite.Require().Error(got)
 	suite.Same(original, got)
 
-	suite.Nil(translate(nil))
+	suite.NoError(translate(nil))
 }
 
 // TestCancellationIsNotACredentialProblem verifies a request that was canceled
@@ -208,7 +209,7 @@ func (suite *ErrorsTestSuite) TestCancellationIsNotACredentialProblem() {
 			got := translate(original)
 
 			suite.Equal(original, got, "the failure must be returned unchanged")
-			suite.NotErrorIs(got, bascule.ErrBadCredentials)
+			suite.Require().NotErrorIs(got, bascule.ErrBadCredentials)
 			suite.NotErrorIs(got, bascule.ErrInvalidCredentials)
 		})
 	}
@@ -220,7 +221,7 @@ func (suite *ErrorsTestSuite) TestMalformedIsOnlyMalformed() {
 	suite.Run("Garbage", func() {
 		err := suite.parse("this is not a jwt", jwt.WithVerify(false))
 
-		suite.ErrorIs(err, ErrMalformed)
+		suite.Require().ErrorIs(err, ErrMalformed)
 		suite.ErrorIs(err, bascule.ErrInvalidCredentials)
 	})
 
@@ -231,7 +232,7 @@ func (suite *ErrorsTestSuite) TestMalformedIsOnlyMalformed() {
 
 		err := suite.parse(value, jwt.WithKeySet(suite.keys))
 
-		suite.NotErrorIs(err, ErrMalformed, "an expired token is well formed")
+		suite.Require().NotErrorIs(err, ErrMalformed, "an expired token is well formed")
 		suite.ErrorIs(err, ErrExpired)
 	})
 }
@@ -246,7 +247,7 @@ func (suite *ErrorsTestSuite) TestUnderlyingErrorAlwaysReachable() {
 
 	err := suite.parse(value, jwt.WithKeySet(suite.keys))
 
-	suite.ErrorIs(err, ErrExpired)
+	suite.Require().ErrorIs(err, ErrExpired)
 	suite.ErrorIs(err, jwt.TokenExpiredError{}, "the jwx error must still be reachable")
 }
 
@@ -283,7 +284,7 @@ func (suite *ErrorsTestSuite) TestContextIsHonored() {
 		suite.Nil(token)
 		suite.Require().Error(err)
 
-		suite.ErrorIs(err, context.Canceled)
+		suite.Require().ErrorIs(err, context.Canceled)
 		suite.Nil(observer.got, "parsing should stop before a key is fetched")
 		suite.NotErrorIs(err, bascule.ErrBadCredentials,
 			"an abandoned check is not a judgement about the token")

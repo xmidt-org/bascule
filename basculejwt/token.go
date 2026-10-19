@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v4/jwt"
+
 	"github.com/xmidt-org/bascule"
 )
 

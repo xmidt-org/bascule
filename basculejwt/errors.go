@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/lestrrat-go/jwx/v4/jwt"
+
 	"github.com/xmidt-org/bascule"
 )
 

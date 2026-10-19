@@ -69,7 +69,7 @@ func (s *Store) Update(_ context.Context, more Principals) {
 		s.principals = make(Principals)
 	}
 
-	for i := 0; i < len(names); i++ {
+	for i := range names {
 		s.principals[names[i]] = digests[i] // a copy was already made
 	}
 
