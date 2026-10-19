@@ -55,3 +55,36 @@ func ExampleJoinTokens_augment() {
 	// extra.Name: extra
 	// extra.Age: 33
 }
+
+// ExampleWithAuthenticateListeners observes every authentication attempt,
+// successful or not.  This is the hook for audit logs and metrics.
+func ExampleWithAuthenticateListeners() {
+	authenticator, _ := NewAuthenticator[string](
+		WithTokenParsers(
+			AsTokenParser[string](func(source string) (Token, error) {
+				if source == "" {
+					return nil, ErrMissingCredentials
+				}
+
+				return StubToken(source), nil
+			}),
+		),
+		WithAuthenticateListenerFuncs(
+			func(e AuthenticateEvent[string]) {
+				if e.Err != nil {
+					fmt.Printf("denied  source=%q err=%v\n", e.Source, e.Err)
+					return
+				}
+
+				fmt.Printf("allowed source=%q principal=%s\n", e.Source, e.Token.Principal())
+			},
+		),
+	)
+
+	_, _ = authenticator.Authenticate(context.Background(), "joe")
+	_, _ = authenticator.Authenticate(context.Background(), "")
+
+	// Output:
+	// allowed source="joe" principal=joe
+	// denied  source="" err=missing credentials
+}

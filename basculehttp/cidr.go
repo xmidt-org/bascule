@@ -52,7 +52,7 @@ type cidrApproverOptionFunc func(*CIDRApprover) error
 func (caof cidrApproverOptionFunc) apply(a *CIDRApprover) error { return caof(a) }
 
 // WithCIDRPrefixLiterals adds the prefixes that select a token's CIDR
-// capabilities, e.g. x1:webpa:cidr:.  Each prefix is compared as written:
+// capabilities, e.g. webpa-prefix-cidr:.  Each prefix is compared as written:
 // every character, including ones that are regular expression metacharacters,
 // must appear in the capability.  The remainder of a capability after its
 // prefix is the network.  Multiple calls are cumulative.
@@ -95,7 +95,7 @@ func WithCIDRPrefixRegexes(prefixes ...string) CIDRApproverOption {
 }
 
 // WithCIDRPrefixes adds the prefixes that select a token's CIDR capabilities,
-// e.g. x1:webpa:cidr:.  Each prefix is a regular expression, exactly as with
+// e.g. webpa-prefix-cidr:.  Each prefix is a regular expression, exactly as with
 // WithCIDRPrefixRegexes.
 //
 // Deprecated: use WithCIDRPrefixLiterals for prefixes that should be matched
@@ -182,7 +182,7 @@ func withCIDRMode(required, permissive bool) CIDRApproverOption {
 
 // CIDRApprover is a bascule HTTP approver that requires the Caller Origin of a
 // request to be inside a network carried by the token, as a capability of the
-// form <prefix><network>/<bits>, e.g. x1:webpa:cidr:192.0.2.0/24.
+// form <prefix><network>/<bits>, e.g. webpa-prefix-cidr:192.0.2.0/24.
 //
 // CIDR capabilities only limit access; they never grant it.  A capability whose
 // network cannot be parsed, including a bare address without /bits, is

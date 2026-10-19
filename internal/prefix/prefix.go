@@ -39,7 +39,7 @@ func (l literal) Match(capability string) (string, bool) {
 
 // Regex returns a Matcher that treats the prefix as a regular expression
 // anchored at the start of the capability.  The expression may contain
-// subexpressions and top-level alternation; "x1:|x2:" matches either and
+// subexpressions and top-level alternation; "prefix-a:|prefix-b:" matches either and
 // nothing else.  An error is returned when the expression does not compile.
 func Regex(p string) (Matcher, error) {
 	// Group the expression so that a top-level alternation cannot escape the

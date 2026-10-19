@@ -110,43 +110,43 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 		options      []ApproverOption
 	}{
 		{
-			capabilities: []string{"x1:webpa:api:.*:all"},
+			capabilities: []string{"webpa-prefix-api:.*:all"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:webpa:api:"),
+				WithPrefixLiterals("webpa-prefix-api:"),
 			},
 		},
 		{
-			capabilities: []string{"x1:webpa:api:device/.*/config:all"},
+			capabilities: []string{"webpa-prefix-api:device/.*/config:all"},
 			request:      suite.newRequest("GET", "/device/DEADBEEF/config"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("xmidt-prefix-api:", "webpa-prefix-api:"),
 			},
 		},
 		{
-			capabilities: []string{"x1:webpa:api:/test/.*:put"},
+			capabilities: []string{"webpa-prefix-api:/test/.*:put"},
 			request:      suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("xmidt-prefix-api:", "webpa-prefix-api:"),
 			},
 		},
 		{
 			capabilities: []string{
-				"x1:xmidt:api:/device/.*/config:all",
-				"x1:webpa:api:/something/else:get",
-				"x1:doesnot:apply:.*:all",
-				"x1:webpa:api:/test/.*:put", // this should match
+				"xmidt-prefix-api:/device/.*/config:all",
+				"webpa-prefix-api:/something/else:get",
+				"doesnot-prefix-apply:.*:all",
+				"webpa-prefix-api:/test/.*:put", // this should match
 			},
 			request: suite.newRequest("PUT", "/test/foo"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("xmidt-prefix-api:", "webpa-prefix-api:"),
 			},
 		},
 		{
-			capabilities: []string{"x1:webpa:api:/test/.*:custom"},
+			capabilities: []string{"webpa-prefix-api:/test/.*:custom"},
 			request:      suite.newRequest("PATCH", "/test/foo"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("xmidt-prefix-api:", "webpa-prefix-api:"),
 				WithAllMethod("custom"),
 			},
 		},
@@ -154,11 +154,11 @@ func (suite *ApproverTestSuite) testApproveSuccess() {
 			// a capability written without the api version, matched against a
 			// versioned path by normalizing the version away first
 			capabilities: []string{
-				"x1:webpa:api:test/.*:put",
+				"webpa-prefix-api:test/.*:put",
 			},
 			request: suite.newRequest("PUT", "/api/v1/test/foo"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:xmidt:api:", "x1:webpa:api:"),
+				WithPrefixLiterals("xmidt-prefix-api:", "webpa-prefix-api:"),
 				WithURLNormalizeFunc(stripAPIVersion),
 			},
 		},
@@ -185,29 +185,29 @@ func (suite *ApproverTestSuite) testApproveUnauthorized() {
 		options      []ApproverOption
 	}{
 		{
-			capabilities: []string{"x1:xmidt:api:.*:all"},
+			capabilities: []string{"xmidt-prefix-api:.*:all"},
 			request:      suite.newRequest("GET", "/"),
 			options:      nil, // will reject all tokens
 		},
 		{
-			capabilities: []string{"x1:webpa:api:.*:put"},
+			capabilities: []string{"webpa-prefix-api:.*:put"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:webpa:api:"),
+				WithPrefixLiterals("webpa-prefix-api:"),
 			},
 		},
 		{
-			capabilities: []string{"x1:webpa:api:/doesnotmatch:get"},
+			capabilities: []string{"webpa-prefix-api:/doesnotmatch:get"},
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:webpa:api:"),
+				WithPrefixLiterals("webpa-prefix-api:"),
 			},
 		},
 		{
-			capabilities: []string{"x1:webpa:api:(?!foo):put"}, // bad expression
+			capabilities: []string{"webpa-prefix-api:(?!foo):put"}, // bad expression
 			request:      suite.newRequest("GET", "/test"),
 			options: []ApproverOption{
-				WithPrefixLiterals("x1:webpa:api:"),
+				WithPrefixLiterals("webpa-prefix-api:"),
 			},
 		},
 	}
@@ -229,7 +229,7 @@ func (suite *ApproverTestSuite) testApproveUnauthorized() {
 // capability is matched against a request.  The prefix is the only thing
 // configured; the capability itself decides what the token may reach.
 func (suite *ApproverTestSuite) testApproveCapabilityURL() {
-	const prefix = "x1:webpa:api:"
+	const prefix = "webpa-prefix-api:"
 
 	testCases := []struct {
 		capability string
@@ -238,213 +238,213 @@ func (suite *ApproverTestSuite) testApproveCapabilityURL() {
 	}{
 		{
 			// a pattern need not be rooted
-			capability: "x1:webpa:api:device/.*/config:all",
+			capability: "webpa-prefix-api:device/.*/config:all",
 			target:     "/device/mac:112233/config",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:device/.*/config:all",
+			capability: "webpa-prefix-api:device/.*/config:all",
 			target:     "/mistake/device/mac:112233/config",
 			approved:   false,
 		}, {
 			// a doubled leading slash is not absorbed
-			capability: "x1:webpa:api:device/.*/config:all",
+			capability: "webpa-prefix-api:device/.*/config:all",
 			target:     "//device/mac:112233/config",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:/device/.*/config:all",
+			capability: "webpa-prefix-api:/device/.*/config:all",
 			target:     "/device/mac:112233/config",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:/device/.*/config:all",
+			capability: "webpa-prefix-api:/device/.*/config:all",
 			target:     "/mistake/device/mac:112233/config",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:/device/.*/config:all",
+			capability: "webpa-prefix-api:/device/.*/config:all",
 			target:     "//device/mac:112233/config",
 			approved:   false,
 		}, {
 			// a capability is a prefix grant, not an exact match
-			capability: "x1:webpa:api:/device/.*/config:all",
+			capability: "webpa-prefix-api:/device/.*/config:all",
 			target:     "/device/mac:112233/config/ignored",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:test:all",
+			capability: "webpa-prefix-api:test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:test:all",
+			capability: "webpa-prefix-api:test:all",
 			target:     "/mistake/test",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:test:all",
+			capability: "webpa-prefix-api:test:all",
 			target:     "/test/foo",
 			approved:   true,
 		}, {
 			// a leading .* may match nothing at all
-			capability: "x1:webpa:api:.*/device/.*/config:all",
+			capability: "webpa-prefix-api:.*/device/.*/config:all",
 			target:     "/device/mac:112233/config",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:.*/device/.*/config:all",
+			capability: "webpa-prefix-api:.*/device/.*/config:all",
 			target:     "/api/device/mac:112233/config",
 			approved:   true,
 		}, {
 			// every alternative is rooted, not just the first
-			capability: "x1:webpa:api:test|dir:all",
+			capability: "webpa-prefix-api:test|dir:all",
 			target:     "/test",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:test|dir:all",
+			capability: "webpa-prefix-api:test|dir:all",
 			target:     "/dir",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:test|dir:all",
+			capability: "webpa-prefix-api:test|dir:all",
 			target:     "/invalid/test",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:test|dir:all",
+			capability: "webpa-prefix-api:test|dir:all",
 			target:     "/invalid/dir",
 			approved:   false,
 		}, {
 			// a token reaches only what its own capability grants
-			capability: "x1:webpa:api:/device/alice/config:all",
+			capability: "webpa-prefix-api:/device/alice/config:all",
 			target:     "/device/alice/config",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:/device/alice/config:all",
+			capability: "webpa-prefix-api:/device/alice/config:all",
 			target:     "/device/bob/config",
 			approved:   false,
 		}, {
 			// neither alternative is rooted, both must match
-			capability: "x1:webpa:api:foo|bar:all",
+			capability: "webpa-prefix-api:foo|bar:all",
 			target:     "/foo",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:foo|bar:all",
+			capability: "webpa-prefix-api:foo|bar:all",
 			target:     "/bar",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:foo|bar:all",
+			capability: "webpa-prefix-api:foo|bar:all",
 			target:     "/xxx/bar",
 			approved:   false,
 		}, {
 			// both alternatives rooted
-			capability: "x1:webpa:api:/foo|/bar:all",
+			capability: "webpa-prefix-api:/foo|/bar:all",
 			target:     "/bar",
 			approved:   true,
 		}, {
 			// alternatives may disagree about the leading '/'
-			capability: "x1:webpa:api:foo|/bar:all",
+			capability: "webpa-prefix-api:foo|/bar:all",
 			target:     "/foo",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:foo|/bar:all",
+			capability: "webpa-prefix-api:foo|/bar:all",
 			target:     "/bar",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:/foo|bar:all",
+			capability: "webpa-prefix-api:/foo|bar:all",
 			target:     "/foo",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:/foo|bar:all",
+			capability: "webpa-prefix-api:/foo|bar:all",
 			target:     "/bar",
 			approved:   true,
 		}, {
 			// alternation may be nested
-			capability: "x1:webpa:api:(x|/y)|z:all",
+			capability: "webpa-prefix-api:(x|/y)|z:all",
 			target:     "/y",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:(x|/y)|z:all",
+			capability: "webpa-prefix-api:(x|/y)|z:all",
 			target:     "/z",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:(x|/y)|z:all",
+			capability: "webpa-prefix-api:(x|/y)|z:all",
 			target:     "/a/y",
 			approved:   false,
 		}, {
 			// single character alternatives parse as a character class
-			capability: "x1:webpa:api:a|b|c:all",
+			capability: "webpa-prefix-api:a|b|c:all",
 			target:     "/b",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:a|b|c:all",
+			capability: "webpa-prefix-api:a|b|c:all",
 			target:     "/d",
 			approved:   false,
 		}, {
 			// a doubled slash is not a way to reach /admin
-			capability: "x1:webpa:api:/admin:all",
+			capability: "webpa-prefix-api:/admin:all",
 			target:     "/admin",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:/admin:all",
+			capability: "webpa-prefix-api:/admin:all",
 			target:     "//admin",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:/admin:all",
+			capability: "webpa-prefix-api:/admin:all",
 			target:     "///admin",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:/admin:all",
+			capability: "webpa-prefix-api:/admin:all",
 			target:     "/admin/sub",
 			approved:   true,
 		}, {
 			// an unrooted pattern is still confined to one leading slash
-			capability: "x1:webpa:api:admin:all",
+			capability: "webpa-prefix-api:admin:all",
 			target:     "/admin",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:admin:all",
+			capability: "webpa-prefix-api:admin:all",
 			target:     "//admin",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:admin:all",
+			capability: "webpa-prefix-api:admin:all",
 			target:     "///admin",
 			approved:   false,
 		}, {
 			// a pattern that asks for a doubled slash still gets it
-			capability: "x1:webpa:api://admin:all",
+			capability: "webpa-prefix-api://admin:all",
 			target:     "//admin",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api://admin:all",
+			capability: "webpa-prefix-api://admin:all",
 			target:     "/admin",
 			approved:   false,
 		}, {
 			// a trailing slash is inside the grant
-			capability: "x1:webpa:api:/admin:all",
+			capability: "webpa-prefix-api:/admin:all",
 			target:     "/admin/",
 			approved:   true,
 		}, {
 			// a doubled slash anywhere is not collapsed
-			capability: "x1:webpa:api:/x/admin:all",
+			capability: "webpa-prefix-api:/x/admin:all",
 			target:     "/x//admin",
 			approved:   false,
 		}, {
 			// a wildcard still covers a doubled slash
-			capability: "x1:webpa:api:.*:all",
+			capability: "webpa-prefix-api:.*:all",
 			target:     "//admin",
 			approved:   true,
 		}, {
 			// the doubled slash guard applies to alternations too
-			capability: "x1:webpa:api:test|dir:all",
+			capability: "webpa-prefix-api:test|dir:all",
 			target:     "//dir",
 			approved:   false,
 		}, {
 			// a request with no path at all
-			capability: "x1:webpa:api:.*:all",
+			capability: "webpa-prefix-api:.*:all",
 			target:     "http://example.com",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:/test:all",
+			capability: "webpa-prefix-api:/test:all",
 			target:     "http://example.com",
 			approved:   false,
 		}, {
-			capability: "x1:webpa:api:/test:all",
+			capability: "webpa-prefix-api:/test:all",
 			target:     "http://example.com/test",
 			approved:   true,
 		}, {
-			capability: "x1:webpa:api:.*:all",
+			capability: "webpa-prefix-api:.*:all",
 			target:     "http://example.com/",
 			approved:   true,
 		},
@@ -481,8 +481,8 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 		// literal prefixes
 		{
 			option:     WithPrefixLiterals,
-			prefix:     "x1:webpa:api:",
-			capability: "x1:webpa:api:/test:all",
+			prefix:     "webpa-prefix-api:",
+			capability: "webpa-prefix-api:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
@@ -495,15 +495,15 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 		}, {
 			// a selected capability still needs a url pattern and a method
 			option:     WithPrefixLiterals,
-			prefix:     "x1:webpa:api:",
-			capability: "x1:webpa:api:/test",
+			prefix:     "webpa-prefix-api:",
+			capability: "webpa-prefix-api:/test",
 			target:     "/test",
 			approved:   false,
 		}, {
 			// a literal prefix must appear in full
 			option:     WithPrefixLiterals,
-			prefix:     "x1:webpa:api:",
-			capability: "x1:xmidt:api:/test:all",
+			prefix:     "webpa-prefix-api:",
+			capability: "xmidt-prefix-api:/test:all",
 			target:     "/test",
 			approved:   false,
 		}, {
@@ -523,8 +523,8 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 		}, {
 			// ... a '.' is not a wildcard
 			option:     WithPrefixLiterals,
-			prefix:     "x1.webpa:",
-			capability: "x1Xwebpa:/test:all",
+			prefix:     "webpa.prefix:",
+			capability: "webpaXprefix:/test:all",
 			target:     "/test",
 			approved:   false,
 		}, {
@@ -539,46 +539,46 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 		// regex prefixes
 		{
 			option:     WithPrefixRegexes,
-			prefix:     "x1:webpa:api:",
-			capability: "x1:webpa:api:/test:all",
+			prefix:     "webpa-prefix-api:",
+			capability: "webpa-prefix-api:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
 			// every alternative of a prefix is anchored, not just the first
 			option:     WithPrefixRegexes,
-			prefix:     "x1:webpa:|x2:webpa:",
-			capability: "x1:webpa:/test:all",
+			prefix:     "webpa-prefix-a:|webpa-prefix-b:",
+			capability: "webpa-prefix-a:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
 			option:     WithPrefixRegexes,
-			prefix:     "x1:webpa:|x2:webpa:",
-			capability: "x2:webpa:/test:all",
+			prefix:     "webpa-prefix-a:|webpa-prefix-b:",
+			capability: "webpa-prefix-b:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
 			option:     WithPrefixRegexes,
-			prefix:     "x1:webpa:|x2:webpa:",
-			capability: "x3:webpa:/test:all",
+			prefix:     "webpa-prefix-a:|webpa-prefix-b:",
+			capability: "webpa-prefix-c:/test:all",
 			target:     "/test",
 			approved:   false,
 		}, {
 			// a prefix may contain subexpressions of its own
 			option:     WithPrefixRegexes,
-			prefix:     "x(1|2):webpa:",
-			capability: "x1:webpa:/test:all",
+			prefix:     "webpa-prefix-(a|b):",
+			capability: "webpa-prefix-a:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
 			option:     WithPrefixRegexes,
-			prefix:     "x(1|2):webpa:",
-			capability: "x2:webpa:/test:all",
+			prefix:     "webpa-prefix-(a|b):",
+			capability: "webpa-prefix-b:/test:all",
 			target:     "/test",
 			approved:   true,
 		}, {
 			option:     WithPrefixRegexes,
-			prefix:     "x(1|2):webpa:",
-			capability: "x3:webpa:/test:all",
+			prefix:     "webpa-prefix-(a|b):",
+			capability: "webpa-prefix-c:/test:all",
 			target:     "/test",
 			approved:   false,
 		}, {
@@ -607,8 +607,8 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 		// the deprecated option reads its prefixes as regexes
 		{
 			option:     WithPrefixes,
-			prefix:     "x(1|2):webpa:",
-			capability: "x2:webpa:/test:all",
+			prefix:     "webpa-prefix-(a|b):",
+			capability: "webpa-prefix-b:/test:all",
 			target:     "/test",
 			approved:   true,
 		},
@@ -637,12 +637,12 @@ func (suite *ApproverTestSuite) testApproveConfiguredPrefix() {
 // testApproveURLNormalizeFunc covers the option itself: that it is consulted,
 // that it cannot alter the request, and how it fails.
 func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
-	const capability = "x1:webpa:api:test/.*:put"
+	const capability = "webpa-prefix-api:test/.*:put"
 
 	suite.Run("Normalized", func() {
 		request := suite.newRequest("PUT", "/api/v2/test/foo")
 		ca := suite.newApprover(
-			WithPrefixLiterals("x1:webpa:api:"),
+			WithPrefixLiterals("webpa-prefix-api:"),
 			WithURLNormalizeFunc(stripAPIVersion),
 		)
 
@@ -653,7 +653,7 @@ func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
 	})
 
 	suite.Run("WithoutTheOption", func() {
-		ca := suite.newApprover(WithPrefixLiterals("x1:webpa:api:"))
+		ca := suite.newApprover(WithPrefixLiterals("webpa-prefix-api:"))
 
 		suite.ErrorIs(
 			ca.Approve(context.Background(),
@@ -664,7 +664,7 @@ func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
 	})
 
 	suite.Run("Nil", func() {
-		_, err := NewApprover(WithPrefixLiterals("x1:webpa:api:"), WithURLNormalizeFunc(nil))
+		_, err := NewApprover(WithPrefixLiterals("webpa-prefix-api:"), WithURLNormalizeFunc(nil))
 		suite.Error(err)
 	})
 }
