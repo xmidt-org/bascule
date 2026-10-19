@@ -77,7 +77,7 @@ func WithBasic() AuthorizationParserOption {
 	return WithScheme(SchemeBasic, BasicTokenParser{})
 }
 
-// AuthorizationParsers is a bascule.TokenParser that handles the Authorization header.
+// AuthorizationParser is a bascule.TokenParser that handles the Authorization header.
 //
 // By default, this parser will use the standard Authorization header, which can be
 // changed via with WithAuthorizationHeader option.

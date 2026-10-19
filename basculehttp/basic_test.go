@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -28,7 +29,7 @@ func (suite *BasicTestSuite) TestBasicTokenParser() {
 		p := BasicTokenParser{}
 		token, err := p.Parse(context.Background(), "^%$@!()$kldfj34729$(&fhd") // hopelessly invalid ...
 
-		suite.ErrorIs(err, bascule.ErrInvalidCredentials)
+		suite.Require().ErrorIs(err, bascule.ErrInvalidCredentials)
 		suite.Nil(token)
 	})
 
@@ -39,7 +40,7 @@ func (suite *BasicTestSuite) TestBasicTokenParser() {
 			base64.StdEncoding.EncodeToString([]byte("missing colon")),
 		)
 
-		suite.ErrorIs(err, bascule.ErrInvalidCredentials)
+		suite.Require().ErrorIs(err, bascule.ErrInvalidCredentials)
 		suite.Nil(token)
 	})
 
@@ -47,7 +48,7 @@ func (suite *BasicTestSuite) TestBasicTokenParser() {
 		p := BasicTokenParser{}
 		token, err := p.Parse(context.Background(), "QWxhZGRpbjpvcGVuIHNlc2FtZQ==")
 
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.Require().NotNil(token)
 		suite.Equal("Aladdin", token.Principal())
 

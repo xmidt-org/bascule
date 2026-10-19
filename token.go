@@ -231,12 +231,12 @@ func AsTokenParser[S any, F TokenParserFunc[S]](f F) TokenParser[S] {
 		return tokenParserFunc[S](func(_ context.Context, source S) (Token, error) {
 			return sourceOnly(source) // curry away the context
 		})
-	} else {
-		ft := reflect.TypeOf((func(context.Context, S) (Token, error))(nil))
-		return tokenParserFunc[S](
-			fVal.Convert(ft).Interface().(func(context.Context, S) (Token, error)),
-		)
 	}
+
+	ft := reflect.TypeOf((func(context.Context, S) (Token, error))(nil))
+	return tokenParserFunc[S](
+		fVal.Convert(ft).Interface().(func(context.Context, S) (Token, error)),
+	)
 }
 
 // TokenParsers is an aggregate, ordered list of TokenParser implementations for

@@ -30,19 +30,19 @@ const (
 var (
 	// ErrInvalidChallengeScheme indicates that a scheme was improperly formatted.  Usually,
 	// this methods the scheme was either blank or contained whitespace.
-	ErrInvalidChallengeScheme = errors.New("Invalid challenge auth scheme")
+	ErrInvalidChallengeScheme = errors.New("invalid challenge auth scheme")
 
 	// ErrInvalidChallengeParameter indicates that an attempt was made to an a challenge
 	// auth parameter that wasn't validly formatted.  Usually, this means that the
 	// name contained whitespace.
-	ErrInvalidChallengeParameter = errors.New("Invalid challenge auth parameter")
+	ErrInvalidChallengeParameter = errors.New("invalid challenge auth parameter")
 
 	// ErrReservedChallengeParameter indicates that an attempt was made to add a
 	// challenge auth parameter that was reserved by the RFC.
 	//
 	// Since this package explicitly does not support token68, trying to set a token68
 	// parameter results in this error.
-	ErrReservedChallengeParameter = errors.New("Reserved challenge auth parameter")
+	ErrReservedChallengeParameter = errors.New("reserved challenge auth parameter")
 )
 
 // blankOrWhitespace tests if v is blank or has any whitespace.  These
@@ -179,7 +179,7 @@ func (cp *ChallengeParameters) Write(dst *strings.Builder) {
 		first = false
 	}
 
-	for i := 0; i < len(cp.names); i++ {
+	for i := range len(cp.names) {
 		if !first {
 			dst.WriteString(", ")
 		}
@@ -205,7 +205,7 @@ func (cp *ChallengeParameters) String() string {
 // error is returned.
 func NewChallengeParameters(s ...string) (cp ChallengeParameters, err error) {
 	if len(s)%2 != 0 {
-		err = errors.New("Odd number of challenge parameters")
+		err = errors.New("odd number of challenge parameters")
 	}
 
 	for i, j := 0, 1; err == nil && i < len(s); i, j = i+2, j+2 {
@@ -250,15 +250,15 @@ func (c Challenge) Write(o *strings.Builder) (err error) {
 //
 // Although realm is optional, it is HIGHLY recommended to set it to something
 // recognizable for a client.
-func NewBasicChallenge(realm string, UTF8 bool) (c Challenge) {
+func NewBasicChallenge(realm string, useUTF8 bool) (c Challenge) {
 	c = Challenge{
 		Scheme: SchemeBasic,
 	}
 
 	// ignore errors, as this function allows realm to be empty.
-	c.Parameters.SetRealm(realm)
-	if UTF8 {
-		c.Parameters.SetCharset("UTF-8")
+	_ = c.Parameters.SetRealm(realm)
+	if useUTF8 {
+		_ = c.Parameters.SetCharset("UTF-8")
 	}
 
 	return

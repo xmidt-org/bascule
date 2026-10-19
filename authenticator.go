@@ -27,7 +27,6 @@ type AuthenticatorOption[S any] interface {
 
 type authenticatorOptionFunc[S any] func(*Authenticator[S]) error
 
-//nolint:unused
 func (aof authenticatorOptionFunc[S]) apply(a *Authenticator[S]) error { return aof(a) }
 
 // WithAuthenticateListeners adds listeners to the Authenticator being built.

@@ -39,13 +39,13 @@ func ExampleMiddleware_basicauth() {
 	)
 
 	// what happens when no authorization is set?
-	noAuth := httptest.NewRequest("GET", "/", nil)
+	noAuth := httptest.NewRequest(http.MethodGet, "/", nil)
 	response := httptest.NewRecorder()
 	h.ServeHTTP(response, noAuth)
 	fmt.Println("no authorization response code:", response.Code)
 
 	// what happens when a valid Basic token is set?
-	withBasic := httptest.NewRequest("GET", "/", nil)
+	withBasic := httptest.NewRequest(http.MethodGet, "/", nil)
 	withBasic.SetBasicAuth("joe", "password")
 	response = httptest.NewRecorder()
 	h.ServeHTTP(response, withBasic)
@@ -91,13 +91,13 @@ func ExampleMiddleware_authentication() {
 		},
 	)
 
-	requestForJoe := httptest.NewRequest("GET", "/", nil)
+	requestForJoe := httptest.NewRequest(http.MethodGet, "/", nil)
 	requestForJoe.SetBasicAuth("joe", "correct_password")
 	response := httptest.NewRecorder()
 	h.ServeHTTP(response, requestForJoe)
 	fmt.Println("we let joe in with the code:", response.Code)
 
-	requestForCurly := httptest.NewRequest("GET", "/", nil)
+	requestForCurly := httptest.NewRequest(http.MethodGet, "/", nil)
 	requestForCurly.SetBasicAuth("joe", "bad_password")
 	response = httptest.NewRecorder()
 	h.ServeHTTP(response, requestForCurly)
@@ -151,13 +151,13 @@ func ExampleMiddleware_authorization() {
 		},
 	)
 
-	requestForJoe := httptest.NewRequest("GET", "/", nil)
+	requestForJoe := httptest.NewRequest(http.MethodGet, "/", nil)
 	requestForJoe.SetBasicAuth("joe", "password")
 	response := httptest.NewRecorder()
 	h.ServeHTTP(response, requestForJoe)
 	fmt.Println("we let joe in with the code:", response.Code)
 
-	requestForCurly := httptest.NewRequest("GET", "/", nil)
+	requestForCurly := httptest.NewRequest(http.MethodGet, "/", nil)
 	requestForCurly.SetBasicAuth("curly", "another_password")
 	response = httptest.NewRecorder()
 	h.ServeHTTP(response, requestForCurly)

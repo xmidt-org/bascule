@@ -50,11 +50,12 @@ func GetCapabilities(v any) (caps []string, ok bool) {
 	case []any:
 		converted := make([]string, 0, len(vt))
 		for _, raw := range vt {
-			if element, isString := raw.(string); isString {
-				converted = append(converted, element)
-			} else {
+			element, isString := raw.(string)
+			if !isString {
 				break
 			}
+
+			converted = append(converted, element)
 		}
 
 		if ok = len(converted) == len(vt); ok {

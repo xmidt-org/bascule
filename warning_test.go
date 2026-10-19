@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWarningString(t *testing.T) {
@@ -114,10 +115,10 @@ func TestAuthorizeEventWarnings(t *testing.T) {
 			events = append(events, e)
 		}),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := WithWarnings(context.Background())
-	assert.NoError(t, a.Authorize(ctx, "resource", StubToken("test")))
+	require.NoError(t, a.Authorize(ctx, "resource", StubToken("test")))
 
 	if assert.Len(t, events, 1) {
 		assert.NoError(t, events[0].Err)

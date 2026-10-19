@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -80,7 +81,7 @@ func (suite *ApproverTestSuite) TestInvalidPrefixRegex() {
 		suite.Run(strconv.Itoa(i), func() {
 			for _, option := range []func(...string) ApproverOption{WithPrefixRegexes, WithPrefixes} {
 				ca, err := NewApprover(option(invalid))
-				suite.Error(err)
+				suite.Require().Error(err)
 				suite.Nil(ca)
 			}
 		})
@@ -92,7 +93,7 @@ func (suite *ApproverTestSuite) TestInvalidAllMethod() {
 		WithAllMethod(""), // blanks aren't allowed
 	)
 
-	suite.Error(err)
+	suite.Require().Error(err)
 	suite.Nil(ca)
 }
 
@@ -645,7 +646,7 @@ func (suite *ApproverTestSuite) testApproveURLNormalizeFunc() {
 			WithURLNormalizeFunc(stripAPIVersion),
 		)
 
-		suite.NoError(ca.Approve(context.Background(), request, suite.newToken(capability)))
+		suite.Require().NoError(ca.Approve(context.Background(), request, suite.newToken(capability)))
 
 		suite.Equal("/api/v2/test/foo", request.URL.Path,
 			"the request's own URL must not have been modified")

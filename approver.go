@@ -24,6 +24,7 @@ type Approver[R any] interface {
 // ApproverFunc is a closure type that implements Approver.
 type ApproverFunc[R any] func(context.Context, R, Token) error
 
+// Approve invokes the closure.
 func (af ApproverFunc[R]) Approve(ctx context.Context, resource R, token Token) error {
 	return af(ctx, resource, token)
 }

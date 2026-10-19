@@ -155,7 +155,7 @@ func splitQuoted(s string, sep byte) (parts []string) {
 		escaped bool
 	)
 
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch c := s[i]; {
 		case escaped:
 			escaped = false

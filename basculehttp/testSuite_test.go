@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -23,7 +24,7 @@ type TestSuite struct {
 
 // newRequest creates a standardized test request, devoid of any authorization.
 func (suite *TestSuite) newRequest() *http.Request {
-	return httptest.NewRequest("GET", "/test", nil)
+	return httptest.NewRequest(http.MethodGet, "/test", nil)
 }
 
 // assertRequest asserts that the given request matches the one created by newRequest.

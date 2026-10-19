@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -47,7 +48,7 @@ func (suite *URLCacheTestSuite) TestBounded() {
 	const maxSize = 4
 	c := newURLCache(maxSize)
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		_, err := c.compile("/path/" + strconv.Itoa(i))
 		suite.Require().NoError(err)
 		suite.LessOrEqual(c.len(), maxSize)
@@ -89,12 +90,12 @@ func (suite *URLCacheTestSuite) TestCachesFailures() {
 	c := newURLCache(DefaultCacheSize)
 
 	re, err := c.compile("(?!foo)")
-	suite.Error(err)
+	suite.Require().Error(err)
 	suite.Nil(re)
 	suite.Equal(1, c.len())
 
 	re, err = c.compile("(?!foo)")
-	suite.Error(err)
+	suite.Require().Error(err)
 	suite.Nil(re)
 	suite.Equal(1, c.len())
 }
@@ -110,15 +111,15 @@ func (suite *URLCacheTestSuite) TestConcurrent() {
 
 	var wg sync.WaitGroup
 	wg.Add(workers)
-	for w := 0; w < workers; w++ {
-		go func(w int) {
+	for range workers {
+		go func() {
 			defer wg.Done()
-			for i := 0; i < rounds; i++ {
+			for i := range rounds {
 				if _, err := c.compile("/path/" + strconv.Itoa(i%32)); err != nil {
 					suite.NoError(err)
 				}
 			}
-		}(w)
+		}()
 	}
 
 	wg.Wait()
@@ -146,7 +147,7 @@ func TestApproverURLCacheSize(t *testing.T) {
 		}
 
 		// approve against several distinct capability urls
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			path := "/path/" + strconv.Itoa(i)
 			_ = a.Approve(context.Background(),
 				(&ApproverTestSuite{}).newRequest("GET", path),

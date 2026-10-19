@@ -6,12 +6,14 @@ package basculehttp
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/xmidt-org/bascule"
 )
 
@@ -26,17 +28,17 @@ func (ct capsToken) Capabilities() []string { return ct }
 
 // approveCIDR runs a CIDRApprover against a request from remoteAddr, returning
 // the error and the text of every warning raised.
-func approveCIDR(t *testing.T, a *CIDRApprover, remoteAddr string, caps ...string) (error, []string) {
+func approveCIDR(t *testing.T, a *CIDRApprover, remoteAddr string, caps ...string) ([]string, error) {
 	t.Helper()
 	ctx := bascule.WithWarnings(context.Background())
-	request := httptest.NewRequest("GET", "/", nil)
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.RemoteAddr = remoteAddr
 
 	err := a.Approve(ctx, request, capsToken(caps))
 
 	collected := bascule.GetWarnings(ctx)
 	if len(collected) == 0 {
-		return err, nil
+		return nil, err
 	}
 
 	warnings := make([]string, 0, len(collected))
@@ -44,7 +46,7 @@ func approveCIDR(t *testing.T, a *CIDRApprover, remoteAddr string, caps ...strin
 		warnings = append(warnings, w.String())
 	}
 
-	return err, warnings
+	return warnings, err
 }
 
 func newCIDRApprover(t *testing.T, opts ...CIDRApproverOption) *CIDRApprover {
@@ -78,7 +80,7 @@ func TestNewCIDRApproverErrors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			a, err := NewCIDRApprover(tc.opts...)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Nil(t, a)
 		})
 	}
@@ -193,12 +195,12 @@ func TestCIDRApproverModes(t *testing.T) {
 					expectedErr = nil
 				}
 
-				err, warnings := approveCIDR(t, a, tc.remoteAddr, tc.caps...)
+				warnings, err := approveCIDR(t, a, tc.remoteAddr, tc.caps...)
 				if expectedErr == nil {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				} else {
-					assert.ErrorIs(t, err, bascule.ErrUnauthorized)
-					assert.ErrorIs(t, err, expectedErr)
+					require.ErrorIs(t, err, bascule.ErrUnauthorized)
+					require.ErrorIs(t, err, expectedErr)
 				}
 
 				assert.Equal(t, expectedWarnings, warnings)
@@ -211,12 +213,12 @@ func TestCIDRApproverDefaultMode(t *testing.T) {
 	a := newCIDRApprover(t, WithCIDRPrefixLiterals(testCIDRPrefix))
 
 	// Correct If Present: a token without a CIDR capability is Unrestricted ...
-	err, warnings := approveCIDR(t, a, "192.0.2.60:1234")
-	assert.NoError(t, err)
+	warnings, err := approveCIDR(t, a, "192.0.2.60:1234")
+	require.NoError(t, err)
 	assert.Empty(t, warnings)
 
 	// ... but one that has a CIDR capability is enforced
-	err, _ = approveCIDR(t, a, "192.0.2.60:1234", testCIDRPrefix+"198.51.100.0/24")
+	_, err = approveCIDR(t, a, "192.0.2.60:1234", testCIDRPrefix+"198.51.100.0/24")
 	assert.ErrorIs(t, err, ErrOriginNotAllowed)
 }
 
@@ -227,8 +229,8 @@ func TestCIDRApproverLastModeWins(t *testing.T) {
 		WithCIDRRequired(),
 	)
 
-	err, warnings := approveCIDR(t, a, "192.0.2.60:1234")
-	assert.ErrorIs(t, err, ErrNoCIDRCapability)
+	warnings, err := approveCIDR(t, a, "192.0.2.60:1234")
+	require.ErrorIs(t, err, ErrNoCIDRCapability)
 	assert.Empty(t, warnings)
 
 	a = newCIDRApprover(t,
@@ -237,8 +239,8 @@ func TestCIDRApproverLastModeWins(t *testing.T) {
 		WithCIDRPermissiveCorrectIfPresent(),
 	)
 
-	err, warnings = approveCIDR(t, a, "192.0.2.60:1234")
-	assert.NoError(t, err)
+	warnings, err = approveCIDR(t, a, "192.0.2.60:1234")
+	require.NoError(t, err)
 	assert.Empty(t, warnings)
 }
 
@@ -370,11 +372,11 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 			}
 
 			a := newCIDRApprover(t, option(prefixes...))
-			err, warnings := approveCIDR(t, a, tc.remoteAddr, tc.capability)
+			warnings, err := approveCIDR(t, a, tc.remoteAddr, tc.capability)
 			if tc.allowed {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.ErrorIs(t, err, ErrOriginNotAllowed)
+				require.ErrorIs(t, err, ErrOriginNotAllowed)
 			}
 
 			if tc.malformed {
@@ -394,7 +396,7 @@ func TestCIDRApproverNoWarningCollector(t *testing.T) {
 		WithCIDRPermissiveRequired(),
 	)
 
-	request := httptest.NewRequest("GET", "/", nil)
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	assert.NotPanics(t, func() {
 		assert.NoError(t, a.Approve(context.Background(), request, capsToken{testCIDRPrefix + "bad"}))
 	})
@@ -408,12 +410,12 @@ func TestCIDRApproverCache(t *testing.T) {
 
 	for i := range 5 {
 		capability := fmt.Sprintf("%s192.0.2.%d/32", testCIDRPrefix, i)
-		err, _ := approveCIDR(t, a, fmt.Sprintf("192.0.2.%d:1234", i), capability)
-		assert.NoError(t, err)
+		_, err := approveCIDR(t, a, fmt.Sprintf("192.0.2.%d:1234", i), capability)
+		require.NoError(t, err)
 
 		// a cached result is used the second time
-		err, _ = approveCIDR(t, a, fmt.Sprintf("192.0.2.%d:1234", i), capability)
-		assert.NoError(t, err)
+		_, err = approveCIDR(t, a, fmt.Sprintf("192.0.2.%d:1234", i), capability)
+		require.NoError(t, err)
 	}
 
 	assert.Equal(t, 2, a.cache.Len())

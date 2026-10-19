@@ -7,8 +7,9 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/kong"
-	"github.com/xmidt-org/bascule/basculehash"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/xmidt-org/bascule/basculehash"
 )
 
 const (
@@ -27,13 +28,13 @@ type Bcrypt struct {
 func (cmd *Bcrypt) Validate() error {
 	switch {
 	case cmd.Cost < bcrypt.MinCost:
-		return fmt.Errorf("Cost cannot be less than %d", bcrypt.MinCost)
+		return fmt.Errorf("cost cannot be less than %d", bcrypt.MinCost)
 
 	case cmd.Cost > bcrypt.MaxCost:
-		return fmt.Errorf("Cost cannot be greater than %d", bcrypt.MaxCost)
+		return fmt.Errorf("cost cannot be greater than %d", bcrypt.MaxCost)
 
 	case len(cmd.Plaintext) > MaxBcryptPlaintextLength:
-		return fmt.Errorf("Plaintext length cannot exceed %d bytes", MaxBcryptPlaintextLength)
+		return fmt.Errorf("plaintext length cannot exceed %d bytes", MaxBcryptPlaintextLength)
 
 	default:
 		return nil
@@ -47,7 +48,7 @@ func (cmd *Bcrypt) Run(kong *kong.Kong) error {
 
 	digest, err := hasher.Hash([]byte(cmd.Plaintext))
 	if err == nil {
-		digest.WriteTo(kong.Stdout)
+		_, _ = digest.WriteTo(kong.Stdout)
 	}
 
 	return err

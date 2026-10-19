@@ -50,7 +50,7 @@ func writeWarningValue(o *strings.Builder, v string) {
 	}
 
 	o.WriteByte('"')
-	for i := 0; i < len(v); i++ {
+	for i := range len(v) {
 		if v[i] == '"' || v[i] == '\\' {
 			o.WriteByte('\\')
 		}
@@ -67,7 +67,7 @@ func isToken(v string) bool {
 		return false
 	}
 
-	for i := 0; i < len(v); i++ {
+	for i := range len(v) {
 		c := v[i]
 		switch {
 		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
