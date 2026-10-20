@@ -114,22 +114,51 @@ func NewAuthorizationParser(opts ...AuthorizationParserOption) (*AuthorizationPa
 // If a token parser is registered for the given scheme, that token parser is invoked.
 // Otherwise, UnsupportedSchemeError is returned, indicating the scheme in question.
 func (ap *AuthorizationParser) Parse(ctx context.Context, source *http.Request) (bascule.Token, error) {
-	authValue := source.Header.Get(ap.header)
-	if len(authValue) == 0 {
-		return nil, bascule.ErrMissingCredentials
-	}
-
-	scheme, value, err := ParseAuthorization(authValue)
+	p, value, err := ap.schemeParser(source)
 	if err != nil {
-		return nil, bascule.ErrInvalidCredentials
-	}
-
-	p, registered := ap.parsers[scheme.lower()]
-	if !registered {
-		return nil, &UnsupportedSchemeError{
-			Scheme: scheme,
-		}
+		return nil, err
 	}
 
 	return p.Parse(ctx, value)
 }
+
+// ParseWithDetails is Parse, except that it uses the scheme's parser's
+// ParseWithDetails when it has one.  A scheme parser without one is parsed as
+// usual.
+func (ap *AuthorizationParser) ParseWithDetails(ctx context.Context, source *http.Request) (bascule.Token, error) {
+	p, value, err := ap.schemeParser(source)
+	if err != nil {
+		return nil, err
+	}
+
+	if dp, ok := p.(bascule.DetailedTokenParser[string]); ok {
+		return dp.ParseWithDetails(ctx, value)
+	}
+
+	return p.Parse(ctx, value)
+}
+
+// schemeParser extracts the credential from the request, and finds the parser
+// for its scheme.
+func (ap *AuthorizationParser) schemeParser(source *http.Request) (bascule.TokenParser[string], string, error) {
+	authValue := source.Header.Get(ap.header)
+	if len(authValue) == 0 {
+		return nil, "", bascule.ErrMissingCredentials
+	}
+
+	scheme, value, err := ParseAuthorization(authValue)
+	if err != nil {
+		return nil, "", bascule.ErrInvalidCredentials
+	}
+
+	p, registered := ap.parsers[scheme.lower()]
+	if !registered {
+		return nil, "", &UnsupportedSchemeError{
+			Scheme: scheme,
+		}
+	}
+
+	return p, value, nil
+}
+
+var _ bascule.DetailedTokenParser[*http.Request] = (*AuthorizationParser)(nil)

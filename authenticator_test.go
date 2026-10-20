@@ -168,6 +168,104 @@ func (suite *AuthenticatorTestSuite) TestFullValidatorFail() {
 	listener.AssertExpectations(suite.T())
 }
 
+// TestZeroValueNoParsers verifies an Authenticator not made by NewAuthenticator
+// reports that it has no parsers, rather than authenticating anything.
+func (suite *AuthenticatorTestSuite) TestZeroValueNoParsers() {
+	var a Authenticator[string]
+
+	token, err := a.Authenticate(suite.newCtx(), suite.newSource())
+	suite.ErrorIs(err, ErrNoTokenParsers)
+	suite.Nil(token)
+}
+
+// detailedParser is a DetailedTokenParser that returns what it was given from
+// ParseWithDetails, and fails the test if Parse is used.
+type detailedParser struct {
+	suite *AuthenticatorTestSuite
+	token Token
+	err   error
+}
+
+func (dp detailedParser) Parse(context.Context, string) (Token, error) {
+	dp.suite.Fail("Parse should not be used on a DetailedTokenParser")
+	return nil, nil
+}
+
+func (dp detailedParser) ParseWithDetails(context.Context, string) (Token, error) {
+	return dp.token, dp.err
+}
+
+// TestInvalidToken verifies a token a DetailedTokenParser returns with an
+// error is reported to the listeners as the InvalidToken, and is never the
+// Token or something Authenticate returns.
+func (suite *AuthenticatorTestSuite) TestInvalidToken() {
+	var (
+		expectedErr = errors.New("expected")
+		events      []AuthenticateEvent[string]
+		validator   = new(mockValidator[string])
+		a           = suite.newAuthenticator(
+			WithTokenParsers[string](detailedParser{suite: suite, token: suite.newToken(), err: expectedErr}),
+			WithValidators(validator),
+			WithAuthenticateListenerFuncs(func(e AuthenticateEvent[string]) { events = append(events, e) }),
+		)
+	)
+
+	token, err := a.Authenticate(suite.newCtx(), suite.newSource())
+	suite.ErrorIs(err, expectedErr)
+	suite.Nil(token)
+
+	suite.Require().Len(events, 1)
+	suite.Nil(events[0].Token)
+	suite.Equal(suite.newToken(), events[0].InvalidToken)
+	suite.ErrorIs(events[0].Err, expectedErr)
+
+	// a rejected token is not validated
+	validator.AssertExpectations(suite.T())
+}
+
+// TestDetailedSuccess verifies a DetailedTokenParser's token is the Token when
+// there is no error, and there is no InvalidToken.
+func (suite *AuthenticatorTestSuite) TestDetailedSuccess() {
+	var (
+		events []AuthenticateEvent[string]
+		a      = suite.newAuthenticator(
+			WithTokenParsers[string](detailedParser{suite: suite, token: suite.newToken()}),
+			WithAuthenticateListenerFuncs(func(e AuthenticateEvent[string]) { events = append(events, e) }),
+		)
+	)
+
+	token, err := a.Authenticate(suite.newCtx(), suite.newSource())
+	suite.NoError(err)
+	suite.Equal(suite.newToken(), token)
+
+	suite.Require().Len(events, 1)
+	suite.Equal(suite.newToken(), events[0].Token)
+	suite.Nil(events[0].InvalidToken)
+}
+
+// TestPlainParserTokenWithError verifies a parser that is not a
+// DetailedTokenParser is treated as it always was: whatever it returns with an
+// error is the Token, and there is no InvalidToken.
+func (suite *AuthenticatorTestSuite) TestPlainParserTokenWithError() {
+	var (
+		expectedErr = errors.New("expected")
+		events      []AuthenticateEvent[string]
+		a           = suite.newAuthenticator(
+			WithTokenParsers(AsTokenParser[string](func(string) (Token, error) {
+				return suite.newToken(), expectedErr
+			})),
+			WithAuthenticateListenerFuncs(func(e AuthenticateEvent[string]) { events = append(events, e) }),
+		)
+	)
+
+	_, err := a.Authenticate(suite.newCtx(), suite.newSource())
+	suite.ErrorIs(err, expectedErr)
+
+	suite.Require().Len(events, 1)
+	suite.Equal(suite.newToken(), events[0].Token)
+	suite.Nil(events[0].InvalidToken)
+}
+
 func TestAuthenticator(t *testing.T) {
 	suite.Run(t, new(AuthenticatorTestSuite))
 }
