@@ -112,8 +112,8 @@ func (suite *ErrorsTestSuite) TestDetailsClaimFailure() {
 			options := append([]jwt.ParseOption{jwt.WithKeySet(suite.keys)}, tc.options...)
 
 			token, err := suite.parseDetails(value, options...)
-			suite.ErrorIs(err, tc.want)
-			suite.ErrorIs(err, bascule.ErrBadCredentials)
+			suite.Require().ErrorIs(err, tc.want)
+			suite.Require().ErrorIs(err, bascule.ErrBadCredentials)
 			suite.Require().NotNil(token)
 			suite.Equal("test", token.Principal())
 
@@ -158,7 +158,7 @@ func (suite *ErrorsTestSuite) TestDetailsUnverified() {
 	for _, tc := range tests {
 		suite.Run(tc.name, func() {
 			token, err := suite.parseDetails(tc.value, jwt.WithKeySet(suite.keys))
-			suite.Error(err)
+			suite.Require().Error(err)
 			suite.Nil(token)
 		})
 	}

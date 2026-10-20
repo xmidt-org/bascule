@@ -174,7 +174,7 @@ func (suite *AuthenticatorTestSuite) TestZeroValueNoParsers() {
 	var a Authenticator[string]
 
 	token, err := a.Authenticate(suite.newCtx(), suite.newSource())
-	suite.ErrorIs(err, ErrNoTokenParsers)
+	suite.Require().ErrorIs(err, ErrNoTokenParsers)
 	suite.Nil(token)
 }
 
@@ -188,7 +188,7 @@ type detailedParser struct {
 
 func (dp detailedParser) Parse(context.Context, string) (Token, error) {
 	dp.suite.Fail("Parse should not be used on a DetailedTokenParser")
-	return nil, nil
+	return nil, errors.New("Parse should not be used")
 }
 
 func (dp detailedParser) ParseWithDetails(context.Context, string) (Token, error) {
@@ -211,13 +211,13 @@ func (suite *AuthenticatorTestSuite) TestInvalidToken() {
 	)
 
 	token, err := a.Authenticate(suite.newCtx(), suite.newSource())
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 	suite.Nil(token)
 
 	suite.Require().Len(events, 1)
 	suite.Nil(events[0].Token)
 	suite.Equal(suite.newToken(), events[0].InvalidToken)
-	suite.ErrorIs(events[0].Err, expectedErr)
+	suite.Require().ErrorIs(events[0].Err, expectedErr)
 
 	// a rejected token is not validated
 	validator.AssertExpectations(suite.T())
@@ -235,7 +235,7 @@ func (suite *AuthenticatorTestSuite) TestDetailedSuccess() {
 	)
 
 	token, err := a.Authenticate(suite.newCtx(), suite.newSource())
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Equal(suite.newToken(), token)
 
 	suite.Require().Len(events, 1)
@@ -259,7 +259,7 @@ func (suite *AuthenticatorTestSuite) TestPlainParserTokenWithError() {
 	)
 
 	_, err := a.Authenticate(suite.newCtx(), suite.newSource())
-	suite.ErrorIs(err, expectedErr)
+	suite.Require().ErrorIs(err, expectedErr)
 
 	suite.Require().Len(events, 1)
 	suite.Equal(suite.newToken(), events[0].Token)

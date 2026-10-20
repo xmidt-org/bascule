@@ -186,11 +186,11 @@ func (suite *AuthorizationTestSuite) TestParseWithDetails() {
 	request.Header.Set("Authorization", "Test value")
 
 	token, err := ap.ParseWithDetails(context.Background(), request)
-	suite.ErrorIs(err, bascule.ErrBadCredentials)
+	suite.Require().ErrorIs(err, bascule.ErrBadCredentials)
 	suite.Equal(expected, token)
 
 	token, err = ap.Parse(context.Background(), request)
-	suite.ErrorIs(err, bascule.ErrBadCredentials)
+	suite.Require().ErrorIs(err, bascule.ErrBadCredentials)
 	suite.Nil(token)
 }
 
@@ -201,15 +201,15 @@ func (suite *AuthorizationTestSuite) TestParseWithDetailsPlainScheme() {
 
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	_, err := ap.ParseWithDetails(context.Background(), request)
-	suite.ErrorIs(err, bascule.ErrMissingCredentials)
+	suite.Require().ErrorIs(err, bascule.ErrMissingCredentials)
 
 	request.Header.Set("Authorization", "Digest abc")
 	_, err = ap.ParseWithDetails(context.Background(), request)
-	suite.Error(err)
+	suite.Require().Error(err)
 
 	request.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("joe:secret")))
 	token, err := ap.ParseWithDetails(context.Background(), request)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Equal("joe", token.Principal())
 }
 
