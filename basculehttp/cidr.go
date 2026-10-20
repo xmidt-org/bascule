@@ -30,6 +30,10 @@ var (
 	// Caller Origin could not be determined.
 	ErrUnknownOrigin = errors.New("unknown caller origin")
 
+	// ErrCIDRDenied indicates the CIDRResolver returned an error.  That error
+	// is joined too, for the service to log.
+	ErrCIDRDenied = errors.New("cidr resolver denied the request")
+
 	// ErrNoCIDRPrefixes is returned by NewCIDRApprover when no capability
 	// prefixes were configured.
 	ErrNoCIDRPrefixes = errors.New("at least one cidr capability prefix is required")
@@ -103,6 +107,53 @@ func WithCIDRPrefixRegexes(prefixes ...string) CIDRApproverOption {
 // expressions.
 func WithCIDRPrefixes(prefixes ...string) CIDRApproverOption {
 	return WithCIDRPrefixRegexes(prefixes...)
+}
+
+// A CIDRResolver has the final say over the networks a token counts as
+// carrying.  It is called on every request, with the request's context, the
+// token's principal, which for a JWT is its sub claim, and the networks of the
+// token's CIDR capabilities, in token order.  A malformed capability arrives
+// as an invalid netip.Prefix, which contains nothing.
+//
+// Whatever the resolver returns is used instead, as if the token had carried
+// those networks.  Returning no networks leaves the token Unrestricted, so it
+// is allowed unless the approver is Required.  Returning an error denies the
+// request with ErrCIDRDenied, whatever the reason: the error is joined for the
+// service to log, and is not shown to the caller.  IPv4-mapped IPv6 networks
+// are normalized to IPv4.
+//
+// That covers the policy a deployment needs, without an option for each case:
+//
+//   - Networks configured per principal, for an issuer that does not put
+//     them in tokens: return append(provided, configured[principal]...).
+//   - An override for one principal: ignore provided and return the override.
+//   - A ceiling for every principal: drop any network not inside it.
+//   - Requiring a network of some principals: return an error when provided
+//     is empty for one of them.
+//   - Blocking a principal: return an error.
+//
+// The resolver is trusted, so what it returns is not checked against the
+// prefixes, and raises no warnings.  The malformed warnings for the provided
+// networks are raised before the resolver runs, in every mode.
+type CIDRResolver func(ctx context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error)
+
+// DefaultCIDRResolver is the CIDRResolver unless WithCIDRResolver says
+// otherwise.  It returns the provided networks unchanged and never returns an
+// error, so the token counts as carrying exactly its CIDR capabilities.
+func DefaultCIDRResolver(_ context.Context, _ string, provided []netip.Prefix) ([]netip.Prefix, error) {
+	return provided, nil
+}
+
+// WithCIDRResolver sets the CIDRResolver, replacing DefaultCIDRResolver.
+func WithCIDRResolver(r CIDRResolver) CIDRApproverOption {
+	return cidrApproverOptionFunc(func(a *CIDRApprover) error {
+		if r == nil {
+			return errors.New("the cidr resolver cannot be nil")
+		}
+
+		a.resolve = r
+		return nil
+	})
 }
 
 // WithOriginResolver sets how the Caller Origin of a request is found.  By
@@ -182,7 +233,9 @@ func withCIDRMode(required, permissive bool) CIDRApproverOption {
 
 // CIDRApprover is a bascule HTTP approver that requires the Caller Origin of a
 // request to be inside a network carried by the token, as a capability of the
-// form <prefix><network>/<bits>, e.g. webpa-prefix-cidr:192.0.2.0/24.
+// form <prefix><network>/<bits>, e.g. webpa-prefix-cidr:192.0.2.0/24.  A
+// CIDRResolver may change the networks a token counts as carrying, for example
+// to add networks configured for its principal.
 //
 // CIDR capabilities only limit access; they never grant it.  A capability whose
 // network cannot be parsed, including a bare address without /bits, is
@@ -191,6 +244,7 @@ func withCIDRMode(required, permissive bool) CIDRApproverOption {
 // the request is allowed.
 type CIDRApprover struct {
 	matchers   []prefix.Matcher
+	resolve    CIDRResolver
 	resolver   *OriginResolver
 	required   bool
 	permissive bool
@@ -206,6 +260,7 @@ type CIDRApprover struct {
 // WithCIDRPrefixRegexes.
 func NewCIDRApprover(opts ...CIDRApproverOption) (*CIDRApprover, error) {
 	a := CIDRApprover{
+		resolve:   DefaultCIDRResolver,
 		resolver:  new(OriginResolver),
 		cacheSize: DefaultCIDRCacheSize,
 	}
@@ -230,43 +285,26 @@ func NewCIDRApprover(opts ...CIDRApproverOption) (*CIDRApprover, error) {
 	return &a, nil
 }
 
-// Approve checks the Caller Origin of the request against the token's CIDR
-// capabilities.  Warnings are raised with bascule.AddWarning.
+// Approve checks the Caller Origin of the request against the networks the
+// token counts as carrying: its CIDR capabilities, as the CIDRResolver sees
+// fit.  Warnings are raised with bascule.AddWarning.
 //
 // In an enforcing mode, a rejection is an error joined with
-// bascule.ErrUnauthorized and one of ErrNoCIDRCapability, ErrUnknownOrigin or
-// ErrOriginNotAllowed.  In a permissive mode, this method never returns an error.
+// bascule.ErrUnauthorized and one of ErrNoCIDRCapability, ErrUnknownOrigin,
+// ErrOriginNotAllowed or ErrCIDRDenied.  In a permissive mode, this method
+// never returns an error.
 func (a *CIDRApprover) Approve(ctx context.Context, resource *http.Request, token bascule.Token) error {
-	capabilities, _ := bascule.GetCapabilities(token)
-
-	var (
-		present  bool
-		networks []netip.Prefix
-	)
-
-	for _, capability := range capabilities {
-		parsed := a.parse(capability)
-		if !parsed.selected {
-			continue
-		}
-
-		present = true
-		if !parsed.network.IsValid() {
-			bascule.AddWarning(ctx, bascule.Warning{
-				Reason: "malformed",
-				Attrs: []bascule.WarningAttr{
-					{Key: "kind", Value: cidrWarningKind},
-					{Key: "cap", Value: capability},
-				},
-			})
-
-			continue
-		}
-
-		networks = append(networks, parsed.network)
+	var principal string
+	if token != nil {
+		principal = token.Principal()
 	}
 
-	if !present {
+	networks, err := a.resolve(ctx, principal, a.selectNetworks(ctx, token))
+	if err != nil {
+		return a.reject(ctx, errors.Join(ErrCIDRDenied, err), "denied")
+	}
+
+	if len(networks) == 0 {
 		if !a.required {
 			return nil
 		}
@@ -280,7 +318,9 @@ func (a *CIDRApprover) Approve(ctx context.Context, resource *http.Request, toke
 	}
 
 	for _, network := range networks {
-		if network.Contains(origin) {
+		// an invalid network, from a malformed capability or the resolver,
+		// contains nothing
+		if normalizePrefix(network).Contains(origin) {
 			return nil
 		}
 	}
@@ -309,6 +349,33 @@ func (a *CIDRApprover) reject(ctx context.Context, err error, reason string, att
 	})
 
 	return nil
+}
+
+// selectNetworks returns the networks of the token's CIDR capabilities, in
+// token order.  A malformed capability raises a warning and contributes an
+// invalid netip.Prefix, so that it still counts as present.
+func (a *CIDRApprover) selectNetworks(ctx context.Context, token bascule.Token) (networks []netip.Prefix) {
+	capabilities, _ := bascule.GetCapabilities(token)
+	for _, capability := range capabilities {
+		parsed := a.parse(capability)
+		if !parsed.selected {
+			continue
+		}
+
+		if !parsed.network.IsValid() {
+			bascule.AddWarning(ctx, bascule.Warning{
+				Reason: "malformed",
+				Attrs: []bascule.WarningAttr{
+					{Key: "kind", Value: cidrWarningKind},
+					{Key: "cap", Value: capability},
+				},
+			})
+		}
+
+		networks = append(networks, parsed.network)
+	}
+
+	return networks
 }
 
 // parse matches a capability against the prefixes and parses its network.

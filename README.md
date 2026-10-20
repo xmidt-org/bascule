@@ -234,6 +234,14 @@ unrestricted. `WithCIDRRequired` reverses that. The permissive modes let the
 request through and record what would have been rejected as a warning, which
 is how to trial a new restriction without breaking clients.
 
+A `CIDRResolver` has the final say over the networks a Token counts as
+carrying. It is a function of the request context, the Token's principal,
+which for a JWT is the `sub` claim, and the networks the Token carries, and
+whatever it returns is used instead. That one hook covers networks configured
+per principal on the server, for an issuer that does not put them in Tokens,
+as well as overriding, capping or requiring networks, or blocking a
+principal by returning an error.
+
 The request's origin is its `RemoteAddr` unless an `OriginResolver` with
 trusted proxies is supplied, in which case it is the nearest hop that is not a
 trusted proxy, read from `Forwarded` or `X-Forwarded-For`.
@@ -243,8 +251,16 @@ origin, err := basculehttp.NewOriginResolver(
 	basculehttp.WithTrustedProxies(netip.MustParsePrefix("10.1.0.0/16")),
 )
 
+// networks configured per principal, e.g. from the service's configuration
+configured := map[string][]netip.Prefix{
+	"device-service": {netip.MustParsePrefix("10.1.0.0/16")},
+}
+
 networks, err := basculehttp.NewCIDRApprover(
 	basculehttp.WithCIDRPrefixLiterals("webpa-prefix-cidr:"),
+	basculehttp.WithCIDRResolver(func(_ context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error) {
+		return append(provided, configured[principal]...), nil
+	}),
 	basculehttp.WithOriginResolver(origin),
 	basculehttp.WithCIDRPermissiveRequired(), // warn for now; switch to WithCIDRRequired later
 )
@@ -252,6 +268,8 @@ networks, err := basculehttp.NewCIDRApprover(
 
 Runnable examples: [`ExampleNewCIDRApprover`](basculehttp/cidr_examples_test.go)
 covers the default and required modes,
+[`ExampleWithCIDRResolver`](basculehttp/cidr_examples_test.go) adds networks
+configured per principal and blocks one,
 [`ExampleNewCIDRApprover_permissive`](basculehttp/cidr_examples_test.go)
 shows the warnings a trial run produces, and
 [`ExampleNewOriginResolver`](basculehttp/origin_examples_test.go) shows a

@@ -94,6 +94,29 @@ Use `net/netip` throughout.
   `/bits`) is **malformed**: a single host must be written `/32` or `/128`.
 - IPv4-mapped IPv6 prefixes are normalized like origins.
 
+### Resolver
+
+A `CIDRResolver` has the final say over the networks a Token counts as
+carrying, in the same shape as tokenrate's `Resolver`:
+
+```go
+type CIDRResolver func(ctx context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error)
+```
+
+It is called on every request with the Token's principal (the JWT `sub`)
+and the networks of its CIDR capabilities in Token order, a **Malformed
+Capability** arriving as an invalid `netip.Prefix`. Whatever it returns is
+used as if the Token had carried it: none leaves the Token **Unrestricted**,
+and an error denies the request with `ErrCIDRDenied`, the resolver's error
+joined for logging but never shown to the Caller. In a Permissive mode a
+denial is a `would-reject; kind=cidr; reason=denied` warning.
+
+One hook, rather than an option per policy, covers networks configured per
+principal for an issuer that does not put them in Tokens, overrides,
+ceilings, requiring networks of some principals, and blocking a principal.
+Malformed warnings are raised before the resolver runs, in every mode; what
+the resolver returns raises none.
+
 ### Modes
 
 The Approver runs in exactly one of four modes. Two settings make them up:
@@ -115,8 +138,9 @@ Required would reject without blocking any.
 
 Evaluate on every request:
 
-| Token's CIDR capabilities (after prefix selection) | Result |
+| Token's networks (after prefix selection and the resolver) | Result |
 |---|---|
+| resolver returned an error | **fail** |
 | none, Correct If Present | **allow** (Unrestricted) |
 | none, Required | **fail** |
 | ≥1, Caller Origin unknown | **fail** |
@@ -127,7 +151,8 @@ Then:
 
 - **Fail + Enforcing** → return an error wrapping `bascule.ErrUnauthorized`
   (so `DefaultErrorStatusCoder` gives `403`) plus a specific sentinel
-  (`ErrNoCIDRCapability`, `ErrOriginNotAllowed`, `ErrUnknownOrigin`).
+  (`ErrNoCIDRCapability`, `ErrOriginNotAllowed`, `ErrUnknownOrigin`,
+  `ErrCIDRDenied`).
 - **Fail + Permissive** → return `nil` and emit a Capability Warning saying
   what would have been rejected.
 - **Every Malformed Capability** → emit a Capability Warning in every mode,
@@ -142,6 +167,7 @@ func NewCIDRApprover(opts ...CIDRApproverOption) (*CIDRApprover, error)
 func WithCIDRPrefixLiterals(prefixes ...string) CIDRApproverOption // at least one prefix is required; none = error from New
 func WithCIDRPrefixRegexes(prefixes ...string) CIDRApproverOption  // opt-in regular expressions
 func WithCIDRPrefixes(prefixes ...string) CIDRApproverOption       // deprecated; same as WithCIDRPrefixRegexes
+func WithCIDRResolver(CIDRResolver) CIDRApproverOption             // default: DefaultCIDRResolver
 func WithOriginResolver(*OriginResolver) CIDRApproverOption // default: RemoteAddr only
 func WithCIDRCacheSize(size int) CIDRApproverOption         // default: DefaultCIDRCacheSize
 
@@ -189,6 +215,7 @@ Design:
   would-reject; kind=cidr; reason=no-cidr-capability
   would-reject; kind=cidr; reason=unknown-origin
   would-reject; kind=cidr; reason=origin-not-allowed; origin=203.0.113.5
+  would-reject; kind=cidr; reason=denied
   ```
 
 - Quoted values come from signed Tokens or the request, so they aren't
@@ -244,6 +271,18 @@ CIDR Approver: every row of the decision table in all four modes, plus:
 - A literal prefix containing regex metacharacters, such as `foo-bar|`, is
   matched as written.
 - A regex prefix with subexpressions still yields the right network.
+- The resolver is handed the request context, the principal, and the
+  provided networks in Token order with an invalid prefix per malformed
+  capability, whose warning is still raised.
+- What the resolver returns replaces the Token's networks: an override
+  allows and rejects accordingly, none is Unrestricted, an invalid prefix
+  is present but matches nothing, and IPv4-mapped networks are normalized.
+- A resolver that adds networks per principal allows inside, rejects
+  outside, satisfies Required, and leaves other principals unaffected.
+- A resolver error fails with `ErrCIDRDenied` in an enforcing mode, with
+  the resolver's error reachable, and warns `reason=denied` in a Permissive
+  one, before the origin is consulted.
+- A resolver does not replace the prefixes; at least one is still required.
 
 Warnings: emitted on a `403` and on a `200`; no header written when no
 header name is configured; `AddWarning` with no collector doesn't panic;

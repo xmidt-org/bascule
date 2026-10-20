@@ -5,6 +5,7 @@ package basculehttp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -26,15 +27,33 @@ func (capsToken) Principal() string { return "test" }
 
 func (ct capsToken) Capabilities() []string { return ct }
 
+// principalToken is a token with a chosen principal that carries capabilities.
+type principalToken struct {
+	principal string
+	caps      []string
+}
+
+func (pt principalToken) Principal() string { return pt.principal }
+
+func (pt principalToken) Capabilities() []string { return pt.caps }
+
 // approveCIDR runs a CIDRApprover against a request from remoteAddr, returning
 // the error and the text of every warning raised.
 func approveCIDR(t *testing.T, a *CIDRApprover, remoteAddr string, caps ...string) ([]string, error) {
+	t.Helper()
+
+	return approveCIDRToken(t, a, remoteAddr, capsToken(caps))
+}
+
+// approveCIDRToken runs a CIDRApprover against a request from remoteAddr
+// presenting token, returning the error and the text of every warning raised.
+func approveCIDRToken(t *testing.T, a *CIDRApprover, remoteAddr string, token bascule.Token) ([]string, error) {
 	t.Helper()
 	ctx := bascule.WithWarnings(context.Background())
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.RemoteAddr = remoteAddr
 
-	err := a.Approve(ctx, request, capsToken(caps))
+	err := a.Approve(ctx, request, token)
 
 	collected := bascule.GetWarnings(ctx)
 	if len(collected) == 0 {
@@ -74,6 +93,10 @@ func TestNewCIDRApproverErrors(t *testing.T) {
 		{
 			name: "zero cache size",
 			opts: []CIDRApproverOption{WithCIDRPrefixLiterals(testCIDRPrefix), WithCIDRCacheSize(0)},
+		},
+		{
+			name: "nil cidr resolver",
+			opts: []CIDRApproverOption{WithCIDRPrefixLiterals(testCIDRPrefix), WithCIDRResolver(nil)},
 		},
 	}
 
@@ -419,4 +442,334 @@ func TestCIDRApproverCache(t *testing.T) {
 	}
 
 	assert.Equal(t, 2, a.cache.Len())
+}
+
+// principalNetworks is a CIDRResolver that adds networks configured per
+// principal to those the token carries, the common case for an issuer that
+// does not put networks in tokens.
+func principalNetworks(configured map[string][]string) CIDRResolver {
+	parsed := make(map[string][]netip.Prefix, len(configured))
+	for principal, networks := range configured {
+		for _, n := range networks {
+			parsed[principal] = append(parsed[principal], netip.MustParsePrefix(n))
+		}
+	}
+
+	return func(_ context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error) {
+		return append(provided, parsed[principal]...), nil
+	}
+}
+
+// TestCIDRApproverResolverPrincipals verifies a resolver can vouch for
+// principals, and that what it returns is treated as carried by the token.
+func TestCIDRApproverResolverPrincipals(t *testing.T) {
+	resolver := principalNetworks(map[string][]string{
+		"joe":  {"192.0.2.0/24", "2001:db8::/32"},
+		"jane": {"::ffff:198.51.100.0/120"}, // normalized like a capability
+	})
+
+	tests := []struct {
+		name       string
+		opts       []CIDRApproverOption
+		token      principalToken
+		remoteAddr string
+		err        error
+	}{
+		{
+			name:       "configured, inside",
+			token:      principalToken{principal: "joe"},
+			remoteAddr: "192.0.2.60:1234",
+		},
+		{
+			name:       "configured, inside v6",
+			token:      principalToken{principal: "joe"},
+			remoteAddr: "[2001:db8::1]:1234",
+		},
+		{
+			name:       "configured, outside",
+			token:      principalToken{principal: "joe"},
+			remoteAddr: "203.0.113.9:1234",
+			err:        ErrOriginNotAllowed,
+		},
+		{
+			name:       "configured, IPv4-mapped network",
+			token:      principalToken{principal: "jane"},
+			remoteAddr: "198.51.100.7:1234",
+		},
+		{
+			name:       "not configured is unrestricted",
+			token:      principalToken{principal: "nobody"},
+			remoteAddr: "203.0.113.9:1234",
+		},
+		{
+			name:       "not configured and required",
+			opts:       []CIDRApproverOption{WithCIDRRequired()},
+			token:      principalToken{principal: "nobody"},
+			remoteAddr: "203.0.113.9:1234",
+			err:        ErrNoCIDRCapability,
+		},
+		{
+			name:       "configured satisfies required",
+			opts:       []CIDRApproverOption{WithCIDRRequired()},
+			token:      principalToken{principal: "joe"},
+			remoteAddr: "192.0.2.60:1234",
+		},
+		{
+			name: "token capability adds to configured",
+			token: principalToken{
+				principal: "joe",
+				caps:      []string{testCIDRPrefix + "203.0.113.0/24"},
+			},
+			remoteAddr: "203.0.113.9:1234",
+		},
+		{
+			name: "configured adds to token capability",
+			token: principalToken{
+				principal: "joe",
+				caps:      []string{testCIDRPrefix + "203.0.113.0/24"},
+			},
+			remoteAddr: "192.0.2.60:1234",
+		},
+		{
+			name: "outside both",
+			token: principalToken{
+				principal: "joe",
+				caps:      []string{testCIDRPrefix + "203.0.113.0/24"},
+			},
+			remoteAddr: "198.51.100.7:1234",
+			err:        ErrOriginNotAllowed,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := append(
+				[]CIDRApproverOption{
+					WithCIDRPrefixLiterals(testCIDRPrefix),
+					WithCIDRResolver(resolver),
+				},
+				tc.opts...,
+			)
+
+			warnings, err := approveCIDRToken(t, newCIDRApprover(t, opts...), tc.remoteAddr, tc.token)
+			if tc.err == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, bascule.ErrUnauthorized)
+				require.ErrorIs(t, err, tc.err)
+			}
+
+			assert.Empty(t, warnings, "resolved networks never raise warnings")
+		})
+	}
+}
+
+// TestCIDRApproverResolverRequiresPrefixes verifies a resolver does not
+// replace the prefixes: a CIDRApprover must still know which capabilities are
+// its own.
+func TestCIDRApproverResolverRequiresPrefixes(t *testing.T) {
+	a, err := NewCIDRApprover(WithCIDRResolver(principalNetworks(map[string][]string{"joe": {"192.0.2.0/24"}})))
+	require.ErrorIs(t, err, ErrNoCIDRPrefixes)
+	assert.Nil(t, a)
+}
+
+// TestCIDRApproverResolverInput verifies what a resolver is handed: the
+// context, the principal, and the provided networks in token order with an
+// invalid prefix for each malformed capability, whose warning is still raised.
+func TestCIDRApproverResolverInput(t *testing.T) {
+	type key struct{}
+	ctx := context.WithValue(bascule.WithWarnings(context.Background()), key{}, "marker")
+
+	var (
+		gotPrincipal string
+		gotProvided  []netip.Prefix
+	)
+
+	a := newCIDRApprover(t,
+		WithCIDRPrefixLiterals(testCIDRPrefix),
+		WithCIDRResolver(func(ctx context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error) {
+			assert.Equal(t, "marker", ctx.Value(key{}), "the request's context is passed through")
+			gotPrincipal = principal
+			gotProvided = provided
+
+			return provided, nil
+		}),
+	)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.RemoteAddr = "192.0.2.60:1234"
+
+	err := a.Approve(ctx, request, principalToken{
+		principal: "joe",
+		caps: []string{
+			"webpa-prefix-api:.*:all", // not selected
+			testCIDRPrefix + "198.51.100.0/24",
+			testCIDRPrefix + "10.0.0.0/33", // malformed
+			testCIDRPrefix + "192.0.2.0/24",
+		},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, "joe", gotPrincipal)
+	assert.Equal(t, []netip.Prefix{
+		netip.MustParsePrefix("198.51.100.0/24"),
+		{},
+		netip.MustParsePrefix("192.0.2.0/24"),
+	}, gotProvided)
+
+	warnings := bascule.GetWarnings(ctx)
+	require.Len(t, warnings, 1)
+	assert.Equal(t, `malformed; kind=cidr; cap="webpa-prefix-cidr:10.0.0.0/33"`, warnings[0].String())
+}
+
+// TestCIDRApproverResolverOutput verifies the approver uses what a resolver
+// returns in place of the token's networks.
+func TestCIDRApproverResolverOutput(t *testing.T) {
+	tests := []struct {
+		name       string
+		resolved   []netip.Prefix
+		remoteAddr string
+		err        error
+	}{
+		{
+			name:       "override allows",
+			resolved:   []netip.Prefix{netip.MustParsePrefix("203.0.113.0/24")},
+			remoteAddr: "203.0.113.9:1234",
+		},
+		{
+			name:       "override rejects a carried network",
+			resolved:   []netip.Prefix{netip.MustParsePrefix("203.0.113.0/24")},
+			remoteAddr: "192.0.2.60:1234",
+			err:        ErrOriginNotAllowed,
+		},
+		{
+			name:       "none is unrestricted",
+			remoteAddr: "198.51.100.7:1234",
+		},
+		{
+			name:       "only an invalid network is present but matches nothing",
+			resolved:   []netip.Prefix{{}},
+			remoteAddr: "192.0.2.60:1234",
+			err:        ErrOriginNotAllowed,
+		},
+		{
+			name:       "IPv4-mapped is normalized",
+			resolved:   []netip.Prefix{netip.MustParsePrefix("::ffff:203.0.113.0/120")},
+			remoteAddr: "203.0.113.9:1234",
+		},
+		{
+			name:       "host bits are masked",
+			resolved:   []netip.Prefix{netip.MustParsePrefix("203.0.113.77/24")},
+			remoteAddr: "203.0.113.9:1234",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			a := newCIDRApprover(t,
+				WithCIDRPrefixLiterals(testCIDRPrefix),
+				WithCIDRResolver(func(context.Context, string, []netip.Prefix) ([]netip.Prefix, error) {
+					return tc.resolved, nil
+				}),
+			)
+
+			// the token carries 192.0.2.0/24, which the resolver replaces
+			warnings, err := approveCIDR(t, a, tc.remoteAddr, testCIDRPrefix+"192.0.2.0/24")
+			if tc.err == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, bascule.ErrUnauthorized)
+				require.ErrorIs(t, err, tc.err)
+			}
+
+			assert.Empty(t, warnings)
+		})
+	}
+}
+
+// TestCIDRApproverResolverDenies verifies a resolver error denies the request
+// in an enforcing mode and warns in a permissive one, without showing the
+// error to the caller, and before the origin is consulted.
+func TestCIDRApproverResolverDenies(t *testing.T) {
+	denied := errors.New("joe is blocked")
+	resolver := func(_ context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error) {
+		if principal == "joe" {
+			return nil, denied
+		}
+
+		return provided, nil
+	}
+
+	// the origin resolver would report unknown-origin for a trusted peer that
+	// forwarded nothing, which must not be reached
+	origin, err := NewOriginResolver(WithTrustedProxies(netip.MustParsePrefix("10.0.0.0/8")))
+	require.NoError(t, err)
+
+	for _, mode := range []CIDRApproverOption{WithCIDRRequired(), WithCIDRCorrectIfPresent()} {
+		a := newCIDRApprover(t,
+			WithCIDRPrefixLiterals(testCIDRPrefix),
+			WithCIDRResolver(resolver),
+			WithOriginResolver(origin),
+			mode,
+		)
+
+		warnings, err := approveCIDRToken(t, a, "10.1.1.1:1234", principalToken{principal: "joe"})
+		require.ErrorIs(t, err, bascule.ErrUnauthorized)
+		require.ErrorIs(t, err, ErrCIDRDenied)
+		require.ErrorIs(t, err, denied, "the resolver's error is reachable for logging")
+		assert.Empty(t, warnings)
+		assert.Equal(t, http.StatusForbidden, DefaultErrorStatusCoder(nil, err))
+
+		_, err = approveCIDRToken(t, a, "192.0.2.60:1234",
+			principalToken{principal: "jane", caps: []string{testCIDRPrefix + "192.0.2.0/24"}})
+		require.NoError(t, err, "other principals are unaffected")
+	}
+
+	for _, mode := range []CIDRApproverOption{WithCIDRPermissiveRequired(), WithCIDRPermissiveCorrectIfPresent()} {
+		a := newCIDRApprover(t,
+			WithCIDRPrefixLiterals(testCIDRPrefix),
+			WithCIDRResolver(resolver),
+			WithOriginResolver(origin),
+			mode,
+		)
+
+		warnings, err := approveCIDRToken(t, a, "10.1.1.1:1234", principalToken{principal: "joe"})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"would-reject; kind=cidr; reason=denied"}, warnings)
+	}
+}
+
+// TestCIDRApproverResolverNilToken verifies a missing token does not panic,
+// and reaches the resolver as an empty principal with nothing provided.
+func TestCIDRApproverResolverNilToken(t *testing.T) {
+	called := false
+	a := newCIDRApprover(t,
+		WithCIDRPrefixLiterals(testCIDRPrefix),
+		WithCIDRResolver(func(_ context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error) {
+			called = true
+			assert.Empty(t, principal)
+			assert.Empty(t, provided)
+
+			return nil, nil
+		}),
+	)
+
+	assert.NotPanics(t, func() {
+		_, err := approveCIDRToken(t, a, "203.0.113.9:1234", nil)
+		assert.NoError(t, err)
+	})
+
+	assert.True(t, called)
+}
+
+func TestDefaultCIDRResolver(t *testing.T) {
+	provided := []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24"), {}}
+
+	got, err := DefaultCIDRResolver(context.Background(), "joe", provided)
+	require.NoError(t, err)
+	assert.Equal(t, provided, got)
+
+	got, err = DefaultCIDRResolver(context.Background(), "", nil)
+	require.NoError(t, err)
+	assert.Empty(t, got)
 }
