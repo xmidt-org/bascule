@@ -30,7 +30,10 @@ One independent authorization check over a request and its **Token**. A request 
 A **Capability** granting an HTTP method on a URL pattern (e.g. `{prefix}device/.*/config:get`). A **Token** with none is denied: endpoint capabilities grant access.
 
 **CIDR Capability**:
-A **Capability** naming a network range (e.g. `{prefix}10.0.0.0/8`) the **Caller Origin** must fall within. It only limits; it never grants.
+A **Capability** naming a network range (e.g. `{prefix}10.0.0.0/8`) the **Caller Origin** must fall within. It only limits; it never grants. A **CIDR Resolver** may change the networks a **Token** counts as carrying, e.g. adding ones configured for its principal (the JWT `sub`).
+
+**CIDR Resolver**:
+A function with the final say over the networks a **Token** counts as carrying, given its principal and the networks of its **CIDR Capabilities**. Returning none leaves the Token **Unrestricted**; returning an error denies the request.
 
 ### Limiting capabilities
 
