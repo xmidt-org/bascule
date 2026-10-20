@@ -195,6 +195,25 @@ type TokenParser[S any] interface {
 	Parse(ctx context.Context, source S) (Token, error)
 }
 
+// DetailedTokenParser is a TokenParser that can also report the token behind a
+// rejection.  An Authenticator uses ParseWithDetails in place of Parse when its
+// parser has it.
+//
+// ParseWithDetails has the same contract as Parse, with one addition: it may
+// return a non-nil Token together with a non-nil error, when the credentials
+// were read and shown to be genuine, but were not accepted.  An example is a
+// JWT whose signature verified but which has expired.  That token says who the
+// caller is, which is useful for recording a rejection, and is nothing more.
+// It must never be authorized, put into a context, or treated as a success.
+// Where a parser cannot vouch for what it read, it returns a nil Token.
+type DetailedTokenParser[S any] interface {
+	TokenParser[S]
+
+	// ParseWithDetails is Parse, except for the token it may return with an
+	// error.
+	ParseWithDetails(ctx context.Context, source S) (Token, error)
+}
+
 // TokenParserFunc describes the closure signatures that are allowed as TokenParser instances.
 type TokenParserFunc[S any] interface {
 	~func(source S) (Token, error) |

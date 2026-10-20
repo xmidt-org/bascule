@@ -3,7 +3,10 @@
 
 package bascule
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // AuthenticateEvent represents the result of bascule's authenticate workflow.
 type AuthenticateEvent[S any] struct {
@@ -14,6 +17,13 @@ type AuthenticateEvent[S any] struct {
 	// Token is the token that resulted from parsing the source.  This field
 	// will only be set if parsing was successful.
 	Token Token
+
+	// InvalidToken is a token that was read and shown to be genuine, but was
+	// not accepted, e.g. a JWT whose signature verified but which has expired.
+	// It is only set when Err is set, and only when the parser can vouch for
+	// the token (see DetailedTokenParser).  It identifies who was rejected and
+	// is never a basis for authorizing anything.
+	InvalidToken Token
 
 	// Err is the error that resulted from authentication.  This field will be
 	// nil for a successful authentication.
@@ -104,7 +114,8 @@ type Authenticator[S any] struct {
 // (2) The token is validated using any configured validator(s)
 // (3) Appropriate events are dispatched to listeners after either of steps (1) or (2)
 func (a *Authenticator[S]) Authenticate(ctx context.Context, source S) (token Token, err error) {
-	token, err = a.parsers.Parse(ctx, source)
+	var invalid Token
+	token, invalid, err = a.parse(ctx, source)
 	if err == nil {
 		var next Token
 		next, err = a.validators.Validate(ctx, source, token)
@@ -114,10 +125,32 @@ func (a *Authenticator[S]) Authenticate(ctx context.Context, source S) (token To
 	}
 
 	a.listeners.OnEvent(AuthenticateEvent[S]{
-		Source: source,
-		Token:  token,
-		Err:    err,
+		Source:       source,
+		Token:        token,
+		InvalidToken: invalid,
+		Err:          err,
 	})
+
+	return
+}
+
+// parse is TokenParsers.Parse, except that a DetailedTokenParser's rejected
+// token is returned as invalid, apart from the token of a success.
+func (a *Authenticator[S]) parse(ctx context.Context, source S) (token, invalid Token, err error) {
+	if len(a.parsers) == 0 {
+		err = ErrNoTokenParsers
+	}
+
+	for i := 0; i < len(a.parsers) && token == nil && (err == nil || errors.Is(err, ErrMissingCredentials)); i++ {
+		if dp, ok := a.parsers[i].(DetailedTokenParser[S]); ok {
+			token, err = dp.ParseWithDetails(ctx, source)
+			if err != nil {
+				token, invalid = nil, token
+			}
+		} else {
+			token, err = a.parsers[i].Parse(ctx, source)
+		}
+	}
 
 	return
 }

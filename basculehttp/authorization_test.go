@@ -5,7 +5,10 @@ package basculehttp
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -159,6 +162,55 @@ func (suite *AuthorizationTestSuite) TestOptionError() {
 	ap, err := NewAuthorizationParser(withAuthorizationParserOptionErr(expectedErr))
 	suite.Require().ErrorIs(err, expectedErr)
 	suite.Nil(ap)
+}
+
+// detailedScheme is a scheme parser whose ParseWithDetails reports a token
+// with an error, and whose Parse reports none.
+type detailedScheme struct{ token bascule.Token }
+
+func (ds detailedScheme) Parse(context.Context, string) (bascule.Token, error) {
+	return nil, bascule.ErrBadCredentials
+}
+
+func (ds detailedScheme) ParseWithDetails(context.Context, string) (bascule.Token, error) {
+	return ds.token, bascule.ErrBadCredentials
+}
+
+// TestParseWithDetails verifies the scheme's ParseWithDetails is used when it
+// has one, and that Parse never returns the token it reports.
+func (suite *AuthorizationTestSuite) TestParseWithDetails() {
+	expected := bascule.StubToken("rejected")
+	ap := suite.newAuthorizationParser(WithScheme("Test", detailedScheme{token: expected}))
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.Header.Set("Authorization", "Test value")
+
+	token, err := ap.ParseWithDetails(context.Background(), request)
+	suite.ErrorIs(err, bascule.ErrBadCredentials)
+	suite.Equal(expected, token)
+
+	token, err = ap.Parse(context.Background(), request)
+	suite.ErrorIs(err, bascule.ErrBadCredentials)
+	suite.Nil(token)
+}
+
+// TestParseWithDetailsPlainScheme verifies a scheme parser without
+// ParseWithDetails is parsed as usual, including the errors before it.
+func (suite *AuthorizationTestSuite) TestParseWithDetailsPlainScheme() {
+	ap := suite.newAuthorizationParser(WithBasic())
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	_, err := ap.ParseWithDetails(context.Background(), request)
+	suite.ErrorIs(err, bascule.ErrMissingCredentials)
+
+	request.Header.Set("Authorization", "Digest abc")
+	_, err = ap.ParseWithDetails(context.Background(), request)
+	suite.Error(err)
+
+	request.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("joe:secret")))
+	token, err := ap.ParseWithDetails(context.Background(), request)
+	suite.NoError(err)
+	suite.Equal("joe", token.Principal())
 }
 
 func TestAuthorization(t *testing.T) {

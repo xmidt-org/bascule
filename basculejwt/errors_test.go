@@ -64,6 +64,106 @@ func (suite *ErrorsTestSuite) sign(key jwk.Key, build func(*jwt.Builder) *jwt.Bu
 	return string(signed)
 }
 
+// parseDetails is parse for ParseWithDetails, which may return a token with the
+// error.
+func (suite *ErrorsTestSuite) parseDetails(value string, options ...jwt.ParseOption) (bascule.Token, error) {
+	parser, err := NewTokenParser(options...)
+	suite.Require().NoError(err)
+
+	token, err := parser.(bascule.DetailedTokenParser[string]).ParseWithDetails(context.Background(), value)
+	suite.Require().Error(err, "the value should not have parsed")
+
+	return token, err
+}
+
+// TestDetailsClaimFailure verifies ParseWithDetails returns a token whose
+// signature is good but whose claims are rejected with the error, and that
+// Parse still returns no token for it.
+func (suite *ErrorsTestSuite) TestDetailsClaimFailure() {
+	tests := []struct {
+		name    string
+		build   func(*jwt.Builder) *jwt.Builder
+		options []jwt.ParseOption
+		want    error
+	}{
+		{
+			name: "expired",
+			build: func(b *jwt.Builder) *jwt.Builder {
+				return b.IssuedAt(suite.now.Add(-2 * time.Hour)).Expiration(suite.now.Add(-time.Hour))
+			},
+			want: ErrExpired,
+		}, {
+			name: "not yet valid",
+			build: func(b *jwt.Builder) *jwt.Builder {
+				return b.NotBefore(suite.now.Add(time.Hour)).Expiration(suite.now.Add(2 * time.Hour))
+			},
+			want: ErrNotYetValid,
+		}, {
+			name:    "invalid issuer",
+			build:   func(b *jwt.Builder) *jwt.Builder { return suite.valid(b.Issuer("wrong")) },
+			options: []jwt.ParseOption{jwt.WithIssuer("expected")},
+			want:    ErrInvalidIssuer,
+		},
+	}
+
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			value := suite.sign(suite.key, tc.build)
+			options := append([]jwt.ParseOption{jwt.WithKeySet(suite.keys)}, tc.options...)
+
+			token, err := suite.parseDetails(value, options...)
+			suite.ErrorIs(err, tc.want)
+			suite.ErrorIs(err, bascule.ErrBadCredentials)
+			suite.Require().NotNil(token)
+			suite.Equal("test", token.Principal())
+
+			// the same value through Parse has no token
+			suite.Nil(suite.parseNilToken(value, options...))
+		})
+	}
+}
+
+// parseNilToken runs Parse and returns the token, which the caller asserts is nil.
+func (suite *ErrorsTestSuite) parseNilToken(value string, options ...jwt.ParseOption) bascule.Token {
+	parser, err := NewTokenParser(options...)
+	suite.Require().NoError(err)
+
+	token, err := parser.Parse(context.Background(), value)
+	suite.Require().Error(err)
+
+	return token
+}
+
+// TestDetailsUnverified verifies ParseWithDetails returns no token for a value
+// whose signature was not verified, however the claims look, or that could not
+// be read at all.
+func (suite *ErrorsTestSuite) TestDetailsUnverified() {
+	other, err := rsa.GenerateKey(rand.Reader, 2048)
+	suite.Require().NoError(err)
+
+	expired := func(b *jwt.Builder) *jwt.Builder {
+		return b.Expiration(suite.now.Add(-time.Hour))
+	}
+
+	tests := []struct {
+		name  string
+		value string
+	}{
+		// the claims are bad as well, but the signature is checked first
+		{name: "wrong key", value: suite.sign(suite.importKey(other, "test"), expired)},
+		{name: "unknown key id", value: suite.sign(suite.importKey(other, "unknown"), expired)},
+		{name: "malformed", value: "not a jwt"},
+	}
+
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			token, err := suite.parseDetails(tc.value, jwt.WithKeySet(suite.keys))
+			suite.Error(err)
+			suite.Nil(token)
+		})
+	}
+}
+
 // parse runs a value through a parser built with the given options and returns
 // the error, which must not be nil.
 func (suite *ErrorsTestSuite) parse(value string, options ...jwt.ParseOption) error {
