@@ -107,5 +107,6 @@ func (suite *ValidatorTestSuite) TestValidate() {
 }
 
 func TestValidator(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ValidatorTestSuite))
 }

@@ -192,5 +192,6 @@ func (suite *ApproversTestSuite) TestAny() {
 }
 
 func TestApprovers(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ApproversTestSuite))
 }

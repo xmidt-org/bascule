@@ -679,10 +679,12 @@ func (suite *ApproverTestSuite) TestApprove() {
 }
 
 func TestApprover(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ApproverTestSuite))
 }
 
 func TestSplitCapability(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		rest   string
 		url    string
@@ -704,6 +706,7 @@ func TestSplitCapability(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.rest, func(t *testing.T) {
+			t.Parallel()
 			url, method, ok := splitCapability(tc.rest)
 			assert.Equal(t, tc.ok, ok)
 			assert.Equal(t, tc.url, url)

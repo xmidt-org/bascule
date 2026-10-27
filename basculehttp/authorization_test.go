@@ -214,5 +214,6 @@ func (suite *AuthorizationTestSuite) TestParseWithDetailsPlainScheme() {
 }
 
 func TestAuthorization(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(AuthorizationTestSuite))
 }

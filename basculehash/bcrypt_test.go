@@ -72,5 +72,6 @@ func (suite *BcryptTestSuite) TestMatches() {
 }
 
 func TestBcrypt(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(BcryptTestSuite))
 }

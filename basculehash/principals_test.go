@@ -23,5 +23,6 @@ func (suite *PrincipalsTestSuite) SetupTest() {
 }
 
 func TestPrincipals(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(PrincipalsTestSuite))
 }

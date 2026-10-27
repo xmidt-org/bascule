@@ -15,12 +15,14 @@ import (
 )
 
 func TestNewOriginResolverInvalidProxy(t *testing.T) {
+	t.Parallel()
 	r, err := NewOriginResolver(WithTrustedProxies(netip.Prefix{}))
 	require.Error(t, err)
 	assert.Nil(t, r)
 }
 
 func TestOriginResolverOrigin(t *testing.T) {
+	t.Parallel()
 	trusted := []netip.Prefix{
 		netip.MustParsePrefix("10.0.0.0/8"),
 		netip.MustParsePrefix("2001:db8:ffff::/48"),
@@ -230,6 +232,7 @@ func TestOriginResolverOrigin(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			r, err := NewOriginResolver(WithTrustedProxies(tc.trusted...))
 			require.NoError(t, err)
 
@@ -251,6 +254,7 @@ func TestOriginResolverOrigin(t *testing.T) {
 }
 
 func TestOriginResolverZeroValue(t *testing.T) {
+	t.Parallel()
 	var r OriginResolver
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.RemoteAddr = "198.51.100.7:1234"
@@ -262,6 +266,7 @@ func TestOriginResolverZeroValue(t *testing.T) {
 }
 
 func TestSplitQuoted(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		in       string
 		expected []string
@@ -275,12 +280,14 @@ func TestSplitQuoted(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.in, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.expected, splitQuoted(tc.in, ','))
 		})
 	}
 }
 
 func TestUnquote(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		in, expected string
 	}{
@@ -296,12 +303,14 @@ func TestUnquote(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.in, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.expected, unquote(tc.in))
 		})
 	}
 }
 
 func TestNormalizePrefix(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		in, expected string
 	}{
@@ -314,6 +323,7 @@ func TestNormalizePrefix(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.in, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t,
 				netip.MustParsePrefix(tc.expected),
 				normalizePrefix(netip.MustParsePrefix(tc.in)),
