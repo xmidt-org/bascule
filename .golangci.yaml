@@ -59,6 +59,7 @@ linters:
     - goconst
     - intrange
     - misspell
+    - modernize
     - nolintlint
     - perfsprint
     - prealloc
@@ -81,6 +82,10 @@ linters:
     funlen:
       lines: 80
       statements: 50
+
+    goconst:
+      min-len: 3
+      min-occurrences: 5
 
     gosec:
       excludes:
