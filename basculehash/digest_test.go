@@ -59,5 +59,6 @@ func (suite *DigestTestSuite) TestWriteTo() {
 }
 
 func TestDigest(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(DigestTestSuite))
 }

@@ -24,5 +24,6 @@ func (suite *SchemeTestSuite) TestUnsupportedSchemeError() {
 }
 
 func TestScheme(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(SchemeTestSuite))
 }

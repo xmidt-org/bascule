@@ -36,5 +36,6 @@ func (suite *PasswordTestSuite) TestGetPassword() {
 }
 
 func TestPassword(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(PasswordTestSuite))
 }

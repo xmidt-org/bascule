@@ -246,6 +246,7 @@ func (suite *TokenSuite) TestTokenAs() {
 }
 
 func TestToken(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(TokenSuite))
 }
 
@@ -445,5 +446,6 @@ func (suite *TokenParserSuite) TestStubTokenParser() {
 }
 
 func TestTokenParser(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(TokenParserSuite))
 }

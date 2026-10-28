@@ -59,5 +59,6 @@ func (suite *BasicTestSuite) TestBasicTokenParser() {
 }
 
 func TestBasic(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(BasicTestSuite))
 }

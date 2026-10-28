@@ -136,5 +136,6 @@ func (suite *AttributesTestSuite) TestGetAttribute() {
 }
 
 func TestAttributes(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(AttributesTestSuite))
 }

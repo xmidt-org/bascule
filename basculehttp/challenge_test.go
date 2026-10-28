@@ -333,5 +333,6 @@ func (suite *ChallengeTestSuite) TestChallenges() {
 }
 
 func TestChallenge(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ChallengeTestSuite))
 }

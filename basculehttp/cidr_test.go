@@ -77,6 +77,7 @@ func newCIDRApprover(t *testing.T, opts ...CIDRApproverOption) *CIDRApprover {
 }
 
 func TestNewCIDRApproverErrors(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		opts []CIDRApproverOption
@@ -102,6 +103,7 @@ func TestNewCIDRApproverErrors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			a, err := NewCIDRApprover(tc.opts...)
 			require.Error(t, err)
 			assert.Nil(t, a)
@@ -111,6 +113,7 @@ func TestNewCIDRApproverErrors(t *testing.T) {
 
 // TestCIDRApproverModes runs every row of the decision table in all four modes.
 func TestCIDRApproverModes(t *testing.T) {
+	t.Parallel()
 	const (
 		malformed33  = `malformed; kind=cidr; cap="webpa-prefix-cidr:10.0.0.0/33"`
 		noCapability = "would-reject; kind=cidr; reason=no-cidr-capability"
@@ -207,6 +210,7 @@ func TestCIDRApproverModes(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(fmt.Sprintf("%s/%s", mode.name, tc.name), func(t *testing.T) {
+				t.Parallel()
 				expectedErr := tc.correctErr
 				if mode.required {
 					expectedErr = tc.requiredErr
@@ -233,6 +237,7 @@ func TestCIDRApproverModes(t *testing.T) {
 }
 
 func TestCIDRApproverDefaultMode(t *testing.T) {
+	t.Parallel()
 	a := newCIDRApprover(t, WithCIDRPrefixLiterals(testCIDRPrefix))
 
 	// Correct If Present: a token without a CIDR capability is Unrestricted ...
@@ -246,6 +251,7 @@ func TestCIDRApproverDefaultMode(t *testing.T) {
 }
 
 func TestCIDRApproverLastModeWins(t *testing.T) {
+	t.Parallel()
 	a := newCIDRApprover(t,
 		WithCIDRPrefixLiterals(testCIDRPrefix),
 		WithCIDRPermissiveRequired(),
@@ -268,6 +274,7 @@ func TestCIDRApproverLastModeWins(t *testing.T) {
 }
 
 func TestCIDRApproverCapabilities(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		prefixes   []string
@@ -384,6 +391,7 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			prefixes := tc.prefixes
 			if len(prefixes) == 0 {
 				prefixes = []string{testCIDRPrefix}
@@ -414,6 +422,7 @@ func TestCIDRApproverCapabilities(t *testing.T) {
 }
 
 func TestCIDRApproverNoWarningCollector(t *testing.T) {
+	t.Parallel()
 	a := newCIDRApprover(t,
 		WithCIDRPrefixLiterals(testCIDRPrefix),
 		WithCIDRPermissiveRequired(),
@@ -426,6 +435,7 @@ func TestCIDRApproverNoWarningCollector(t *testing.T) {
 }
 
 func TestCIDRApproverCache(t *testing.T) {
+	t.Parallel()
 	a := newCIDRApprover(t,
 		WithCIDRPrefixLiterals(testCIDRPrefix),
 		WithCIDRCacheSize(2),
@@ -463,6 +473,7 @@ func principalNetworks(configured map[string][]string) CIDRResolver {
 // TestCIDRApproverResolverPrincipals verifies a resolver can vouch for
 // principals, and that what it returns is treated as carried by the token.
 func TestCIDRApproverResolverPrincipals(t *testing.T) {
+	t.Parallel()
 	resolver := principalNetworks(map[string][]string{
 		"joe":  {"192.0.2.0/24", "2001:db8::/32"},
 		"jane": {"::ffff:198.51.100.0/120"}, // normalized like a capability
@@ -543,6 +554,7 @@ func TestCIDRApproverResolverPrincipals(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			opts := append(
 				[]CIDRApproverOption{
 					WithCIDRPrefixLiterals(testCIDRPrefix),
@@ -568,6 +580,7 @@ func TestCIDRApproverResolverPrincipals(t *testing.T) {
 // replace the prefixes: a CIDRApprover must still know which capabilities are
 // its own.
 func TestCIDRApproverResolverRequiresPrefixes(t *testing.T) {
+	t.Parallel()
 	a, err := NewCIDRApprover(WithCIDRResolver(principalNetworks(map[string][]string{"joe": {"192.0.2.0/24"}})))
 	require.ErrorIs(t, err, ErrNoCIDRPrefixes)
 	assert.Nil(t, a)
@@ -577,6 +590,7 @@ func TestCIDRApproverResolverRequiresPrefixes(t *testing.T) {
 // context, the principal, and the provided networks in token order with an
 // invalid prefix for each malformed capability, whose warning is still raised.
 func TestCIDRApproverResolverInput(t *testing.T) {
+	t.Parallel()
 	type key struct{}
 	ctx := context.WithValue(bascule.WithWarnings(context.Background()), key{}, "marker")
 
@@ -625,6 +639,7 @@ func TestCIDRApproverResolverInput(t *testing.T) {
 // TestCIDRApproverResolverOutput verifies the approver uses what a resolver
 // returns in place of the token's networks.
 func TestCIDRApproverResolverOutput(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		resolved   []netip.Prefix
@@ -666,6 +681,7 @@ func TestCIDRApproverResolverOutput(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			a := newCIDRApprover(t,
 				WithCIDRPrefixLiterals(testCIDRPrefix),
 				WithCIDRResolver(func(context.Context, string, []netip.Prefix) ([]netip.Prefix, error) {
@@ -691,6 +707,7 @@ func TestCIDRApproverResolverOutput(t *testing.T) {
 // in an enforcing mode and warns in a permissive one, without showing the
 // error to the caller, and before the origin is consulted.
 func TestCIDRApproverResolverDenies(t *testing.T) {
+	t.Parallel()
 	denied := errors.New("joe is blocked")
 	resolver := func(_ context.Context, principal string, provided []netip.Prefix) ([]netip.Prefix, error) {
 		if principal == "joe" {
@@ -742,6 +759,7 @@ func TestCIDRApproverResolverDenies(t *testing.T) {
 // TestCIDRApproverResolverNilToken verifies a missing token does not panic,
 // and reaches the resolver as an empty principal with nothing provided.
 func TestCIDRApproverResolverNilToken(t *testing.T) {
+	t.Parallel()
 	called := false
 	a := newCIDRApprover(t,
 		WithCIDRPrefixLiterals(testCIDRPrefix),
@@ -763,6 +781,7 @@ func TestCIDRApproverResolverNilToken(t *testing.T) {
 }
 
 func TestDefaultCIDRResolver(t *testing.T) {
+	t.Parallel()
 	provided := []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24"), {}}
 
 	got, err := DefaultCIDRResolver(context.Background(), "joe", provided)

@@ -11,6 +11,7 @@ import (
 )
 
 func TestLiteral(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		prefix     string
@@ -34,6 +35,7 @@ func TestLiteral(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			rest, ok := Literal(tc.prefix).Match(tc.capability)
 			assert.Equal(t, tc.ok, ok)
 			assert.Equal(t, tc.rest, rest)
@@ -42,6 +44,7 @@ func TestLiteral(t *testing.T) {
 }
 
 func TestRegex(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		prefix     string
@@ -64,6 +67,7 @@ func TestRegex(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			m, err := Regex(tc.prefix)
 			require.NoError(t, err)
 
@@ -75,12 +79,14 @@ func TestRegex(t *testing.T) {
 }
 
 func TestRegexInvalid(t *testing.T) {
+	t.Parallel()
 	for _, invalid := range []string{
 		"(?!foo)", // RE2 has no negative lookahead
 		"(a",      // unbalanced
 		"*",       // nothing to repeat
 	} {
 		t.Run(invalid, func(t *testing.T) {
+			t.Parallel()
 			m, err := Regex(invalid)
 			require.Error(t, err)
 			assert.Nil(t, m)

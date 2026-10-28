@@ -354,6 +354,7 @@ func (suite *ErrorsTestSuite) TestUnderlyingErrorAlwaysReachable() {
 }
 
 func TestErrors(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ErrorsTestSuite))
 }
 

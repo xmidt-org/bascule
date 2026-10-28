@@ -362,5 +362,6 @@ func (suite *ValidatorsTestSuite) TestCompositeValidators() {
 }
 
 func TestValidators(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ValidatorsTestSuite))
 }

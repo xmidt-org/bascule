@@ -95,5 +95,6 @@ func (suite *CapabilitiesTestSuite) TestGetCapabilities() {
 }
 
 func TestCapabilities(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(CapabilitiesTestSuite))
 }

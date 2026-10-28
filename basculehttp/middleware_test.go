@@ -479,5 +479,6 @@ func (suite *MiddlewareTestSuite) TestWarnings() {
 }
 
 func TestMiddleware(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(MiddlewareTestSuite))
 }
