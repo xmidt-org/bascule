@@ -176,5 +176,6 @@ func (suite *AuthorizerTestSuite) TestFullSecondApproverFail() {
 }
 
 func TestAuthorizer(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(AuthorizerTestSuite))
 }

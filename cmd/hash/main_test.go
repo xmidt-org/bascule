@@ -130,5 +130,6 @@ func (suite *RunTestSuite) TestBcryptSubcommand() {
 }
 
 func TestRun(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(RunTestSuite))
 }

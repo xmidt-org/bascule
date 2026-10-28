@@ -113,5 +113,6 @@ func (suite *ErrorTestSuite) TestUseStatusCode() {
 }
 
 func TestError(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ErrorTestSuite))
 }

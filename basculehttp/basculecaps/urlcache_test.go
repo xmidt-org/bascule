@@ -127,12 +127,15 @@ func (suite *URLCacheTestSuite) TestConcurrent() {
 }
 
 func TestURLCache(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(URLCacheTestSuite))
 }
 
 // TestApproverURLCacheSize covers the option and its validation.
 func TestApproverURLCacheSize(t *testing.T) {
+	t.Parallel()
 	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
 		for _, size := range []int{0, -1} {
 			if _, err := NewApprover(WithPrefixLiterals("webpa-prefix:"), WithCacheSize(size)); err == nil {
 				t.Errorf("expected an error for size %d", size)
@@ -141,6 +144,7 @@ func TestApproverURLCacheSize(t *testing.T) {
 	})
 
 	t.Run("bounded", func(t *testing.T) {
+		t.Parallel()
 		a, err := NewApprover(WithPrefixLiterals("webpa-prefix:"), WithCacheSize(2))
 		if err != nil {
 			t.Fatal(err)

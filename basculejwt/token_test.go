@@ -148,5 +148,6 @@ func (suite *TokenTestSuite) TestTokenParser() {
 }
 
 func TestToken(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(TokenTestSuite))
 }

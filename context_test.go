@@ -99,5 +99,6 @@ func (suite *ContextTestSuite) TestWithToken() {
 }
 
 func TestContext(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ContextTestSuite))
 }

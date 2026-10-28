@@ -117,5 +117,6 @@ func (suite *ErrorsTestSuite) TestApproved() {
 }
 
 func TestErrors(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ErrorsTestSuite))
 }

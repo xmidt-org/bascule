@@ -69,5 +69,6 @@ func (suite *StoreTestSuite) TestUnmarshalJSON() {
 }
 
 func TestStore(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(StoreTestSuite))
 }

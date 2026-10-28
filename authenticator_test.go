@@ -267,5 +267,6 @@ func (suite *AuthenticatorTestSuite) TestPlainParserTokenWithError() {
 }
 
 func TestAuthenticator(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(AuthenticatorTestSuite))
 }

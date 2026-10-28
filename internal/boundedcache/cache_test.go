@@ -12,12 +12,14 @@ import (
 )
 
 func TestNewInvalidSize(t *testing.T) {
+	t.Parallel()
 	for _, size := range []int{0, -1} {
 		assert.Panics(t, func() { New[int](size) })
 	}
 }
 
 func TestGetAdd(t *testing.T) {
+	t.Parallel()
 	c := New[int](4)
 
 	_, ok := c.Get("a")
@@ -36,6 +38,7 @@ func TestGetAdd(t *testing.T) {
 }
 
 func TestBounded(t *testing.T) {
+	t.Parallel()
 	const maxSize = 4
 	c := New[int](maxSize)
 
@@ -50,6 +53,7 @@ func TestBounded(t *testing.T) {
 // TestEvictsOldest verifies that once full, the entry added longest ago is the
 // one dropped, even if it was read recently.
 func TestEvictsOldest(t *testing.T) {
+	t.Parallel()
 	c := New[string](2)
 	c.Add("first", "1")
 	c.Add("second", "2")
@@ -73,6 +77,7 @@ func TestEvictsOldest(t *testing.T) {
 
 // TestConcurrent exercises the cache from several goroutines.  Run with -race.
 func TestConcurrent(t *testing.T) {
+	t.Parallel()
 	const (
 		workers = 8
 		rounds  = 200

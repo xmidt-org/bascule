@@ -13,6 +13,7 @@ import (
 )
 
 func TestWarningString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		warning  Warning
@@ -54,12 +55,14 @@ func TestWarningString(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.expected, tc.warning.String())
 		})
 	}
 }
 
 func TestAddWarningNoCollector(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	assert.NotPanics(t, func() {
 		AddWarning(ctx, Warning{Reason: "ignored"})
@@ -69,6 +72,7 @@ func TestAddWarningNoCollector(t *testing.T) {
 }
 
 func TestWarnings(t *testing.T) {
+	t.Parallel()
 	ctx := WithWarnings(context.Background())
 	assert.Nil(t, GetWarnings(ctx))
 
@@ -89,6 +93,7 @@ func TestWarnings(t *testing.T) {
 }
 
 func TestAddWarningConcurrent(t *testing.T) {
+	t.Parallel()
 	ctx := WithWarnings(context.Background())
 
 	var wg sync.WaitGroup
@@ -103,6 +108,7 @@ func TestAddWarningConcurrent(t *testing.T) {
 }
 
 func TestAuthorizeEventWarnings(t *testing.T) {
+	t.Parallel()
 	expected := Warning{Reason: "would-reject"}
 
 	var events []AuthorizeEvent[string]
