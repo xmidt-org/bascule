@@ -3,7 +3,7 @@ module github.com/xmidt-org/bascule
 go 1.27.1
 
 require (
-	github.com/alecthomas/kong v1.16.1
+	github.com/alecthomas/kong v1.17.0
 	github.com/lestrrat-go/jwx/v4 v4.6.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.58.0
